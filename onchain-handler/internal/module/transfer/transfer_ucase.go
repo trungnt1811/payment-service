@@ -89,11 +89,11 @@ func (u *transferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadD
 
 		// Prepare reward entry
 		rewards = append(rewards, model.TransferHistory{
-			RewardAddress:    u.Config.Blockchain.RewardAddress,
-			RecipientAddress: payload.RecipientAddress,
-			TokenAmount:      payload.TokenAmount,
-			Status:           -1, // Default to failed status initially
-			TxType:           payload.TxType,
+			TokenDistributionAddress: u.Config.Blockchain.TokenDistributionAddress,
+			RecipientAddress:         payload.RecipientAddress,
+			TokenAmount:              payload.TokenAmount,
+			Status:                   -1, // Default to failed status initially
+			TxType:                   payload.TxType,
 		})
 	}
 

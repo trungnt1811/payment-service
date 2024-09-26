@@ -13,7 +13,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
-// DistributeTokens distributes tokens from the reward address to user wallets using bulk transfer
+// DistributeTokens distributes tokens from the token distribution address to user wallets using bulk transfer
 func DistributeTokens(client *ethclient.Client, config *conf.Configuration, recipients map[string]*big.Int) (*string, error) {
 	// Load Blockchain configuration
 	chainID := config.Blockchain.ChainID
