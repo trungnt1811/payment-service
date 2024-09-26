@@ -141,7 +141,7 @@ func (listener *BaseEventListener) listen(ctx context.Context, parseAndProcessFu
 		log.LG.Debugf("Listening for events starting at block: %d", currentBlock)
 
 		// Determine the end block while respecting MaxBlockRange and the latest block.
-		endBlock := currentBlock + MaxBlockRange
+		endBlock := currentBlock + MaxBlockRange/8
 		if endBlock > latestBlock.Uint64() {
 			endBlock = latestBlock.Uint64()
 		}
@@ -178,11 +178,6 @@ func (listener *BaseEventListener) listen(ctx context.Context, parseAndProcessFu
 				if err != nil {
 					log.LG.Errorf("Failed to process log entry: %v", err)
 					continue
-				}
-
-				// Update the last processed block in the repository.
-				if err := listener.LastBlockRepo.UpdateLastProcessedBlock(ctx, currentBlock); err != nil {
-					log.LG.Errorf("Failed to update last processed block in repository: %v", err)
 				}
 
 				// Send the processed event to the channel.
