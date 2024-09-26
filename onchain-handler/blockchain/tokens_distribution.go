@@ -13,8 +13,8 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
-// DistributeReward distributes reward tokens from the reward address to user wallets using bulk transfer
-func DistributeReward(client *ethclient.Client, config *conf.Configuration, recipients map[string]*big.Int) (*string, error) {
+// DistributeTokens distributes tokens from the reward address to user wallets using bulk transfer
+func DistributeTokens(client *ethclient.Client, config *conf.Configuration, recipients map[string]*big.Int) (*string, error) {
 	// Load Blockchain configuration
 	chainID := config.Blockchain.ChainID
 	privateKey := config.Blockchain.PrivateKeyReward

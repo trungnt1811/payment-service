@@ -38,15 +38,15 @@ func (u *transferUCase) DistributeTokens(ctx context.Context, payloads []dto.Tra
 	}
 
 	// Prepare reward history
-	rewardModels, err := u.prepareRewardHistory(payloads)
+	rewardModels, err := u.prepareTransferHistories(payloads)
 	if err != nil {
-		return fmt.Errorf("failed to prepare reward history: %v", err)
+		return fmt.Errorf("failed to prepare token transfer histories: %v", err)
 	}
 
-	// Perform concurrent reward distribution
-	err = u.distributeAndSaveRewards(ctx, rewardModels, recipients)
+	// Perform concurrent tokens distribution
+	err = u.distributeAndSaveTransferHistories(ctx, rewardModels, recipients)
 	if err != nil {
-		return fmt.Errorf("failed to distribute rewards: %v", err)
+		return fmt.Errorf("failed to distribute tokens: %v", err)
 	}
 
 	return nil
@@ -76,8 +76,8 @@ func (u *transferUCase) convertToRecipients(req []dto.TransferTokenPayloadDTO) (
 	return recipients, nil
 }
 
-// prepareRewardHistory prepares reward history based on the payload
-func (u *transferUCase) prepareRewardHistory(req []dto.TransferTokenPayloadDTO) ([]model.TransferHistory, error) {
+// prepareTransferHistories prepares token transfer history based on the payload
+func (u *transferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadDTO) ([]model.TransferHistory, error) {
 	var rewards []model.TransferHistory
 
 	for _, payload := range req {
@@ -101,8 +101,8 @@ func (u *transferUCase) prepareRewardHistory(req []dto.TransferTokenPayloadDTO) 
 }
 
 // distributeAndSaveRewards distributes rewards and updates reward history
-func (u *transferUCase) distributeAndSaveRewards(ctx context.Context, rewards []model.TransferHistory, recipients map[string]*big.Int) error {
-	txHash, err := blockchain.DistributeReward(u.ETHClient, u.Config, recipients)
+func (u *transferUCase) distributeAndSaveTransferHistories(ctx context.Context, rewards []model.TransferHistory, recipients map[string]*big.Int) error {
+	txHash, err := blockchain.DistributeTokens(u.ETHClient, u.Config, recipients)
 	for index := range rewards {
 		if err != nil {
 			rewards[index].ErrorMessage = fmt.Sprintf("Failed to distribute: %v", err)
@@ -116,7 +116,7 @@ func (u *transferUCase) distributeAndSaveRewards(ctx context.Context, rewards []
 	// Save reward history
 	err = u.TrasferRepository.CreateTransferHistories(ctx, rewards)
 	if err != nil {
-		return fmt.Errorf("failed to save rewards history: %v", err)
+		return fmt.Errorf("failed to save token transfer histories: %v", err)
 	}
 
 	return nil
