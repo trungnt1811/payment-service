@@ -17,7 +17,7 @@ import (
 func DistributeTokens(client *ethclient.Client, config *conf.Configuration, recipients map[string]*big.Int) (*string, error) {
 	// Load Blockchain configuration
 	chainID := config.Blockchain.ChainID
-	privateKey := config.Blockchain.PrivateKeyReward
+	privateKey := config.Blockchain.PrivateKeyDistributionAddress
 	tokenAddress := config.Blockchain.LifePointAddress
 
 	// Get authentication for signing transactions
