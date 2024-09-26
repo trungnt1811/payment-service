@@ -1,6 +1,6 @@
 CREATE TABLE onchain_transactions (
     id SERIAL PRIMARY KEY,  -- SERIAL takes care of auto-increment
-    reward_address VARCHAR(50) NOT NULL,
+    token_distribution_address VARCHAR(50) NOT NULL,
     recipient_address VARCHAR(50) NOT NULL,
     transaction_hash VARCHAR(66) NOT NULL,
     token_amount NUMERIC(50, 18) NOT NULL,
