@@ -29,8 +29,9 @@ func (r *lockRepository) CreateLockEventHistory(ctx context.Context, lockEvent m
 }
 
 // GetLatestLockEventsByUserAddress retrieves the latest lock event for each lock ID of a user.
-func (r *lockRepository) GetLatestLockEventsByUserAddress(ctx context.Context, userAddress string) ([]model.LockEvent, error) {
+func (r *lockRepository) GetLatestLockEventsByUserAddress(ctx context.Context, userAddress string, page, size int) ([]model.LockEvent, error) {
 	var lockEvents []model.LockEvent
+	offset := (page - 1) * size
 
 	if err := r.db.WithContext(ctx).
 		Raw(`
@@ -38,7 +39,8 @@ func (r *lockRepository) GetLatestLockEventsByUserAddress(ctx context.Context, u
 			FROM lock_event 
 			WHERE user_address = ? AND status = 1
 			ORDER BY lock_id, created_at DESC
-		`, userAddress).Scan(&lockEvents).Error; err != nil {
+			LIMIT ? OFFSET ?
+		`, userAddress, size+1, offset).Scan(&lockEvents).Error; err != nil {
 		return nil, err
 	}
 
@@ -59,11 +61,14 @@ func (r *lockRepository) GetDepositLockEventByLockIDs(ctx context.Context, lockI
 }
 
 // GetLockEventHistoriesByUserAddress retrieves (both deposit and withdraw) lock events for a specific user.
-func (r *lockRepository) GetLockEventHistoriesByUserAddress(ctx context.Context, userAddress string) ([]model.LockEvent, error) {
+func (r *lockRepository) GetLockEventHistoriesByUserAddress(ctx context.Context, userAddress string, page, size int) ([]model.LockEvent, error) {
 	var lockEvents []model.LockEvent
+	offset := (page - 1) * size
 
 	if err := r.db.WithContext(ctx).
 		Where("user_address = ?", userAddress).
+		Limit(size + 1).
+		Offset(offset).
 		Find(&lockEvents).Error; err != nil {
 		return nil, err
 	}
