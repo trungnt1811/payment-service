@@ -25,12 +25,13 @@ const (
 
 // LockEventData represents the event data for both Deposit and Withdraw events.
 type LockEventData struct {
-	User     common.Address
-	LockID   uint64
-	Amount   *big.Int
-	TxHash   string
-	Event    string // "Deposit" or "Withdraw"
-	Duration *big.Int
+	User          common.Address
+	LockID        uint64
+	Amount        *big.Int
+	TxHash        string
+	Event         string // "Deposit" or "Withdraw"
+	Duration      *big.Int
+	LockTimestamp *big.Int
 }
 
 // LockEventListener listens for Deposit and Withdraw events in the TokenLock contract.
@@ -72,6 +73,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		Amount         *big.Int
 		CurrentBalance *big.Int
 		LockDuration   *big.Int // Add duration for Deposit events
+		LockTimestamp  *big.Int // Add lock timestamp for Deposit events
 	}{}
 
 	var eventName string
@@ -84,8 +86,14 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 			return nil, fmt.Errorf("failed to unpack Deposit event: %w", err)
 		}
 
+		// Convert LockTimestamp to time.Time
+		lockTimestamp := time.Unix(event.LockTimestamp.Int64(), 0)
+
+		// Convert LockDuration to a time.Duration
 		lockDuration := time.Duration(event.LockDuration.Int64()) * time.Second
-		endDuration = time.Now().Add(lockDuration) // Current time + duration
+
+		// Calculate the end duration as LockTimestamp + LockDuration
+		endDuration = lockTimestamp.Add(lockDuration)
 	} else if listener.isWithdrawEvent(vLog) {
 		err := listener.ParsedABI.UnpackIntoInterface(&event, WithdrawEvent, vLog.Data)
 		eventName = WithdrawEvent
@@ -117,6 +125,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		eventModel.CurrentBalance = event.CurrentBalance.String()
 		eventModel.LockDuration = event.LockDuration.Uint64()
 		eventModel.EndDuration = endDuration
+		eventModel.LockTimestamp = event.LockTimestamp.Uint64()
 	}
 
 	// Additional fields for Withdraw events
@@ -145,6 +154,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 
 	if eventData.Event == DepositEvent {
 		eventData.Duration = event.LockDuration
+		eventData.LockTimestamp = event.LockTimestamp
 	}
 
 	return eventData, nil

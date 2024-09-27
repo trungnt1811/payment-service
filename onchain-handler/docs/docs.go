@@ -207,6 +207,9 @@ const docTemplate = `{
                 "lock_id": {
                     "type": "integer"
                 },
+                "lock_timestamp": {
+                    "type": "integer"
+                },
                 "status": {
                     "type": "integer"
                 },
