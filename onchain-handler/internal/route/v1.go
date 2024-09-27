@@ -40,37 +40,40 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 	appRouter.GET("/lock/latest-events", lockHandler.GetLatestLockEventsByUserAddress)
 
 	// SECTION: events listener
+	// base event listener for common listener logic
+	baseEventListener := blockchain.NewBaseEventListener(
+		ethClient,
+		blockstate.NewBlockstateRepository(db),
+		&config.Blockchain.StartBlockListener,
+	)
+	// membership event listener
 	membershipEventListener, err := blockchain.NewMembershipEventListener(
+		baseEventListener,
 		ethClient,
 		config.Blockchain.MembershipContractAddress,
 		membershipRepository,
-		blockstate.NewBlockstateRepository(db),
-		&config.Blockchain.StartBlockListener,
 	)
 	if err != nil {
 		log.LG.Errorf("Failed to initialize MembershipEventListener: %v", err)
 		return
 	}
-	go func() {
-		if err := membershipEventListener.RunListener(ctx); err != nil {
-			log.LG.Errorf("Error running MembershipEventListener: %v", err)
-		}
-	}()
-
+	membershipEventListener.RegisterMembershipEventListener(ctx)
+	// lock event listener
 	lockEventListener, err := blockchain.NewLockEventListener(
+		baseEventListener,
 		ethClient,
 		config.Blockchain.LockContractAddress,
 		lockRepository,
-		blockstate.NewBlockstateRepository(db),
-		&config.Blockchain.StartBlockListener,
 	)
 	if err != nil {
 		log.LG.Errorf("Failed to initialize LockEventListener: %v", err)
 		return
 	}
+	lockEventListener.RegisterLockEventListener(ctx)
+
 	go func() {
-		if err := lockEventListener.RunListener(ctx); err != nil {
-			log.LG.Errorf("Error running LockEventListener: %v", err)
+		if err := baseEventListener.RunListener(ctx); err != nil {
+			log.LG.Errorf("Error running event listeners: %v", err)
 		}
 	}()
 }

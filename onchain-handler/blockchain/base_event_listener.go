@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -24,19 +23,16 @@ const (
 
 // BaseEventListener represents the shared behavior of any blockchain event listener.
 type BaseEventListener struct {
-	ETHClient       *ethclient.Client
-	ContractAddress common.Address
-	EventChan       chan interface{}
-	ParsedABI       abi.ABI
-	LastBlockRepo   interfaces.BlockStateRepository
-	CurrentBlock    uint64
+	ETHClient     *ethclient.Client
+	EventChan     chan interface{}
+	LastBlockRepo interfaces.BlockStateRepository
+	CurrentBlock  uint64
+	EventHandlers map[common.Address]func(log types.Log) (interface{}, error) // Map to handle events per contract
 }
 
 // NewBaseEventListener initializes a base listener.
 func NewBaseEventListener(
 	client *ethclient.Client,
-	contractAddr string,
-	parsedABI abi.ABI,
 	lastBlockRepo interfaces.BlockStateRepository,
 	startBlockListener *uint64,
 ) *BaseEventListener {
@@ -58,23 +54,28 @@ func NewBaseEventListener(
 	}
 
 	return &BaseEventListener{
-		ETHClient:       client,
-		ContractAddress: common.HexToAddress(contractAddr),
-		EventChan:       eventChan,
-		ParsedABI:       parsedABI,
-		LastBlockRepo:   lastBlockRepo,
-		CurrentBlock:    currentBlock, // Store the final determined current block
+		ETHClient:     client,
+		EventChan:     eventChan,
+		LastBlockRepo: lastBlockRepo,
+		CurrentBlock:  currentBlock, // Store the final determined current block
+		EventHandlers: make(map[common.Address]func(log types.Log) (interface{}, error)),
 	}
 }
 
+// registerEventListener registers an event listener for a specific contract
+func (listener *BaseEventListener) registerEventListener(contractAddress string, handler func(log types.Log) (interface{}, error)) {
+	address := common.HexToAddress(contractAddress)
+	listener.EventHandlers[address] = handler
+}
+
 // RunListener starts the listener and processes incoming events.
-func (listener *BaseEventListener) RunListener(ctx context.Context, parseAndProcessFunc func(types.Log) (interface{}, error)) error {
+func (listener *BaseEventListener) RunListener(ctx context.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(2) // Two goroutines: listen and processEvents
 
 	go func() {
 		defer wg.Done()
-		listener.listen(ctx, parseAndProcessFunc)
+		listener.listen(ctx)
 	}()
 
 	go func() {
@@ -94,7 +95,7 @@ func (listener *BaseEventListener) RunListener(ctx context.Context, parseAndProc
 }
 
 // listen polls the blockchain for logs and parses them.
-func (listener *BaseEventListener) listen(ctx context.Context, parseAndProcessFunc func(types.Log) (interface{}, error)) {
+func (listener *BaseEventListener) listen(ctx context.Context) {
 	log.LG.Info("Starting event listener...")
 
 	// Get the last processed block from the repository, defaulting to an offset if not found.
@@ -146,6 +147,12 @@ func (listener *BaseEventListener) listen(ctx context.Context, parseAndProcessFu
 			endBlock = latestBlock.Uint64()
 		}
 
+		// Extract contract addresses from EventHandlers map
+		contractAddresses := make([]common.Address, 0, len(listener.EventHandlers))
+		for address := range listener.EventHandlers {
+			contractAddresses = append(contractAddresses, address)
+		}
+
 		// Process the blocks in chunks of 10 blocks (or DefaultBlockOffset).
 		for chunkStart := currentBlock; chunkStart <= endBlock; chunkStart += DefaultBlockOffset {
 			chunkEnd := chunkStart + DefaultBlockOffset - 1
@@ -159,7 +166,7 @@ func (listener *BaseEventListener) listen(ctx context.Context, parseAndProcessFu
 			// Poll logs from the blockchain with retries in case of failure.
 			for retries := 0; retries < MaxRetries; retries++ {
 				// Poll logs from the chunk of blocks.
-				logs, err = pollForLogsFromBlock(ctx, listener.ETHClient, listener.ContractAddress, chunkStart, chunkEnd)
+				logs, err = pollForLogsFromBlock(ctx, listener.ETHClient, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
 					log.LG.Warnf("Failed to poll logs from block %d to %d: %v. Retrying...", chunkStart, chunkEnd, err)
 					time.Sleep(RetryDelay)
@@ -172,16 +179,20 @@ func (listener *BaseEventListener) listen(ctx context.Context, parseAndProcessFu
 				break // Exit the loop if we cannot fetch logs
 			}
 
-			// Process the retrieved logs.
+			// Apply each parseAndProcessFunc to the logs
 			for _, logEntry := range logs {
-				processedEvent, err := parseAndProcessFunc(logEntry)
-				if err != nil {
-					log.LG.Errorf("Failed to process log entry: %v", err)
-					continue
-				}
+				if eventHandler, exists := listener.EventHandlers[logEntry.Address]; exists {
+					processedEvent, err := eventHandler(logEntry)
+					if err != nil {
+						log.LG.Warnf("Failed to process log entry: %v", err)
+						continue
+					}
 
-				// Send the processed event to the channel.
-				listener.EventChan <- processedEvent
+					// Send the processed event to the channel
+					listener.EventChan <- processedEvent
+				} else {
+					log.LG.Warnf("No event handler for log address: %s", logEntry.Address.Hex())
+				}
 			}
 
 			// Update the current block for the next iteration.

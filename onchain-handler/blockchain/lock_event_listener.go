@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -36,17 +37,18 @@ type LockEventData struct {
 
 // LockEventListener listens for Deposit and Withdraw events in the TokenLock contract.
 type LockEventListener struct {
-	*BaseEventListener
-	Repo interfaces.LockRepository
+	BaseEventListener *BaseEventListener
+	Repo              interfaces.LockRepository
+	ContractAddress   string
+	ParsedABI         abi.ABI
 }
 
 // NewLockEventListener initializes the lock event listener.
 func NewLockEventListener(
+	baseEventListener *BaseEventListener,
 	client *ethclient.Client,
 	contractAddr string,
 	repo interfaces.LockRepository,
-	lastBlockRepo interfaces.BlockStateRepository,
-	startBlockListener *uint64,
 ) (*LockEventListener, error) {
 	abiFilePath, err := filepath.Abs("./contracts/abis/TokenLock.abi.json")
 	if err != nil {
@@ -58,10 +60,11 @@ func NewLockEventListener(
 		return nil, fmt.Errorf("failed to load ABI: %w", err)
 	}
 
-	baseListener := NewBaseEventListener(client, contractAddr, parsedABI, lastBlockRepo, startBlockListener)
 	return &LockEventListener{
-		BaseEventListener: baseListener,
+		BaseEventListener: baseEventListener,
 		Repo:              repo,
+		ContractAddress:   contractAddr,
+		ParsedABI:         parsedABI,
 	}, nil
 }
 
@@ -168,8 +171,9 @@ func (listener *LockEventListener) isWithdrawEvent(vLog types.Log) bool {
 	return vLog.Topics[0].Hex() == listener.ParsedABI.Events["Withdraw"].ID.Hex()
 }
 
-// RunListener starts the listener with specific event processing logic.
-func (listener *LockEventListener) RunListener(ctx context.Context) error {
-	// Pass the specific event parsing function.
-	return listener.BaseEventListener.RunListener(ctx, listener.parseAndProcessLockEvent)
+func (listener *LockEventListener) RegisterLockEventListener(ctx context.Context) {
+	listener.BaseEventListener.registerEventListener(
+		listener.ContractAddress,
+		listener.parseAndProcessLockEvent,
+	)
 }

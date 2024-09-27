@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -27,17 +28,18 @@ type MembershipEventData struct {
 
 // MembershipEventListener listens for MembershipPurchased events.
 type MembershipEventListener struct {
-	*BaseEventListener
-	Repo interfaces.MembershipRepository
+	BaseEventListener *BaseEventListener
+	Repo              interfaces.MembershipRepository
+	ContractAddress   string
+	ParsedABI         abi.ABI
 }
 
 // NewMembershipEventListener initializes the membership event listener.
 func NewMembershipEventListener(
+	baseEventListener *BaseEventListener,
 	client *ethclient.Client,
 	contractAddr string,
 	repo interfaces.MembershipRepository,
-	lastBlockRepo interfaces.BlockStateRepository,
-	startBlockListener *uint64,
 ) (*MembershipEventListener, error) {
 	abiFilePath, err := filepath.Abs("./contracts/abis/MembershipPurchase.abi.json")
 	if err != nil {
@@ -49,10 +51,11 @@ func NewMembershipEventListener(
 		return nil, fmt.Errorf("failed to load ABI: %w", err)
 	}
 
-	baseListener := NewBaseEventListener(client, contractAddr, parsedABI, lastBlockRepo, startBlockListener)
 	return &MembershipEventListener{
-		BaseEventListener: baseListener,
+		BaseEventListener: baseEventListener,
 		Repo:              repo,
+		ContractAddress:   contractAddr,
+		ParsedABI:         parsedABI,
 	}, nil
 }
 
@@ -124,8 +127,9 @@ func (listener *MembershipEventListener) parseAndProcessMembershipEvent(vLog typ
 	return eventData, nil
 }
 
-// RunListener starts the listener with specific event processing logic.
-func (listener *MembershipEventListener) RunListener(ctx context.Context) error {
-	// Pass the specific event parsing function.
-	return listener.BaseEventListener.RunListener(ctx, listener.parseAndProcessMembershipEvent)
+func (listener *MembershipEventListener) RegisterMembershipEventListener(ctx context.Context) {
+	listener.BaseEventListener.registerEventListener(
+		listener.ContractAddress,
+		listener.parseAndProcessMembershipEvent,
+	)
 }

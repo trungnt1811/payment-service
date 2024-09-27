@@ -39,15 +39,15 @@ func loadABI(path string) (abi.ABI, error) {
 func pollForLogsFromBlock(
 	ctx context.Context,
 	client *ethclient.Client, // Ethereum client
-	contractAddr common.Address, // Contract address to filter logs
+	contractAddresses []common.Address, // Contract addresses to filter logs
 	fromBlock uint64, // Block number to start querying from
 	endBlock uint64,
 ) ([]types.Log, error) {
 	// Prepare filter query for the logs
 	query := ethereum.FilterQuery{
-		Addresses: []common.Address{contractAddr}, // Contract address to filter logs from
-		FromBlock: big.NewInt(int64(fromBlock)),   // Start block for querying logs
-		ToBlock:   big.NewInt(int64(endBlock)),    // End block for querying logs
+		Addresses: contractAddresses,            // Contract addresses to filter logs from
+		FromBlock: big.NewInt(int64(fromBlock)), // Start block for querying logs
+		ToBlock:   big.NewInt(int64(endBlock)),  // End block for querying logs
 	}
 
 	// Poll for logs
