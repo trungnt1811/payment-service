@@ -1,4 +1,4 @@
-CREATE TABLE onchain_transactions (
+CREATE TABLE onchain_transaction (
     id SERIAL PRIMARY KEY,  -- SERIAL takes care of auto-increment
     token_distribution_address VARCHAR(42) NOT NULL,
     recipient_address VARCHAR(42) NOT NULL,
@@ -21,9 +21,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a trigger that applies to 'onchain_transactions' table
-CREATE TRIGGER update_onchain_transactions_updated_at
-BEFORE UPDATE ON onchain_transactions
+-- Create a trigger that applies to 'onchain_transaction' table
+CREATE TRIGGER update_onchain_transaction_updated_at
+BEFORE UPDATE ON onchain_transaction
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 

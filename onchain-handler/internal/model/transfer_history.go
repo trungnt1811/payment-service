@@ -20,7 +20,7 @@ type TransferHistory struct {
 }
 
 func (m *TransferHistory) TableName() string {
-	return "onchain_transactions"
+	return "onchain_transaction"
 }
 
 func (m *TransferHistory) ToDto() dto.TransferHistoryDTO {
