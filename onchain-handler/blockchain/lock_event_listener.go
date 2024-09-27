@@ -25,13 +25,13 @@ const (
 
 // LockEventData represents the event data for both Deposit and Withdraw events.
 type LockEventData struct {
-	User          common.Address
-	LockID        uint64
-	Amount        *big.Int
-	TxHash        string
-	Event         string // "Deposit" or "Withdraw"
-	Duration      *big.Int
-	LockTimestamp *big.Int
+	User      common.Address
+	LockID    uint64
+	Amount    *big.Int
+	TxHash    string
+	Event     string // "Deposit" or "Withdraw"
+	Timestamp *big.Int
+	Duration  *big.Int
 }
 
 // LockEventListener listens for Deposit and Withdraw events in the TokenLock contract.
@@ -72,8 +72,8 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		LockID         *big.Int
 		Amount         *big.Int
 		CurrentBalance *big.Int
+		Timestamp      *big.Int
 		LockDuration   *big.Int // Add duration for Deposit events
-		Timestamp      *big.Int // Add lock timestamp for Deposit events
 	}{}
 
 	var eventName string
@@ -116,8 +116,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		Amount:          event.Amount.String(),
 		LockAction:      strings.ToUpper(eventName),
 		Status:          1, // Assume successful processing
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		LockTimestamp:   event.Timestamp.Uint64(),
 	}
 
 	// Additional fields for Deposit events
@@ -125,7 +124,6 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		eventModel.CurrentBalance = event.CurrentBalance.String()
 		eventModel.LockDuration = event.LockDuration.Uint64()
 		eventModel.EndDuration = endDuration
-		eventModel.LockTimestamp = event.Timestamp.Uint64()
 	}
 
 	// Additional fields for Withdraw events
@@ -145,16 +143,16 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 	}
 
 	eventData := &LockEventData{
-		User:   event.User,
-		LockID: lockID,
-		Amount: event.Amount,
-		TxHash: vLog.TxHash.Hex(),
-		Event:  eventName,
+		User:      event.User,
+		LockID:    lockID,
+		Amount:    event.Amount,
+		TxHash:    vLog.TxHash.Hex(),
+		Event:     eventName,
+		Timestamp: event.Timestamp,
 	}
 
 	if eventData.Event == DepositEvent {
 		eventData.Duration = event.LockDuration
-		eventData.LockTimestamp = event.Timestamp
 	}
 
 	return eventData, nil

@@ -98,8 +98,6 @@ func (listener *MembershipEventListener) parseAndProcessMembershipEvent(vLog typ
 		Amount:          event.Amount.String(),
 		Status:          1,
 		EndDuration:     endDuration,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 	}
 
 	// Store event in the repository
