@@ -17,6 +17,12 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
+// Constants for the event types
+const (
+	DepositEvent  = "Deposit"
+	WithdrawEvent = "Withdraw"
+)
+
 // LockEventData represents the event data for both Deposit and Withdraw events.
 type LockEventData struct {
 	User     common.Address
@@ -61,56 +67,64 @@ func NewLockEventListener(
 // parseAndProcessLockEvent handles Deposit and Withdraw event-specific logic.
 func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (interface{}, error) {
 	event := struct {
-		User         common.Address
-		LockID       *big.Int
-		Amount       *big.Int
-		LockDuration *big.Int // Add duration to handle Deposit events
+		User           common.Address
+		LockID         *big.Int
+		Amount         *big.Int
+		CurrentBalance *big.Int
+		LockDuration   *big.Int // Add duration for Deposit events
 	}{}
 
 	var eventName string
 	var endDuration time.Time
 
 	if listener.isDepositEvent(vLog) {
-		err := listener.ParsedABI.UnpackIntoInterface(&event, "Deposit", vLog.Data)
-		eventName = "Deposit"
+		err := listener.ParsedABI.UnpackIntoInterface(&event, DepositEvent, vLog.Data)
+		eventName = DepositEvent
 		if err != nil {
 			return nil, fmt.Errorf("failed to unpack Deposit event: %w", err)
 		}
 
-		// Calculate endDuration based on lock timestamp (current time) and lock duration
 		lockDuration := time.Duration(event.LockDuration.Int64()) * time.Second
 		endDuration = time.Now().Add(lockDuration) // Current time + duration
 	} else if listener.isWithdrawEvent(vLog) {
-		err := listener.ParsedABI.UnpackIntoInterface(&event, "Withdraw", vLog.Data)
-		eventName = "Withdraw"
+		err := listener.ParsedABI.UnpackIntoInterface(&event, WithdrawEvent, vLog.Data)
+		eventName = WithdrawEvent
 		if err != nil {
 			return nil, fmt.Errorf("failed to unpack Withdraw event: %w", err)
 		}
 	}
 
-	// Extract the indexed fields (user address and lock ID).
 	event.User = common.HexToAddress(vLog.Topics[1].Hex())
-
 	lockID, err := parseHexToUint64(vLog.Topics[2].Hex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse lock ID: %w", err)
 	}
 
-	// Prepare the event model.
+	// Prepare the event model
 	eventModel := model.LockEvent{
 		UserAddress:     event.User.Hex(),
 		LockID:          lockID,
 		TransactionHash: vLog.TxHash.Hex(),
 		Amount:          event.Amount.String(),
 		LockAction:      strings.ToUpper(eventName),
-		Status:          1,
-		LockDuration:    event.LockDuration.Uint64(),
+		Status:          1, // Assume successful processing
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
-		EndDuration:     endDuration, // Set end duration for Deposit events
 	}
 
-	// Store event in the repository.
+	// Additional fields for Deposit events
+	if eventName == DepositEvent {
+		eventModel.CurrentBalance = event.CurrentBalance.String()
+		eventModel.LockDuration = event.LockDuration.Uint64()
+		eventModel.EndDuration = endDuration
+	}
+
+	// Additional fields for Withdraw events
+	if eventName == WithdrawEvent {
+		eventModel.CurrentBalance = event.CurrentBalance.String()
+	}
+
+	// Store event in the repository
 	err = listener.Repo.CreateLockEventHistory(context.Background(), eventModel)
 	if err != nil {
 		if isDuplicateTransactionError(err) {
@@ -121,14 +135,16 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		}
 	}
 
-	// Create event data.
 	eventData := &LockEventData{
-		User:     event.User,
-		LockID:   lockID,
-		Amount:   event.Amount,
-		TxHash:   vLog.TxHash.Hex(),
-		Event:    eventName,
-		Duration: event.LockDuration, // For Deposit events
+		User:   event.User,
+		LockID: lockID,
+		Amount: event.Amount,
+		TxHash: vLog.TxHash.Hex(),
+		Event:  eventName,
+	}
+
+	if eventData.Event == DepositEvent {
+		eventData.Duration = event.LockDuration
 	}
 
 	return eventData, nil

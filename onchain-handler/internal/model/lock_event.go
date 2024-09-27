@@ -8,6 +8,7 @@ type LockEvent struct {
 	LockID          uint64    `json:"lock_id"`
 	TransactionHash string    `json:"transaction_hash"`
 	Amount          string    `json:"amount"`
+	CurrentBalance  string    `json:"current_balance"`
 	LockAction      string    `json:"lock_action"`
 	Status          uint8     `json:"status"`
 	LockDuration    uint64    `json:"lock_duration"`
