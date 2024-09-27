@@ -42,7 +42,8 @@ contract TokenLock is OwnableUpgradeable, IERC20 {
     error TransferFailed();
     error NotSupported();
 
-    event Deposit(address indexed user, uint256 indexed lockId, uint256 amount, uint256 currentBalance, uint256 lockDuration);
+    // Updated event to include the block.timestamp
+    event Deposit(address indexed user, uint256 indexed lockId, uint256 amount, uint256 currentBalance, uint256 lockDuration, uint256 timestamp);
     event Withdraw(address indexed user, uint256 indexed lockId, uint256 amount, uint256 currentBalance);
 
     function initialize(
@@ -92,8 +93,8 @@ contract TokenLock is OwnableUpgradeable, IERC20 {
 
         _transferFromSender(amount);
 
-        // Emit event with current balance of the lock
-        emit Deposit(msg.sender, currentLockId, amount, user.locks[currentLockId].amount, duration);
+        // Emit event with current balance of the lock and current timestamp
+        emit Deposit(msg.sender, currentLockId, amount, user.locks[currentLockId].amount, duration, block.timestamp);
     }
 
     function withdraw(uint256 lockId, uint256 amount) public {
