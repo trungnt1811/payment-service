@@ -79,13 +79,13 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "lockDuration",
+        "name": "timestamp",
         "type": "uint256"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "timestamp",
+        "name": "lockDuration",
         "type": "uint256"
       }
     ],
@@ -161,6 +161,12 @@
         "indexed": false,
         "internalType": "uint256",
         "name": "currentBalance",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
         "type": "uint256"
       }
     ],
