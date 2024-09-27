@@ -103,6 +103,10 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		if err != nil {
 			return nil, fmt.Errorf("failed to unpack Withdraw event: %w", err)
 		}
+	} else {
+		// Log unknown event
+		log.LG.Warnf("Unknown event in log: %v", vLog)
+		return "Unknown lock event", nil
 	}
 
 	event.User = common.HexToAddress(vLog.Topics[1].Hex())
@@ -163,12 +167,12 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 
 func (listener *LockEventListener) isDepositEvent(vLog types.Log) bool {
 	// Check if this is a Deposit event by comparing the topic with the Deposit event signature
-	return vLog.Topics[0].Hex() == listener.ParsedABI.Events["Deposit"].ID.Hex()
+	return vLog.Topics[0].Hex() == listener.ParsedABI.Events[DepositEvent].ID.Hex()
 }
 
 func (listener *LockEventListener) isWithdrawEvent(vLog types.Log) bool {
 	// Check if this is a Withdraw event by comparing the topic with the Withdraw event signature
-	return vLog.Topics[0].Hex() == listener.ParsedABI.Events["Withdraw"].ID.Hex()
+	return vLog.Topics[0].Hex() == listener.ParsedABI.Events[WithdrawEvent].ID.Hex()
 }
 
 func (listener *LockEventListener) RegisterLockEventListener(ctx context.Context) {
