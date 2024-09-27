@@ -200,7 +200,7 @@ func (listener *BaseEventListener) processEvents(ctx context.Context) {
 	for {
 		select {
 		case event := <-listener.EventChan:
-			log.LG.Debugf("Received event: %+v", event)
+			log.LG.Debugf("Processed event: %+v", event)
 
 		case <-ctx.Done():
 			log.LG.Info("Stopping event processing...")

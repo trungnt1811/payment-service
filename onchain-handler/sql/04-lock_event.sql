@@ -6,7 +6,7 @@ CREATE TABLE lock_event (
     amount DECIMAL(50, 18),
     lock_action VARCHAR(10) NOT NULL, --DEPOSIT or WITHDRAW
     status SMALLINT NOT NULL DEFAULT 0,  -- 0 for pending, 1 for success, -1 for failed 
-    lock_duration TIMESTAMP NOT NULL,
+    lock_duration BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     end_duration TIMESTAMP NOT NULL,

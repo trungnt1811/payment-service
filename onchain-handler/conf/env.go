@@ -28,6 +28,7 @@ type BlockchainConfiguration struct {
 	TokenDistributionAddress      string `mapstructure:"TOKEN_DISTRIBUTION_ADDRESS"`
 	LifePointAddress              string `mapstructure:"LIFE_POINT_ADDRESS"`
 	MembershipContractAddress     string `mapstructure:"MEMBERSHIP_CONTRACT_ADDRESS"`
+	LockContractAddress           string `mapstructure:"LOCK_CONTRACT_ADDRESS"`
 	StartBlockListener            uint64 `mapstructure:"START_BLOCK_LISTENER"`
 }
 

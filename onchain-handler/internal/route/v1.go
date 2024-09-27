@@ -11,6 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/blockchain"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/internal/module/blockstate"
+	"github.com/genefriendway/onchain-handler/internal/module/lock"
 	"github.com/genefriendway/onchain-handler/internal/module/membership"
 	"github.com/genefriendway/onchain-handler/internal/module/transfer"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
@@ -32,6 +33,9 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 	membershipHandler := membership.NewMembershipHandler(membershipUCase)
 	appRouter.GET("/membership/events", membershipHandler.GetMembershipEventsByOrderIDs)
 
+	// SECTION: lock history
+	lockRepository := lock.NewLockRepository(db)
+
 	// SECTION: events listener
 	membershipEventListener, err := blockchain.NewMembershipEventListener(
 		ethClient,
@@ -47,6 +51,23 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 	go func() {
 		if err := membershipEventListener.RunListener(ctx); err != nil {
 			log.LG.Errorf("Error running MembershipEventListener: %v", err)
+		}
+	}()
+
+	lockEventListener, err := blockchain.NewLockEventListener(
+		ethClient,
+		config.Blockchain.LockContractAddress,
+		lockRepository,
+		blockstate.NewBlockstateRepository(db),
+		&config.Blockchain.StartBlockListener,
+	)
+	if err != nil {
+		log.LG.Errorf("Failed to initialize LockEventListener: %v", err)
+		return
+	}
+	go func() {
+		if err := lockEventListener.RunListener(ctx); err != nil {
+			log.LG.Errorf("Error running LockEventListener: %v", err)
 		}
 	}()
 }

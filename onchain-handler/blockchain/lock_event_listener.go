@@ -1,0 +1,151 @@
+package blockchain
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/model"
+	"github.com/genefriendway/onchain-handler/internal/utils/log"
+)
+
+// LockEventData represents the event data for both Deposit and Withdraw events.
+type LockEventData struct {
+	User     common.Address
+	LockID   uint64
+	Amount   *big.Int
+	TxHash   string
+	Event    string // "Deposit" or "Withdraw"
+	Duration *big.Int
+}
+
+// LockEventListener listens for Deposit and Withdraw events in the TokenLock contract.
+type LockEventListener struct {
+	*BaseEventListener
+	Repo interfaces.LockRepository
+}
+
+// NewLockEventListener initializes the lock event listener.
+func NewLockEventListener(
+	client *ethclient.Client,
+	contractAddr string,
+	repo interfaces.LockRepository,
+	lastBlockRepo interfaces.BlockStateRepository,
+	startBlockListener *uint64,
+) (*LockEventListener, error) {
+	abiFilePath, err := filepath.Abs("./contracts/abis/TokenLock.abi.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ABI file path: %w", err)
+	}
+
+	parsedABI, err := loadABI(abiFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load ABI: %w", err)
+	}
+
+	baseListener := NewBaseEventListener(client, contractAddr, parsedABI, lastBlockRepo, startBlockListener)
+	return &LockEventListener{
+		BaseEventListener: baseListener,
+		Repo:              repo,
+	}, nil
+}
+
+// parseAndProcessLockEvent handles Deposit and Withdraw event-specific logic.
+func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (interface{}, error) {
+	event := struct {
+		User         common.Address
+		LockID       *big.Int
+		Amount       *big.Int
+		LockDuration *big.Int // Add duration to handle Deposit events
+	}{}
+
+	var eventName string
+	var endDuration time.Time
+
+	if listener.isDepositEvent(vLog) {
+		err := listener.ParsedABI.UnpackIntoInterface(&event, "Deposit", vLog.Data)
+		eventName = "Deposit"
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack Deposit event: %w", err)
+		}
+
+		// Calculate endDuration based on lock timestamp (current time) and lock duration
+		lockDuration := time.Duration(event.LockDuration.Int64()) * time.Second
+		endDuration = time.Now().Add(lockDuration) // Current time + duration
+	} else if listener.isWithdrawEvent(vLog) {
+		err := listener.ParsedABI.UnpackIntoInterface(&event, "Withdraw", vLog.Data)
+		eventName = "Withdraw"
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack Withdraw event: %w", err)
+		}
+	}
+
+	// Extract the indexed fields (user address and lock ID).
+	event.User = common.HexToAddress(vLog.Topics[1].Hex())
+
+	lockID, err := parseHexToUint64(vLog.Topics[2].Hex())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse lock ID: %w", err)
+	}
+
+	// Prepare the event model.
+	eventModel := model.LockEvent{
+		UserAddress:     event.User.Hex(),
+		LockID:          lockID,
+		TransactionHash: vLog.TxHash.Hex(),
+		Amount:          event.Amount.String(),
+		LockAction:      strings.ToUpper(eventName),
+		Status:          1,
+		LockDuration:    event.LockDuration.Uint64(),
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		EndDuration:     endDuration, // Set end duration for Deposit events
+	}
+
+	// Store event in the repository.
+	err = listener.Repo.CreateLockEventHistory(context.Background(), eventModel)
+	if err != nil {
+		if isDuplicateTransactionError(err) {
+			log.LG.Warnf("Duplicate transaction detected for TxHash %s: %v", vLog.TxHash.Hex(), err)
+		} else {
+			log.LG.Errorf("Failed to create lock event history for LockID %d: %v", lockID, err)
+			return nil, err
+		}
+	}
+
+	// Create event data.
+	eventData := &LockEventData{
+		User:     event.User,
+		LockID:   lockID,
+		Amount:   event.Amount,
+		TxHash:   vLog.TxHash.Hex(),
+		Event:    eventName,
+		Duration: event.LockDuration, // For Deposit events
+	}
+
+	return eventData, nil
+}
+
+func (listener *LockEventListener) isDepositEvent(vLog types.Log) bool {
+	// Check if this is a Deposit event by comparing the topic with the Deposit event signature
+	return vLog.Topics[0].Hex() == listener.ParsedABI.Events["Deposit"].ID.Hex()
+}
+
+func (listener *LockEventListener) isWithdrawEvent(vLog types.Log) bool {
+	// Check if this is a Withdraw event by comparing the topic with the Withdraw event signature
+	return vLog.Topics[0].Hex() == listener.ParsedABI.Events["Withdraw"].ID.Hex()
+}
+
+// RunListener starts the listener with specific event processing logic.
+func (listener *LockEventListener) RunListener(ctx context.Context) error {
+	// Pass the specific event parsing function.
+	return listener.BaseEventListener.RunListener(ctx, listener.parseAndProcessLockEvent)
+}

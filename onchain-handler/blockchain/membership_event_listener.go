@@ -66,7 +66,8 @@ func (listener *MembershipEventListener) parseAndProcessMembershipEvent(vLog typ
 	}{}
 
 	// Unpack the log data into the event structure.
-	err := listener.ParsedABI.UnpackIntoInterface(&event, "MembershipPurchased", vLog.Data)
+	eventName := "MembershipPurchased"
+	err := listener.ParsedABI.UnpackIntoInterface(&event, eventName, vLog.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack log for TxHash %s: %w", vLog.TxHash.Hex(), err)
 	}
