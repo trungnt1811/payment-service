@@ -73,7 +73,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		Amount         *big.Int
 		CurrentBalance *big.Int
 		LockDuration   *big.Int // Add duration for Deposit events
-		LockTimestamp  *big.Int // Add lock timestamp for Deposit events
+		Timestamp      *big.Int // Add lock timestamp for Deposit events
 	}{}
 
 	var eventName string
@@ -86,13 +86,13 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 			return nil, fmt.Errorf("failed to unpack Deposit event: %w", err)
 		}
 
-		// Convert LockTimestamp to time.Time
-		lockTimestamp := time.Unix(event.LockTimestamp.Int64(), 0)
+		// Convert lock Timestamp to time.Time
+		lockTimestamp := time.Unix(event.Timestamp.Int64(), 0)
 
 		// Convert LockDuration to a time.Duration
 		lockDuration := time.Duration(event.LockDuration.Int64()) * time.Second
 
-		// Calculate the end duration as LockTimestamp + LockDuration
+		// Calculate the end duration as lock Timestamp + LockDuration
 		endDuration = lockTimestamp.Add(lockDuration)
 	} else if listener.isWithdrawEvent(vLog) {
 		err := listener.ParsedABI.UnpackIntoInterface(&event, WithdrawEvent, vLog.Data)
@@ -125,7 +125,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		eventModel.CurrentBalance = event.CurrentBalance.String()
 		eventModel.LockDuration = event.LockDuration.Uint64()
 		eventModel.EndDuration = endDuration
-		eventModel.LockTimestamp = event.LockTimestamp.Uint64()
+		eventModel.LockTimestamp = event.Timestamp.Uint64()
 	}
 
 	// Additional fields for Withdraw events
@@ -154,7 +154,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 
 	if eventData.Event == DepositEvent {
 		eventData.Duration = event.LockDuration
-		eventData.LockTimestamp = event.LockTimestamp
+		eventData.LockTimestamp = event.Timestamp
 	}
 
 	return eventData, nil
