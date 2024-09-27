@@ -1,4 +1,46 @@
 definitions:
+  dto.LockEventDTO:
+    properties:
+      amount:
+        type: string
+      created_at:
+        type: string
+      current_balance:
+        type: string
+      deposit_amount:
+        type: string
+      end_duration:
+        type: string
+      id:
+        type: integer
+      lock_action:
+        type: string
+      lock_duration:
+        type: integer
+      lock_id:
+        type: integer
+      status:
+        type: integer
+      transaction_hash:
+        type: string
+      user_address:
+        type: string
+    type: object
+  dto.LockEventDTOResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.LockEventDTO'
+        type: array
+      next_page:
+        type: integer
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
   dto.MembershipEventDTO:
     properties:
       amount:
@@ -42,6 +84,46 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/lock/latest-events:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint fetches a paginated list of lock events based on
+        the provided user address.
+      parameters:
+      - description: User's wallet address
+        in: query
+        name: userAddress
+        required: true
+        type: string
+      - description: Page number, default is 1
+        in: query
+        name: page
+        type: integer
+      - description: Page size, default is 10
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of lock events
+          schema:
+            $ref: '#/definitions/dto.LockEventDTOResponse'
+        "400":
+          description: Invalid user address or missing parameters
+          schema:
+            $ref: '#/definitions/util.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/util.GeneralError'
+      security:
+      - ApiKeyAuth: []
+      summary: Get list of latest lock events by user address
+      tags:
+      - lock
   /api/v1/membership/events:
     get:
       consumes:

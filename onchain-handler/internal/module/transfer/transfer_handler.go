@@ -8,6 +8,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	util "github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
@@ -69,10 +70,7 @@ func (h *TransferHandler) Transfer(ctx *gin.Context) {
 	// Proceed to distribute tokens if all checks pass
 	if err := h.UCase.DistributeTokens(ctx, req); err != nil {
 		log.LG.Errorf("Failed to distribute tokens: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to distribute tokens",
-			"details": err.Error(),
-		})
+		util.RespondError(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
 		return
 	}
 

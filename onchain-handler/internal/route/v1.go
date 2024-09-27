@@ -35,6 +35,9 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 
 	// SECTION: lock history
 	lockRepository := lock.NewLockRepository(db)
+	lockUCase := lock.NewLockUCase(lockRepository)
+	lockHandler := lock.NewLockHandler(lockUCase)
+	appRouter.GET("/membership/latest-events", lockHandler.GetLatestLockEventsByUserAddress)
 
 	// SECTION: events listener
 	membershipEventListener, err := blockchain.NewMembershipEventListener(

@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/genefriendway/onchain-handler/internal/dto"
+)
 
 type LockEvent struct {
 	ID              uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -19,4 +23,20 @@ type LockEvent struct {
 
 func (m *LockEvent) TableName() string {
 	return "lock_event"
+}
+
+func (m *LockEvent) ToDto() dto.LockEventDTO {
+	return dto.LockEventDTO{
+		ID:              m.ID,
+		UserAddress:     m.UserAddress,
+		LockID:          m.LockID,
+		TransactionHash: m.TransactionHash,
+		Amount:          m.Amount,
+		CurrentBalance:  m.CurrentBalance,
+		LockAction:      m.LockAction,
+		Status:          m.Status,
+		LockDuration:    m.LockDuration,
+		CreatedAt:       m.CreatedAt,
+		EndDuration:     m.EndDuration,
+	}
 }

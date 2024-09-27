@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	util "github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
@@ -56,7 +57,7 @@ func (h *MembershipHandler) GetMembershipEventsByOrderIDs(ctx *gin.Context) {
 	events, err := h.UCase.GetMembershipEventsByOrderIDs(ctx, orderIDs)
 	if err != nil {
 		log.LG.Errorf("Failed to retrieve membership events: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve membership events", err)
 		return
 	}
 
