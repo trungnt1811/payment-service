@@ -1,6 +1,6 @@
 CREATE TABLE membership_event (
     id BIGSERIAL PRIMARY KEY,
-    user_address VARCHAR(50) NOT NULL,
+    user_address VARCHAR(42) NOT NULL,
     order_id BIGINT NOT NULL,
     transaction_hash VARCHAR(66) NOT NULL UNIQUE,
     amount DECIMAL(50, 18),
@@ -13,15 +13,6 @@ CREATE TABLE membership_event (
 
 CREATE INDEX membership_event_order_id_idx ON membership_event (order_id);
 CREATE INDEX membership_event_status_end_duration_idx ON membership_event (status, end_duration);
-
--- Create a trigger to update 'updated_at' column on update
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-   NEW.updated_at = NOW();
-   RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_membership_event_updated_at
 BEFORE UPDATE ON membership_event
