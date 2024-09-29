@@ -80,17 +80,18 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 	}{}
 
 	var eventName string
+	var lockTimestamp time.Time
 	var endDuration time.Time
 
 	if listener.isDepositEvent(vLog) {
-		err := listener.ParsedABI.UnpackIntoInterface(&event, DepositEvent, vLog.Data)
 		eventName = DepositEvent
+		err := listener.ParsedABI.UnpackIntoInterface(&event, DepositEvent, vLog.Data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unpack Deposit event: %w", err)
 		}
 
 		// Convert lock Timestamp to time.Time
-		lockTimestamp := time.Unix(event.Timestamp.Int64(), 0)
+		lockTimestamp = time.Unix(event.Timestamp.Int64(), 0)
 
 		// Convert LockDuration to a time.Duration
 		lockDuration := time.Duration(event.LockDuration.Int64()) * time.Second
@@ -98,11 +99,14 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		// Calculate the end duration as lock Timestamp + LockDuration
 		endDuration = lockTimestamp.Add(lockDuration)
 	} else if listener.isWithdrawEvent(vLog) {
-		err := listener.ParsedABI.UnpackIntoInterface(&event, WithdrawEvent, vLog.Data)
 		eventName = WithdrawEvent
+		err := listener.ParsedABI.UnpackIntoInterface(&event, WithdrawEvent, vLog.Data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unpack Withdraw event: %w", err)
 		}
+
+		// Convert lock Timestamp to time.Time
+		lockTimestamp = time.Unix(event.Timestamp.Int64(), 0)
 	} else {
 		// Log unknown event
 		log.LG.Warnf("Unknown event in log: %v", vLog)
@@ -123,7 +127,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 		Amount:          event.Amount.String(),
 		LockAction:      strings.ToUpper(eventName),
 		Status:          1, // Assume successful processing
-		LockTimestamp:   event.Timestamp.Uint64(),
+		CreatedAt:       lockTimestamp,
 	}
 
 	// Additional fields for Deposit events

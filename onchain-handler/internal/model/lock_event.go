@@ -16,7 +16,6 @@ type LockEvent struct {
 	LockAction      string    `json:"lock_action"`
 	Status          uint8     `json:"status"`
 	LockDuration    uint64    `json:"lock_duration"`
-	LockTimestamp   uint64    `json:"lock_timestamp"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	EndDuration     time.Time `json:"end_duration"`
@@ -37,7 +36,6 @@ func (m *LockEvent) ToDto() dto.LockEventDTO {
 		LockAction:      m.LockAction,
 		Status:          m.Status,
 		LockDuration:    m.LockDuration,
-		LockTimestamp:   m.LockTimestamp,
 		CreatedAt:       m.CreatedAt,
 		EndDuration:     m.EndDuration,
 	}
