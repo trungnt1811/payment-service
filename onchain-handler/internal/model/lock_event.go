@@ -6,6 +6,11 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 )
 
+const (
+	DepositLockAction  = "DEPOSIT"
+	WithdrawLockAction = "WITHDRAW"
+)
+
 type LockEvent struct {
 	ID              uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	UserAddress     string    `json:"user_address"`
@@ -26,7 +31,7 @@ func (m *LockEvent) TableName() string {
 }
 
 func (m *LockEvent) ToDto() dto.LockEventDTO {
-	return dto.LockEventDTO{
+	dto := dto.LockEventDTO{
 		ID:              m.ID,
 		UserAddress:     m.UserAddress,
 		LockID:          m.LockID,
@@ -35,8 +40,13 @@ func (m *LockEvent) ToDto() dto.LockEventDTO {
 		CurrentBalance:  m.CurrentBalance,
 		LockAction:      m.LockAction,
 		Status:          m.Status,
-		LockDuration:    m.LockDuration,
 		CreatedAt:       m.CreatedAt,
-		EndDuration:     m.EndDuration,
 	}
+
+	if m.LockAction == DepositLockAction {
+		dto.LockDuration = m.LockDuration
+		dto.EndDuration = m.EndDuration
+	}
+
+	return dto
 }

@@ -12,7 +12,7 @@ type LockEventDTO struct {
 	CurrentBalance  string    `json:"current_balance"`
 	LockAction      string    `json:"lock_action"`
 	Status          uint8     `json:"status"`
-	LockDuration    uint64    `json:"lock_duration"`
+	LockDuration    uint64    `json:"lock_duration,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
-	EndDuration     time.Time `json:"end_duration"`
+	EndDuration     time.Time `json:"end_duration,omitempty"`
 }
