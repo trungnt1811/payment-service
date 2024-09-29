@@ -1,4 +1,4 @@
-package blockchain
+package listeners
 
 import (
 	"context"
@@ -9,8 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	listener_interfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/utils"
 )
 
 const (
@@ -35,7 +37,7 @@ func NewBaseEventListener(
 	client *ethclient.Client,
 	lastBlockRepo interfaces.BlockStateRepository,
 	startBlockListener *uint64,
-) *BaseEventListener {
+) listener_interfaces.BaseEventListener {
 	eventChan := make(chan interface{}, DefaultEventChannelBufferSize)
 
 	// Fetch the last processed block from the repository
@@ -63,7 +65,7 @@ func NewBaseEventListener(
 }
 
 // registerEventListener registers an event listener for a specific contract
-func (listener *BaseEventListener) registerEventListener(contractAddress string, handler func(log types.Log) (interface{}, error)) {
+func (listener *BaseEventListener) RegisterEventListener(contractAddress string, handler func(log types.Log) (interface{}, error)) {
 	address := common.HexToAddress(contractAddress)
 	listener.EventHandlers[address] = handler
 }
@@ -102,7 +104,7 @@ func (listener *BaseEventListener) listen(ctx context.Context) {
 	lastBlock, err := listener.LastBlockRepo.GetLastProcessedBlock(ctx)
 	if err != nil || lastBlock == 0 {
 		log.LG.Warnf("Failed to get last processed block or it was zero: %v", err)
-		latestBlock, err := getLatestBlockNumber(ctx, listener.ETHClient)
+		latestBlock, err := utils.GetLatestBlockNumber(ctx, listener.ETHClient)
 		if err != nil {
 			log.LG.Errorf("Failed to retrieve the latest block number from blockchain: %v", err)
 			return
@@ -125,7 +127,7 @@ func (listener *BaseEventListener) listen(ctx context.Context) {
 	// Continuously listen for new events.
 	for {
 		// Retrieve the latest block number from the blockchain to stay up-to-date.
-		latestBlock, err := getLatestBlockNumber(ctx, listener.ETHClient)
+		latestBlock, err := utils.GetLatestBlockNumber(ctx, listener.ETHClient)
 		if err != nil {
 			log.LG.Errorf("Failed to retrieve the latest block number from blockchain: %v", err)
 			time.Sleep(RetryDelay)
@@ -166,7 +168,7 @@ func (listener *BaseEventListener) listen(ctx context.Context) {
 			// Poll logs from the blockchain with retries in case of failure.
 			for retries := 0; retries < MaxRetries; retries++ {
 				// Poll logs from the chunk of blocks.
-				logs, err = pollForLogsFromBlock(ctx, listener.ETHClient, contractAddresses, chunkStart, chunkEnd)
+				logs, err = utils.PollForLogsFromBlock(ctx, listener.ETHClient, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
 					log.LG.Warnf("Failed to poll logs from block %d to %d: %v. Retrying...", chunkStart, chunkEnd, err)
 					time.Sleep(RetryDelay)

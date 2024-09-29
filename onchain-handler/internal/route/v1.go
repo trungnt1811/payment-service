@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 
-	"github.com/genefriendway/onchain-handler/blockchain"
+	"github.com/genefriendway/onchain-handler/blockchain/listeners"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/internal/module/blockstate"
 	"github.com/genefriendway/onchain-handler/internal/module/lock"
@@ -23,7 +23,7 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 
 	// SECTION: reward tokens
 	transferRepository := transfer.NewTransferRepository(db)
-	transferUCase := transfer.NewtTransferUCase(transferRepository, ethClient, config)
+	transferUCase := transfer.NewTransferUCase(transferRepository, ethClient, config)
 	transferHandler := transfer.NewTransferHandler(transferUCase)
 	appRouter.POST("/transfer", transferHandler.Transfer)
 
@@ -41,13 +41,13 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 
 	// SECTION: events listener
 	// base event listener for common listener logic
-	baseEventListener := blockchain.NewBaseEventListener(
+	baseEventListener := listeners.NewBaseEventListener(
 		ethClient,
 		blockstate.NewBlockstateRepository(db),
 		&config.Blockchain.StartBlockListener,
 	)
 	// membership event listener
-	membershipEventListener, err := blockchain.NewMembershipEventListener(
+	membershipEventListener, err := listeners.NewMembershipEventListener(
 		baseEventListener,
 		ethClient,
 		config.Blockchain.MembershipContractAddress,
@@ -57,9 +57,9 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 		log.LG.Errorf("Failed to initialize MembershipEventListener: %v", err)
 		return
 	}
-	membershipEventListener.RegisterMembershipEventListener(ctx)
+	membershipEventListener.Register(ctx)
 	// lock event listener
-	lockEventListener, err := blockchain.NewLockEventListener(
+	lockEventListener, err := listeners.NewLockEventListener(
 		baseEventListener,
 		ethClient,
 		config.Blockchain.LockContractAddress,
@@ -69,7 +69,7 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 		log.LG.Errorf("Failed to initialize LockEventListener: %v", err)
 		return
 	}
-	lockEventListener.RegisterLockEventListener(ctx)
+	lockEventListener.Register(ctx)
 
 	go func() {
 		if err := baseEventListener.RunListener(ctx); err != nil {

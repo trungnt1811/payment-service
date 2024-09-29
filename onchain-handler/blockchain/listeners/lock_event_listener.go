@@ -1,4 +1,4 @@
-package blockchain
+package listeners
 
 import (
 	"context"
@@ -13,9 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	listener_interfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/utils"
 )
 
 // Constants for the event types
@@ -37,7 +39,7 @@ type LockEventData struct {
 
 // LockEventListener listens for Deposit and Withdraw events in the TokenLock contract.
 type LockEventListener struct {
-	BaseEventListener *BaseEventListener
+	BaseEventListener listener_interfaces.BaseEventListener
 	Repo              interfaces.LockRepository
 	ContractAddress   string
 	ParsedABI         abi.ABI
@@ -45,17 +47,17 @@ type LockEventListener struct {
 
 // NewLockEventListener initializes the lock event listener.
 func NewLockEventListener(
-	baseEventListener *BaseEventListener,
+	baseEventListener listener_interfaces.BaseEventListener,
 	client *ethclient.Client,
 	contractAddr string,
 	repo interfaces.LockRepository,
-) (*LockEventListener, error) {
+) (listener_interfaces.EventListener, error) {
 	abiFilePath, err := filepath.Abs("./contracts/abis/TokenLock.abi.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ABI file path: %w", err)
 	}
 
-	parsedABI, err := loadABI(abiFilePath)
+	parsedABI, err := utils.LoadABI(abiFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load ABI: %w", err)
 	}
@@ -114,7 +116,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 	}
 
 	event.User = common.HexToAddress(vLog.Topics[1].Hex())
-	lockID, err := parseHexToUint64(vLog.Topics[2].Hex())
+	lockID, err := utils.ParseHexToUint64(vLog.Topics[2].Hex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse lock ID: %w", err)
 	}
@@ -145,7 +147,7 @@ func (listener *LockEventListener) parseAndProcessLockEvent(vLog types.Log) (int
 	// Store event in the repository
 	err = listener.Repo.CreateLockEventHistory(context.Background(), eventModel)
 	if err != nil {
-		if isDuplicateTransactionError(err) {
+		if utils.IsDuplicateTransactionError(err) {
 			log.LG.Warnf("Duplicate transaction detected for TxHash %s: %v", vLog.TxHash.Hex(), err)
 		} else {
 			log.LG.Errorf("Failed to create lock event history for LockID %d: %v", lockID, err)
@@ -179,8 +181,8 @@ func (listener *LockEventListener) isWithdrawEvent(vLog types.Log) bool {
 	return vLog.Topics[0].Hex() == listener.ParsedABI.Events[WithdrawEvent].ID.Hex()
 }
 
-func (listener *LockEventListener) RegisterLockEventListener(ctx context.Context) {
-	listener.BaseEventListener.registerEventListener(
+func (listener *LockEventListener) Register(ctx context.Context) {
+	listener.BaseEventListener.RegisterEventListener(
 		listener.ContractAddress,
 		listener.parseAndProcessLockEvent,
 	)

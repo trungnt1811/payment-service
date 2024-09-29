@@ -1,4 +1,4 @@
-package blockchain
+package listeners
 
 import (
 	"context"
@@ -12,9 +12,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	listener_interfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/utils"
 )
 
 // MembershipEventData represents the event data for a MembershipPurchased event.
@@ -28,7 +30,7 @@ type MembershipEventData struct {
 
 // MembershipEventListener listens for MembershipPurchased events.
 type MembershipEventListener struct {
-	BaseEventListener *BaseEventListener
+	BaseEventListener listener_interfaces.BaseEventListener
 	Repo              interfaces.MembershipRepository
 	ContractAddress   string
 	ParsedABI         abi.ABI
@@ -36,17 +38,17 @@ type MembershipEventListener struct {
 
 // NewMembershipEventListener initializes the membership event listener.
 func NewMembershipEventListener(
-	baseEventListener *BaseEventListener,
+	baseEventListener listener_interfaces.BaseEventListener,
 	client *ethclient.Client,
 	contractAddr string,
 	repo interfaces.MembershipRepository,
-) (*MembershipEventListener, error) {
+) (listener_interfaces.EventListener, error) {
 	abiFilePath, err := filepath.Abs("./contracts/abis/MembershipPurchase.abi.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ABI file path: %w", err)
 	}
 
-	parsedABI, err := loadABI(abiFilePath)
+	parsedABI, err := utils.LoadABI(abiFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load ABI: %w", err)
 	}
@@ -89,7 +91,7 @@ func (listener *MembershipEventListener) parseAndProcessMembershipEvent(vLog typ
 		return nil, fmt.Errorf("invalid duration value: %d", event.Duration)
 	}
 
-	orderID, err := parseHexToUint64(vLog.Topics[2].Hex())
+	orderID, err := utils.ParseHexToUint64(vLog.Topics[2].Hex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse order ID: %w", err)
 	}
@@ -107,7 +109,7 @@ func (listener *MembershipEventListener) parseAndProcessMembershipEvent(vLog typ
 	// Handle duplicate transaction errors gracefully
 	err = listener.Repo.CreateMembershipEventHistory(context.Background(), eventModel)
 	if err != nil {
-		if isDuplicateTransactionError(err) {
+		if utils.IsDuplicateTransactionError(err) {
 			log.LG.Warnf("Duplicate transaction detected for TxHash %s: %v", vLog.TxHash.Hex(), err)
 		} else {
 			log.LG.Errorf("Failed to create membership event history for OrderID %d: %v", event.OrderID, err)
@@ -127,8 +129,8 @@ func (listener *MembershipEventListener) parseAndProcessMembershipEvent(vLog typ
 	return eventData, nil
 }
 
-func (listener *MembershipEventListener) RegisterMembershipEventListener(ctx context.Context) {
-	listener.BaseEventListener.registerEventListener(
+func (listener *MembershipEventListener) Register(ctx context.Context) {
+	listener.BaseEventListener.RegisterEventListener(
 		listener.ContractAddress,
 		listener.parseAndProcessMembershipEvent,
 	)

@@ -7,12 +7,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/genefriendway/onchain-handler/blockchain"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/internal/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
+	"github.com/genefriendway/onchain-handler/utils"
 )
 
 type transferUCase struct {
@@ -21,7 +21,7 @@ type transferUCase struct {
 	Config            *conf.Configuration
 }
 
-func NewtTransferUCase(transferRepository interfaces.TransferRepository, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TransferUCase {
+func NewTransferUCase(transferRepository interfaces.TransferRepository, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TransferUCase {
 	return &transferUCase{
 		TrasferRepository: transferRepository,
 		ETHClient:         ethClient,
@@ -102,7 +102,7 @@ func (u *transferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadD
 
 // distributeAndSaveRewards distributes rewards and updates reward history
 func (u *transferUCase) distributeAndSaveTransferHistories(ctx context.Context, rewards []model.TransferHistory, recipients map[string]*big.Int) error {
-	txHash, err := blockchain.DistributeTokens(u.ETHClient, u.Config, recipients)
+	txHash, err := utils.DistributeTokens(u.ETHClient, u.Config, recipients)
 	for index := range rewards {
 		if err != nil {
 			rewards[index].ErrorMessage = fmt.Sprintf("Failed to distribute: %v", err)
