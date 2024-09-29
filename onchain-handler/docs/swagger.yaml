@@ -19,8 +19,6 @@ definitions:
         type: integer
       lock_id:
         type: integer
-      lock_timestamp:
-        type: integer
       status:
         type: integer
       transaction_hash:
