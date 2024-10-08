@@ -16,7 +16,7 @@ async function main() {
     const tokenName = "LifePoint V1";
     const tokenSymbol = "LPV1";
     const ownerAddress = "0xOwnerAddress"; // Replace with the actual owner address
-    const totalMinted = ethers.utils.parseEther("100000000"); // Mint 100,000,000 tokens (18 decimals)
+    const totalMinted = 100000000; // Mint 100,000,000 tokens (18 decimals)
 
     // Deploy a new version of LifePointToken using the factory
     const tx = await lifePointTokenFactory.createLifePointToken(tokenName, tokenSymbol, ownerAddress, totalMinted);
@@ -33,7 +33,7 @@ async function main() {
     const token = await LifePointToken.attach(lifePointTokenAddress);
 
     // Mint 1000 tokens for the recipient
-    const mintAmount = ethers.utils.parseEther("1000");  // 1000 tokens with 18 decimals
+    const mintAmount = 1000;  // 1000 tokens with 18 decimals
 
     // Call the mint function directly
     const mintTx = await token.mint(recipient.address, mintAmount);
