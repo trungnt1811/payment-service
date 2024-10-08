@@ -16,7 +16,7 @@ async function main() {
     const tokenName = "LifePoint V1";
     const tokenSymbol = "LPV1";
     const ownerAddress = "0xOwnerAddress"; // Replace with the actual owner address
-    const totalMinted = ethers.utils.parseUnits("100000000", 18); // Mint 100,000,000 tokens (18 decimals)
+    const totalMinted = ethers.utils.parseEther("100000000"); // Mint 100,000,000 tokens (18 decimals)
 
     // Deploy a new version of LifePointToken using the factory
     const tx = await lifePointTokenFactory.createLifePointToken(tokenName, tokenSymbol, ownerAddress, totalMinted);
