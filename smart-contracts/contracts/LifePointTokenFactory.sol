@@ -14,18 +14,19 @@ contract LifePointTokenFactory is Ownable {
     function createLifePointToken(
         string memory name, 
         string memory symbol, 
+        address owner, 
         uint256 totalMinted
     ) external onlyOwner {
         versionCounter++;
-        LifePointToken newToken = new LifePointToken(name, symbol, msg.sender, totalMinted);
+        LifePointToken newToken = new LifePointToken(name, symbol, owner, totalMinted);
         lifePointTokens[versionCounter] = newToken;
 
         emit LifePointTokenCreated(versionCounter, address(newToken), totalMinted);
     }
 
     // Function to get the address of a token by version
-    function getLifePointToken(uint256 version) external view returns (LifePointToken) {
+    function getLifePointToken(uint256 version) external view returns (address) {
         require(address(lifePointTokens[version]) != address(0), "Token version does not exist");
-        return lifePointTokens[version];
+        return address(lifePointTokens[version]);
     }
 }
