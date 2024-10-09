@@ -7,6 +7,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract BulkSender is Ownable {
     event BulkTransfer(address indexed token, uint256 totalAmount, uint256 recipientCount);
 
+    // This function allows sending AVAX to the contract
+    receive() external payable {}
+
     // Bulk transfer function for any ERC-20 token
     function bulkTransfer(address token, address[] calldata recipients, uint256[] calldata values) external onlyOwner {
         // Ensure input data consistency
@@ -27,7 +30,9 @@ contract BulkSender is Ownable {
     // Internal function to process the actual transfers
     function _processTransfers(IERC20 erc20, address[] calldata recipients, uint256[] calldata values) internal returns (uint256 totalAmount) {
         for (uint256 i = 0; i < recipients.length; i++) {
-            erc20.transferFrom(msg.sender, recipients[i], values[i]);
+            // Ensure that the transfer is successful
+            bool success = erc20.transferFrom(msg.sender, recipients[i], values[i]);
+            require(success, "Transfer failed"); // Revert if transfer fails
             totalAmount += values[i];
         }
     }
