@@ -2,44 +2,75 @@
 pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract BulkSender is Ownable {
-    using SafeERC20 for IERC20;
+contract BulkSender {
+    // Events for logging transfers
+    event ERC20Transfer(address indexed token, address indexed from, address indexed to, uint256 amount);
+    event NativeTransfer(address indexed from, address indexed to, uint256 amount);
 
-    event BulkTransfer(address indexed token, uint256 totalAmount, uint256 recipientCount);
+    error ArraysLengthMismatch(uint256 recipientsLength, uint256 amountsLength);
 
-    // This function allows sending AVAX to the contract
-    receive() external payable {}
+    /**
+     * @notice Transfers tokens or Ether to multiple recipients in a single transaction.
+     * @param recipients An array of recipient addresses.
+     * @param amounts An array of amounts to transfer to each recipient.
+     * @param tokenAddress The address of the ERC-20 token to transfer, or address(0) for Ether transfers.
+     */
+    function bulkTransfer(
+        address[] calldata recipients,
+        uint256[] calldata amounts,
+        address tokenAddress
+    ) external payable {
+        // Check that the recipients and amounts arrays have the same length
+        if (recipients.length != amounts.length) {
+            revert ArraysLengthMismatch(recipients.length, amounts.length);
+        }
 
-    // Bulk transfer function for any ERC-20 token
-    function bulkTransfer(address token, address[] calldata recipients, uint256[] calldata values) external onlyOwner {
-        // Ensure input data consistency
-        _validateInputs(recipients, values);
+        // If tokenAddress is address(0), perform Ether transfers
+        if (tokenAddress == address(0)) {
+            _bulkTransferNative(recipients, amounts);
+        } else {
+            // Otherwise, perform ERC-20 token transfers
+            _bulkTransferERC20(recipients, amounts, tokenAddress);
+        }
 
-        IERC20 erc20 = IERC20(token);
-        uint256 totalAmount = _processTransfers(erc20, recipients, values);
-
-        emit BulkTransfer(token, totalAmount, recipients.length);
-    }
-
-    // Internal function to validate inputs
-    function _validateInputs(address[] calldata recipients, uint256[] calldata values) internal pure {
-        require(recipients.length == values.length, "Recipients and values length mismatch");
-        require(recipients.length > 0, "No recipients");
-
-        for (uint256 i = 0; i < recipients.length; i++) {
-            require(recipients[i] != address(0), "Cannot transfer to zero address");
+        // Return any leftover Ether back to the sender
+        if (address(this).balance > 0) {
+            payable(msg.sender).transfer(address(this).balance);
         }
     }
 
-    // Internal function to process the actual transfers
-    function _processTransfers(IERC20 erc20, address[] calldata recipients, uint256[] calldata values) internal returns (uint256 totalAmount) {
+    /**
+     * @notice Internal function to transfer Ether to multiple recipients.
+     * @param recipients An array of recipient addresses.
+     * @param amounts An array of amounts to transfer to each recipient.
+     */
+    function _bulkTransferNative(address[] calldata recipients, uint256[] calldata amounts) private {
         for (uint256 i = 0; i < recipients.length; i++) {
-            // Ensure that the transfer is successful
-            erc20.safeTransferFrom(msg.sender, recipients[i], values[i]);
-            totalAmount += values[i];
+            address recipient = recipients[i];
+            uint256 amount = amounts[i];
+            payable(recipient).transfer(amount);
+            emit NativeTransfer(msg.sender, recipient, amount);
+        }
+    }
+
+    /**
+     * @notice Internal function to transfer ERC-20 tokens to multiple recipients.
+     * @param recipients An array of recipient addresses.
+     * @param amounts An array of amounts to transfer to each recipient.
+     * @param tokenAddress The address of the ERC-20 token to transfer.
+     */
+    function _bulkTransferERC20(
+        address[] calldata recipients,
+        uint256[] calldata amounts,
+        address tokenAddress
+    ) private {
+        IERC20 token = IERC20(tokenAddress);
+        for (uint256 i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
+            uint256 amount = amounts[i];
+            token.transferFrom(msg.sender, recipient, amount);
+            emit ERC20Transfer(tokenAddress, msg.sender, recipient, amount);
         }
     }
 }

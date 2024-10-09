@@ -31,7 +31,7 @@ var (
 
 // BulksenderMetaData contains all meta data concerning the Bulksender contract.
 var BulksenderMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"recipientCount\",\"type\":\"uint256\"}],\"name\":\"BulkTransfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"}],\"name\":\"bulkTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"recipientsLength\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountsLength\",\"type\":\"uint256\"}],\"name\":\"ArraysLengthMismatch\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"NativeTransfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"}],\"name\":\"bulkTransfer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // BulksenderABI is the input ABI used to generate the binding from.
@@ -180,124 +180,30 @@ func (_Bulksender *BulksenderTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _Bulksender.Contract.contract.Transact(opts, method, params...)
 }
 
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+// BulkTransfer is a paid mutator transaction binding the contract method 0x89ef8292.
 //
-// Solidity: function owner() view returns(address)
-func (_Bulksender *BulksenderCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _Bulksender.contract.Call(opts, &out, "owner")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
+// Solidity: function bulkTransfer(address[] recipients, uint256[] amounts, address tokenAddress) payable returns()
+func (_Bulksender *BulksenderTransactor) BulkTransfer(opts *bind.TransactOpts, recipients []common.Address, amounts []*big.Int, tokenAddress common.Address) (*types.Transaction, error) {
+	return _Bulksender.contract.Transact(opts, "bulkTransfer", recipients, amounts, tokenAddress)
 }
 
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+// BulkTransfer is a paid mutator transaction binding the contract method 0x89ef8292.
 //
-// Solidity: function owner() view returns(address)
-func (_Bulksender *BulksenderSession) Owner() (common.Address, error) {
-	return _Bulksender.Contract.Owner(&_Bulksender.CallOpts)
+// Solidity: function bulkTransfer(address[] recipients, uint256[] amounts, address tokenAddress) payable returns()
+func (_Bulksender *BulksenderSession) BulkTransfer(recipients []common.Address, amounts []*big.Int, tokenAddress common.Address) (*types.Transaction, error) {
+	return _Bulksender.Contract.BulkTransfer(&_Bulksender.TransactOpts, recipients, amounts, tokenAddress)
 }
 
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+// BulkTransfer is a paid mutator transaction binding the contract method 0x89ef8292.
 //
-// Solidity: function owner() view returns(address)
-func (_Bulksender *BulksenderCallerSession) Owner() (common.Address, error) {
-	return _Bulksender.Contract.Owner(&_Bulksender.CallOpts)
+// Solidity: function bulkTransfer(address[] recipients, uint256[] amounts, address tokenAddress) payable returns()
+func (_Bulksender *BulksenderTransactorSession) BulkTransfer(recipients []common.Address, amounts []*big.Int, tokenAddress common.Address) (*types.Transaction, error) {
+	return _Bulksender.Contract.BulkTransfer(&_Bulksender.TransactOpts, recipients, amounts, tokenAddress)
 }
 
-// BulkTransfer is a paid mutator transaction binding the contract method 0xe886dade.
-//
-// Solidity: function bulkTransfer(address token, address[] recipients, uint256[] values) returns()
-func (_Bulksender *BulksenderTransactor) BulkTransfer(opts *bind.TransactOpts, token common.Address, recipients []common.Address, values []*big.Int) (*types.Transaction, error) {
-	return _Bulksender.contract.Transact(opts, "bulkTransfer", token, recipients, values)
-}
-
-// BulkTransfer is a paid mutator transaction binding the contract method 0xe886dade.
-//
-// Solidity: function bulkTransfer(address token, address[] recipients, uint256[] values) returns()
-func (_Bulksender *BulksenderSession) BulkTransfer(token common.Address, recipients []common.Address, values []*big.Int) (*types.Transaction, error) {
-	return _Bulksender.Contract.BulkTransfer(&_Bulksender.TransactOpts, token, recipients, values)
-}
-
-// BulkTransfer is a paid mutator transaction binding the contract method 0xe886dade.
-//
-// Solidity: function bulkTransfer(address token, address[] recipients, uint256[] values) returns()
-func (_Bulksender *BulksenderTransactorSession) BulkTransfer(token common.Address, recipients []common.Address, values []*big.Int) (*types.Transaction, error) {
-	return _Bulksender.Contract.BulkTransfer(&_Bulksender.TransactOpts, token, recipients, values)
-}
-
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
-//
-// Solidity: function renounceOwnership() returns()
-func (_Bulksender *BulksenderTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Bulksender.contract.Transact(opts, "renounceOwnership")
-}
-
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
-//
-// Solidity: function renounceOwnership() returns()
-func (_Bulksender *BulksenderSession) RenounceOwnership() (*types.Transaction, error) {
-	return _Bulksender.Contract.RenounceOwnership(&_Bulksender.TransactOpts)
-}
-
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
-//
-// Solidity: function renounceOwnership() returns()
-func (_Bulksender *BulksenderTransactorSession) RenounceOwnership() (*types.Transaction, error) {
-	return _Bulksender.Contract.RenounceOwnership(&_Bulksender.TransactOpts)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_Bulksender *BulksenderTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
-	return _Bulksender.contract.Transact(opts, "transferOwnership", newOwner)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_Bulksender *BulksenderSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _Bulksender.Contract.TransferOwnership(&_Bulksender.TransactOpts, newOwner)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_Bulksender *BulksenderTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _Bulksender.Contract.TransferOwnership(&_Bulksender.TransactOpts, newOwner)
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_Bulksender *BulksenderTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Bulksender.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_Bulksender *BulksenderSession) Receive() (*types.Transaction, error) {
-	return _Bulksender.Contract.Receive(&_Bulksender.TransactOpts)
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_Bulksender *BulksenderTransactorSession) Receive() (*types.Transaction, error) {
-	return _Bulksender.Contract.Receive(&_Bulksender.TransactOpts)
-}
-
-// BulksenderBulkTransferIterator is returned from FilterBulkTransfer and is used to iterate over the raw logs and unpacked data for BulkTransfer events raised by the Bulksender contract.
-type BulksenderBulkTransferIterator struct {
-	Event *BulksenderBulkTransfer // Event containing the contract specifics and raw log
+// BulksenderERC20TransferIterator is returned from FilterERC20Transfer and is used to iterate over the raw logs and unpacked data for ERC20Transfer events raised by the Bulksender contract.
+type BulksenderERC20TransferIterator struct {
+	Event *BulksenderERC20Transfer // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -311,7 +217,7 @@ type BulksenderBulkTransferIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *BulksenderBulkTransferIterator) Next() bool {
+func (it *BulksenderERC20TransferIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -320,7 +226,7 @@ func (it *BulksenderBulkTransferIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(BulksenderBulkTransfer)
+			it.Event = new(BulksenderERC20Transfer)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -335,7 +241,7 @@ func (it *BulksenderBulkTransferIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(BulksenderBulkTransfer)
+		it.Event = new(BulksenderERC20Transfer)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -351,53 +257,70 @@ func (it *BulksenderBulkTransferIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *BulksenderBulkTransferIterator) Error() error {
+func (it *BulksenderERC20TransferIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *BulksenderBulkTransferIterator) Close() error {
+func (it *BulksenderERC20TransferIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// BulksenderBulkTransfer represents a BulkTransfer event raised by the Bulksender contract.
-type BulksenderBulkTransfer struct {
-	Token          common.Address
-	TotalAmount    *big.Int
-	RecipientCount *big.Int
-	Raw            types.Log // Blockchain specific contextual infos
+// BulksenderERC20Transfer represents a ERC20Transfer event raised by the Bulksender contract.
+type BulksenderERC20Transfer struct {
+	Token  common.Address
+	From   common.Address
+	To     common.Address
+	Amount *big.Int
+	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterBulkTransfer is a free log retrieval operation binding the contract event 0xda0ea7dc6081f48fde4813039347dfa02348fa095aa9e7c152e07ef4e474e2f6.
+// FilterERC20Transfer is a free log retrieval operation binding the contract event 0x16e1b64802081839623a4bec223b20b6ee097d9edd8fcef3d4ceb3a94271306e.
 //
-// Solidity: event BulkTransfer(address indexed token, uint256 totalAmount, uint256 recipientCount)
-func (_Bulksender *BulksenderFilterer) FilterBulkTransfer(opts *bind.FilterOpts, token []common.Address) (*BulksenderBulkTransferIterator, error) {
+// Solidity: event ERC20Transfer(address indexed token, address indexed from, address indexed to, uint256 amount)
+func (_Bulksender *BulksenderFilterer) FilterERC20Transfer(opts *bind.FilterOpts, token []common.Address, from []common.Address, to []common.Address) (*BulksenderERC20TransferIterator, error) {
 
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
 	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
 
-	logs, sub, err := _Bulksender.contract.FilterLogs(opts, "BulkTransfer", tokenRule)
+	logs, sub, err := _Bulksender.contract.FilterLogs(opts, "ERC20Transfer", tokenRule, fromRule, toRule)
 	if err != nil {
 		return nil, err
 	}
-	return &BulksenderBulkTransferIterator{contract: _Bulksender.contract, event: "BulkTransfer", logs: logs, sub: sub}, nil
+	return &BulksenderERC20TransferIterator{contract: _Bulksender.contract, event: "ERC20Transfer", logs: logs, sub: sub}, nil
 }
 
-// WatchBulkTransfer is a free log subscription operation binding the contract event 0xda0ea7dc6081f48fde4813039347dfa02348fa095aa9e7c152e07ef4e474e2f6.
+// WatchERC20Transfer is a free log subscription operation binding the contract event 0x16e1b64802081839623a4bec223b20b6ee097d9edd8fcef3d4ceb3a94271306e.
 //
-// Solidity: event BulkTransfer(address indexed token, uint256 totalAmount, uint256 recipientCount)
-func (_Bulksender *BulksenderFilterer) WatchBulkTransfer(opts *bind.WatchOpts, sink chan<- *BulksenderBulkTransfer, token []common.Address) (event.Subscription, error) {
+// Solidity: event ERC20Transfer(address indexed token, address indexed from, address indexed to, uint256 amount)
+func (_Bulksender *BulksenderFilterer) WatchERC20Transfer(opts *bind.WatchOpts, sink chan<- *BulksenderERC20Transfer, token []common.Address, from []common.Address, to []common.Address) (event.Subscription, error) {
 
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
 	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
 
-	logs, sub, err := _Bulksender.contract.WatchLogs(opts, "BulkTransfer", tokenRule)
+	logs, sub, err := _Bulksender.contract.WatchLogs(opts, "ERC20Transfer", tokenRule, fromRule, toRule)
 	if err != nil {
 		return nil, err
 	}
@@ -407,8 +330,8 @@ func (_Bulksender *BulksenderFilterer) WatchBulkTransfer(opts *bind.WatchOpts, s
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(BulksenderBulkTransfer)
-				if err := _Bulksender.contract.UnpackLog(event, "BulkTransfer", log); err != nil {
+				event := new(BulksenderERC20Transfer)
+				if err := _Bulksender.contract.UnpackLog(event, "ERC20Transfer", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -429,21 +352,21 @@ func (_Bulksender *BulksenderFilterer) WatchBulkTransfer(opts *bind.WatchOpts, s
 	}), nil
 }
 
-// ParseBulkTransfer is a log parse operation binding the contract event 0xda0ea7dc6081f48fde4813039347dfa02348fa095aa9e7c152e07ef4e474e2f6.
+// ParseERC20Transfer is a log parse operation binding the contract event 0x16e1b64802081839623a4bec223b20b6ee097d9edd8fcef3d4ceb3a94271306e.
 //
-// Solidity: event BulkTransfer(address indexed token, uint256 totalAmount, uint256 recipientCount)
-func (_Bulksender *BulksenderFilterer) ParseBulkTransfer(log types.Log) (*BulksenderBulkTransfer, error) {
-	event := new(BulksenderBulkTransfer)
-	if err := _Bulksender.contract.UnpackLog(event, "BulkTransfer", log); err != nil {
+// Solidity: event ERC20Transfer(address indexed token, address indexed from, address indexed to, uint256 amount)
+func (_Bulksender *BulksenderFilterer) ParseERC20Transfer(log types.Log) (*BulksenderERC20Transfer, error) {
+	event := new(BulksenderERC20Transfer)
+	if err := _Bulksender.contract.UnpackLog(event, "ERC20Transfer", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// BulksenderOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the Bulksender contract.
-type BulksenderOwnershipTransferredIterator struct {
-	Event *BulksenderOwnershipTransferred // Event containing the contract specifics and raw log
+// BulksenderNativeTransferIterator is returned from FilterNativeTransfer and is used to iterate over the raw logs and unpacked data for NativeTransfer events raised by the Bulksender contract.
+type BulksenderNativeTransferIterator struct {
+	Event *BulksenderNativeTransfer // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -457,7 +380,7 @@ type BulksenderOwnershipTransferredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *BulksenderOwnershipTransferredIterator) Next() bool {
+func (it *BulksenderNativeTransferIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -466,7 +389,7 @@ func (it *BulksenderOwnershipTransferredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(BulksenderOwnershipTransferred)
+			it.Event = new(BulksenderNativeTransfer)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -481,7 +404,7 @@ func (it *BulksenderOwnershipTransferredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(BulksenderOwnershipTransferred)
+		it.Event = new(BulksenderNativeTransfer)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -497,60 +420,61 @@ func (it *BulksenderOwnershipTransferredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *BulksenderOwnershipTransferredIterator) Error() error {
+func (it *BulksenderNativeTransferIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *BulksenderOwnershipTransferredIterator) Close() error {
+func (it *BulksenderNativeTransferIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// BulksenderOwnershipTransferred represents a OwnershipTransferred event raised by the Bulksender contract.
-type BulksenderOwnershipTransferred struct {
-	PreviousOwner common.Address
-	NewOwner      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
+// BulksenderNativeTransfer represents a NativeTransfer event raised by the Bulksender contract.
+type BulksenderNativeTransfer struct {
+	From   common.Address
+	To     common.Address
+	Amount *big.Int
+	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+// FilterNativeTransfer is a free log retrieval operation binding the contract event 0xce8688f853ffa65c042b72302433c25d7a230c322caba0901587534b6551091d.
 //
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_Bulksender *BulksenderFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BulksenderOwnershipTransferredIterator, error) {
+// Solidity: event NativeTransfer(address indexed from, address indexed to, uint256 amount)
+func (_Bulksender *BulksenderFilterer) FilterNativeTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*BulksenderNativeTransferIterator, error) {
 
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
 	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
 	}
 
-	logs, sub, err := _Bulksender.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	logs, sub, err := _Bulksender.contract.FilterLogs(opts, "NativeTransfer", fromRule, toRule)
 	if err != nil {
 		return nil, err
 	}
-	return &BulksenderOwnershipTransferredIterator{contract: _Bulksender.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
+	return &BulksenderNativeTransferIterator{contract: _Bulksender.contract, event: "NativeTransfer", logs: logs, sub: sub}, nil
 }
 
-// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+// WatchNativeTransfer is a free log subscription operation binding the contract event 0xce8688f853ffa65c042b72302433c25d7a230c322caba0901587534b6551091d.
 //
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_Bulksender *BulksenderFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BulksenderOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+// Solidity: event NativeTransfer(address indexed from, address indexed to, uint256 amount)
+func (_Bulksender *BulksenderFilterer) WatchNativeTransfer(opts *bind.WatchOpts, sink chan<- *BulksenderNativeTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
 
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
 	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
 	}
 
-	logs, sub, err := _Bulksender.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	logs, sub, err := _Bulksender.contract.WatchLogs(opts, "NativeTransfer", fromRule, toRule)
 	if err != nil {
 		return nil, err
 	}
@@ -560,8 +484,8 @@ func (_Bulksender *BulksenderFilterer) WatchOwnershipTransferred(opts *bind.Watc
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(BulksenderOwnershipTransferred)
-				if err := _Bulksender.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+				event := new(BulksenderNativeTransfer)
+				if err := _Bulksender.contract.UnpackLog(event, "NativeTransfer", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -582,12 +506,12 @@ func (_Bulksender *BulksenderFilterer) WatchOwnershipTransferred(opts *bind.Watc
 	}), nil
 }
 
-// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+// ParseNativeTransfer is a log parse operation binding the contract event 0xce8688f853ffa65c042b72302433c25d7a230c322caba0901587534b6551091d.
 //
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_Bulksender *BulksenderFilterer) ParseOwnershipTransferred(log types.Log) (*BulksenderOwnershipTransferred, error) {
-	event := new(BulksenderOwnershipTransferred)
-	if err := _Bulksender.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+// Solidity: event NativeTransfer(address indexed from, address indexed to, uint256 amount)
+func (_Bulksender *BulksenderFilterer) ParseNativeTransfer(log types.Log) (*BulksenderNativeTransfer, error) {
+	event := new(BulksenderNativeTransfer)
+	if err := _Bulksender.contract.UnpackLog(event, "NativeTransfer", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

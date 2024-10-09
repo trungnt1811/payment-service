@@ -252,7 +252,7 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
-	tx, err = bulkSender.BulkTransfer(auth, common.HexToAddress(tokenAddress), recipientAddresses, tokenAmounts)
+	tx, err = bulkSender.BulkTransfer(auth, recipientAddresses, tokenAmounts, common.HexToAddress(tokenAddress))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}

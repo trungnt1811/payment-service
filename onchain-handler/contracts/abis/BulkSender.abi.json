@@ -1,5 +1,21 @@
 [
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "recipientsLength",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountsLength",
+        "type": "uint256"
+      }
+    ],
+    "name": "ArraysLengthMismatch",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -9,19 +25,25 @@
         "type": "address"
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "totalAmount",
-        "type": "uint256"
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "recipientCount",
+        "name": "amount",
         "type": "uint256"
       }
     ],
-    "name": "BulkTransfer",
+    "name": "ERC20Transfer",
     "type": "event"
   },
   {
@@ -30,26 +52,27 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "previousOwner",
+        "name": "from",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newOwner",
+        "name": "to",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       }
     ],
-    "name": "OwnershipTransferred",
+    "name": "NativeTransfer",
     "type": "event"
   },
   {
     "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
       {
         "internalType": "address[]",
         "name": "recipients",
@@ -57,50 +80,18 @@
       },
       {
         "internalType": "uint256[]",
-        "name": "values",
+        "name": "amounts",
         "type": "uint256[]"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
       }
     ],
     "name": "bulkTransfer",
     "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "stateMutability": "payable",
-    "type": "receive"
+    "type": "function"
   }
 ]
