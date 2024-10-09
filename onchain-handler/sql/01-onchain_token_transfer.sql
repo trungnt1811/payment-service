@@ -1,15 +1,14 @@
-CREATE TABLE onchain_transaction (
+CREATE TABLE onchain_token_transfer (
     id SERIAL PRIMARY KEY,  -- SERIAL takes care of auto-increment
-    token_distribution_address VARCHAR(42) NOT NULL,
-    recipient_address VARCHAR(42) NOT NULL,
     transaction_hash VARCHAR(66) NOT NULL,
+    from_address VARCHAR(42) NOT NULL,
+    to_address VARCHAR(42) NOT NULL,
     token_amount NUMERIC(50, 18) NOT NULL,
-    status SMALLINT NOT NULL DEFAULT 0,  -- 0 for pending, 1 for success, -1 for failed 
+    symbol VARCHAR(10) NOT NULL,
+    status BOOLEAN NOT NULL DEFAULT 0,
     error_message TEXT,
-    tx_type VARCHAR(15) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT tx_type_check CHECK (tx_type IN ('PURCHASE', 'COMMISSION'))
 );
 
 -- Create a trigger function to update 'updated_at' column on update
@@ -21,9 +20,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a trigger that applies to 'onchain_transaction' table
-CREATE TRIGGER update_onchain_transaction_updated_at
-BEFORE UPDATE ON onchain_transaction
+-- Create a trigger that applies to 'onchain_token_transfer' table
+CREATE TRIGGER update_onchain_token_transfer_updated_at
+BEFORE UPDATE ON onchain_token_transfer
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
