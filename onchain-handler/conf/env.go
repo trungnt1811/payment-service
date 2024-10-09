@@ -22,14 +22,46 @@ type DatabaseConfiguration struct {
 }
 
 type BlockchainConfiguration struct {
-	RpcUrl                        string `mapstructure:"RPC_URL"`
-	ChainID                       uint32 `mapstructure:"CHAIN_ID"`
-	PrivateKeyDistributionAddress string `mapstructure:"PRIVATE_KEY_DISTRIBUTION_ADDRESS"`
-	TokenDistributionAddress      string `mapstructure:"TOKEN_DISTRIBUTION_ADDRESS"`
-	LifePointAddress              string `mapstructure:"LIFE_POINT_ADDRESS"`
-	MembershipContractAddress     string `mapstructure:"MEMBERSHIP_CONTRACT_ADDRESS"`
-	LockContractAddress           string `mapstructure:"LOCK_CONTRACT_ADDRESS"`
-	StartBlockListener            uint64 `mapstructure:"START_BLOCK_LISTENER"`
+	RpcUrl             string                        `mapstructure:"RPC_URL"`
+	ChainID            uint32                        `mapstructure:"CHAIN_ID"`
+	StartBlockListener uint64                        `mapstructure:"START_BLOCK_LISTENER"`
+	SmartContract      SmartContractConfiguration    `mapstructure:",squash"`
+	LPTreasuryPool     LPTreasuryPoolConfiguration   `mapstructure:",squash"`
+	USDTTreasuryPool   USDTTreasuryPoolConfiguration `mapstructure:",squash"`
+	LPCommunityPool    LPCommunityPoolConfiguration  `mapstructure:",squash"`
+	LPRevenuePool      LPRevenuePoolConfiguration    `mapstructure:",squash"`
+	LPStakingPool      LPStakingPoolConfiguration    `mapstructure:",squash"`
+}
+
+type LPTreasuryPoolConfiguration struct {
+	LPTreasuryAddress    string `mapstructure:"LP_TREASURY_ADDRESS"`
+	PrivateKeyLPTreasury string `mapstructure:"PRIVATE_KEY_LP_TREASURY"`
+}
+
+type USDTTreasuryPoolConfiguration struct {
+	USDTTreasuryAddress    string `mapstructure:"USDT_TREASURY_ADDRESS"`
+	PrivateKeyUSDTTreasury string `mapstructure:"PRIVATE_KEY_USDT_TREASURY"`
+}
+
+type LPCommunityPoolConfiguration struct {
+	LPCommunityAddress    string `mapstructure:"LP_COMMUNITY_ADDRESS"`
+	PrivateKeyLPCommunity string `mapstructure:"PRIVATE_KEY_LP_COMMUNITY"`
+}
+
+type LPRevenuePoolConfiguration struct {
+	LPRevenueAddress    string `mapstructure:"LP_REVENUE_ADDRESS"`
+	PrivateKeyLPRevenue string `mapstructure:"PRIVATE_KEY_LP_REVENUE"`
+}
+
+type LPStakingPoolConfiguration struct {
+	LPStakingAddress    string `mapstructure:"LP_STAKING_ADDRESS"`
+	PrivateKeyLPStaking string `mapstructure:"PRIVATE_KEY_LP_STAKING"`
+}
+
+type SmartContractConfiguration struct {
+	LifePointContractAddress  string `mapstructure:"LIFE_POINT_CONTRACT_ADDRESS"`
+	USDTContractAddress       string `mapstructure:"USDT_CONTRACT_ADDRESS"`
+	BulkSenderContractAddress string `mapstructure:"BULK_SENDER_CONTRACT_ADDRESS"`
 }
 
 type Configuration struct {
