@@ -8,6 +8,7 @@ import (
 
 type TokenTransferHistory struct {
 	ID              uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
+	RequestID       string    `json:"request_id"`
 	TransactionHash string    `json:"transaction_hash"`
 	FromAddress     string    `json:"from_address"`
 	ToAddress       string    `json:"to_address"`
@@ -26,6 +27,7 @@ func (m *TokenTransferHistory) TableName() string {
 func (m *TokenTransferHistory) ToDto() dto.TokenTransferHistoryDTO {
 	return dto.TokenTransferHistoryDTO{
 		ID:              m.ID,
+		RequestID:       m.RequestID,
 		TransactionHash: m.TransactionHash,
 		FromAddress:     m.FromAddress,
 		ToAddress:       m.ToAddress,

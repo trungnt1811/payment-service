@@ -50,11 +50,11 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	for _, payload := range req {
-		// Validate the sender (FromAddress) using constants for recognized pool names
-		if !isValidPool(payload.FromAddress) {
+		// Validate the sender using constants for recognized pool names
+		if !isValidPool(payload.PoolName) {
 			validPools := getValidPools()
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Invalid sender pool: " + payload.FromAddress,
+				"error":   "Invalid sender pool: " + payload.PoolName,
 				"details": "FromAddress must be one of the recognized pools: " + validPools,
 			})
 			return

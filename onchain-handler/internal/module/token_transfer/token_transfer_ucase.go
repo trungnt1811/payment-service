@@ -38,13 +38,13 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 	}
 
 	// Prepare reward history
-	rewardModels, err := u.prepareTransferHistories(payloads)
+	rewardModels, err := u.prepareTokenTransferHistories(payloads)
 	if err != nil {
 		return fmt.Errorf("failed to prepare token transfer histories: %v", err)
 	}
 
-	// Perform concurrent tokens distribution
-	err = u.distributeAndSaveTransferHistories(ctx, rewardModels, recipients)
+	// Perform bulking tokens transfer
+	err = u.bulkTransferAndSaveTokenTransferHistories(ctx, rewardModels, recipients)
 	if err != nil {
 		return fmt.Errorf("failed to distribute tokens: %v", err)
 	}
@@ -58,8 +58,13 @@ func (u *tokenTransferUCase) convertToRecipients(req []dto.TokenTransferPayloadD
 
 	for _, payload := range req {
 		// Check for duplicate recipient addresses
-		if _, exists := recipients[payload.FromAddress]; exists {
-			return nil, fmt.Errorf("duplicate recipient address: %s", payload.FromAddress)
+		fromAddress, err := conf.GetPoolAddress(payload.PoolName)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: do we need to check duplicated here?
+		if _, exists := recipients[fromAddress]; exists {
+			return nil, fmt.Errorf("duplicate recipient address: %s", fromAddress)
 		}
 
 		// Convert token amount to big.Int
@@ -74,8 +79,8 @@ func (u *tokenTransferUCase) convertToRecipients(req []dto.TokenTransferPayloadD
 	return recipients, nil
 }
 
-// prepareTransferHistories prepares token transfer history based on the payload
-func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
+// prepareTokenTransferHistories prepares token transfer history based on the payload
+func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
 	var rewards []model.TokenTransferHistory
 
 	for _, payload := range req {
@@ -85,6 +90,7 @@ func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TokenTransferPay
 
 		// Prepare reward entry
 		rewards = append(rewards, model.TokenTransferHistory{
+			RequestID:   payload.RequestID,
 			FromAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
 			ToAddress:   payload.ToAddress,
 			TokenAmount: payload.TokenAmount,
@@ -95,21 +101,21 @@ func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TokenTransferPay
 	return rewards, nil
 }
 
-// distributeAndSaveRewards distributes rewards and updates reward history
-func (u *tokenTransferUCase) distributeAndSaveTransferHistories(ctx context.Context, rewards []model.TokenTransferHistory, recipients map[string]*big.Int) error {
-	txHash, _, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients)
-	for index := range rewards {
+// bulkTransferAndSaveTokenTransferHistories bulk transfer tokens and updates tokens transfer history
+func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(ctx context.Context, tokenTransfers []model.TokenTransferHistory, recipients map[string]*big.Int) error {
+	txHash, tokenSymbol, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients)
+	for index := range tokenTransfers {
 		if err != nil {
-			rewards[index].ErrorMessage = fmt.Sprintf("Failed to distribute: %v", err)
-			rewards[index].Status = false
+			return fmt.Errorf("failed to bulk transfer token: %v", err)
 		} else {
-			rewards[index].TransactionHash = *txHash
-			rewards[index].Status = false
+			tokenTransfers[index].TransactionHash = *txHash
+			tokenTransfers[index].Status = true
+			tokenTransfers[index].Symbol = *tokenSymbol
 		}
 	}
 
 	// Save reward history
-	err = u.TokenTrasferRepository.CreateTokenTransferHistories(ctx, rewards)
+	err = u.TokenTrasferRepository.CreateTokenTransferHistories(ctx, tokenTransfers)
 	if err != nil {
 		return fmt.Errorf("failed to save token transfer histories: %v", err)
 	}

@@ -72,7 +72,8 @@ const docTemplate = `{
         "dto.TokenTransferPayloadDTO": {
             "type": "object",
             "properties": {
-                "from_address": {
+                "pool_name": {
+                    "description": "PoolName should be: LP_Community, LP_Staking, LP_Revenue, LP_Treasury, USDT_Treasury",
                     "type": "string"
                 },
                 "request_id": {
