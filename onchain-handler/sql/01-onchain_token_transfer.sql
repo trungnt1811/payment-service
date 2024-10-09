@@ -5,10 +5,10 @@ CREATE TABLE onchain_token_transfer (
     to_address VARCHAR(42) NOT NULL,
     token_amount NUMERIC(50, 18) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
-    status BOOLEAN NOT NULL DEFAULT 0,
+    status BOOLEAN NOT NULL DEFAULT False,
     error_message TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create a trigger function to update 'updated_at' column on update
