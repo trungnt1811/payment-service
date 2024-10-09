@@ -31,7 +31,7 @@ var (
 
 // BulksenderMetaData contains all meta data concerning the Bulksender contract.
 var BulksenderMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"recipientCount\",\"type\":\"uint256\"}],\"name\":\"BulkTransfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"}],\"name\":\"bulkTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"recipientCount\",\"type\":\"uint256\"}],\"name\":\"BulkTransfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"}],\"name\":\"bulkTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
 }
 
 // BulksenderABI is the input ABI used to generate the binding from.
@@ -272,6 +272,27 @@ func (_Bulksender *BulksenderSession) TransferOwnership(newOwner common.Address)
 // Solidity: function transferOwnership(address newOwner) returns()
 func (_Bulksender *BulksenderTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
 	return _Bulksender.Contract.TransferOwnership(&_Bulksender.TransactOpts, newOwner)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_Bulksender *BulksenderTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Bulksender.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_Bulksender *BulksenderSession) Receive() (*types.Transaction, error) {
+	return _Bulksender.Contract.Receive(&_Bulksender.TransactOpts)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_Bulksender *BulksenderTransactorSession) Receive() (*types.Transaction, error) {
+	return _Bulksender.Contract.Receive(&_Bulksender.TransactOpts)
 }
 
 // BulksenderBulkTransferIterator is returned from FilterBulkTransfer and is used to iterate over the raw logs and unpacked data for BulkTransfer events raised by the Bulksender contract.
