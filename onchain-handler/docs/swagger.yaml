@@ -27,7 +27,7 @@ definitions:
 info:
   contact: {}
 paths:
-  /api/v1/transfer:
+  /api/v1/token-transfer:
     post:
       consumes:
       - application/json

@@ -20,5 +20,5 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 	transferRepository := transfer.NewTokenTransferRepository(db)
 	transferUCase := transfer.NewTokenTransferUCase(transferRepository, ethClient, config)
 	transferHandler := transfer.NewTokenTransferHandler(transferUCase)
-	appRouter.POST("/transfer", transferHandler.Transfer)
+	appRouter.POST("/token-transfer", transferHandler.Transfer)
 }

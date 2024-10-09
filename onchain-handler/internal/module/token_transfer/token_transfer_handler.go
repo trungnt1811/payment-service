@@ -1,11 +1,13 @@
 package transfer
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	util "github.com/genefriendway/onchain-handler/internal/utils"
@@ -33,7 +35,7 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransfer
 // @Success 200 {object} map[string]bool "Success response: {\"success\": true}"
 // @Failure 400 {object} util.GeneralError "Invalid payload or invalid recipient address/transaction type"
 // @Failure 500 {object} util.GeneralError "Internal server error, failed to distribute tokens"
-// @Router /api/v1/transfer [post]
+// @Router /api/v1/token-transfer [post]
 func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	var req []dto.TokenTransferPayloadDTO
 
@@ -48,6 +50,16 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	for _, payload := range req {
+		// Validate the sender (FromAddress) using constants for recognized pool names
+		if !isValidPool(payload.FromAddress) {
+			validPools := getValidPools()
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid sender pool: " + payload.FromAddress,
+				"details": "FromAddress must be one of the recognized pools: " + validPools,
+			})
+			return
+		}
+
 		// Check if the recipient address is a valid Ethereum address
 		if !common.IsHexAddress(payload.ToAddress) {
 			ctx.JSON(http.StatusBadRequest, gin.H{
@@ -66,4 +78,25 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// isValidPool checks if the given pool name is valid by comparing it with known constants.
+func isValidPool(poolName string) bool {
+	switch poolName {
+	case constants.LPCommunity, constants.LPStaking, constants.LPRevenue, constants.LPTreasury, constants.USDTTreasury:
+		return true
+	default:
+		return false
+	}
+}
+
+// getValidPools returns a comma-separated string of all valid pool names
+func getValidPools() string {
+	return fmt.Sprintf("%s, %s, %s, %s, %s",
+		constants.LPCommunity,
+		constants.LPStaking,
+		constants.LPRevenue,
+		constants.LPTreasury,
+		constants.USDTTreasury,
+	)
 }
