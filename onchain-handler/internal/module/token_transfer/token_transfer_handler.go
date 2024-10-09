@@ -49,9 +49,9 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 
 	for _, payload := range req {
 		// Check if the recipient address is a valid Ethereum address
-		if !common.IsHexAddress(payload.RecipientAddress) {
+		if !common.IsHexAddress(payload.ToAddress) {
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Invalid recipient address: " + payload.RecipientAddress,
+				"error":   "Invalid recipient address: " + payload.ToAddress,
 				"details": "RecipientAddress must be a valid Ethereum address",
 			})
 			return

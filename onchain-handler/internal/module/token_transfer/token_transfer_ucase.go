@@ -58,19 +58,17 @@ func (u *tokenTransferUCase) convertToRecipients(req []dto.TokenTransferPayloadD
 
 	for _, payload := range req {
 		// Check for duplicate recipient addresses
-		if _, exists := recipients[payload.RecipientAddress]; exists {
-			return nil, fmt.Errorf("duplicate recipient address: %s", payload.RecipientAddress)
+		if _, exists := recipients[payload.FromAddress]; exists {
+			return nil, fmt.Errorf("duplicate recipient address: %s", payload.FromAddress)
 		}
 
 		// Convert token amount to big.Int
 		tokenAmount := new(big.Int)
-		if _, success := tokenAmount.SetString(payload.TokenAmount, 10); !success {
-			return nil, fmt.Errorf("invalid token amount: %s", payload.TokenAmount)
-		}
+		tokenAmount.SetUint64(payload.TokenAmount)
 
 		// Multiply by 10^18 to convert to the smallest unit of the token (like wei for ETH)
 		tokenAmountInSmallestUnit := new(big.Int).Mul(tokenAmount, new(big.Int).Exp(big.NewInt(10), big.NewInt(constants.LifePointDecimals), nil))
-		recipients[payload.RecipientAddress] = tokenAmountInSmallestUnit
+		recipients[payload.ToAddress] = tokenAmountInSmallestUnit
 	}
 
 	return recipients, nil
@@ -83,14 +81,12 @@ func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TokenTransferPay
 	for _, payload := range req {
 		// Validate token amount
 		tokenAmount := new(big.Int)
-		if _, success := tokenAmount.SetString(payload.TokenAmount, 10); !success {
-			return nil, fmt.Errorf("invalid token amount: %s", payload.TokenAmount)
-		}
+		tokenAmount.SetUint64(payload.TokenAmount)
 
 		// Prepare reward entry
 		rewards = append(rewards, model.TokenTransferHistory{
 			FromAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
-			ToAddress:   payload.RecipientAddress,
+			ToAddress:   payload.ToAddress,
 			TokenAmount: payload.TokenAmount,
 			Status:      false, // Default to failed status initially
 		})

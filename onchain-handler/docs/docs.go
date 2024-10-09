@@ -72,11 +72,17 @@ const docTemplate = `{
         "dto.TokenTransferPayloadDTO": {
             "type": "object",
             "properties": {
-                "recipient_address": {
+                "from_address": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "to_address": {
                     "type": "string"
                 },
                 "token_amount": {
-                    "type": "string"
+                    "type": "integer"
                 }
             }
         },
