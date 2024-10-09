@@ -163,7 +163,7 @@ type ERC20Token interface {
 }
 
 // BulkTransfer transfers tokens from the pool address to user wallets using bulk transfer
-func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients map[string]*big.Int) (*string, *string, error) {
+func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients []string, amounts []*big.Int) (*string, *string, error) {
 	chainID := config.Blockchain.ChainID
 	bulkSenderContractAddress := config.Blockchain.SmartContract.BulkSenderContractAddress
 
@@ -205,7 +205,7 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 
 	// Calculate total amount to transfer for approval
 	totalAmount := big.NewInt(0)
-	for _, amount := range recipients {
+	for _, amount := range amounts {
 		totalAmount = new(big.Int).Add(totalAmount, amount)
 	}
 
@@ -237,14 +237,6 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		return nil, nil, fmt.Errorf("approval transaction failed")
 	}
 
-	// Prepare recipient addresses and token amounts
-	var recipientAddresses []common.Address
-	var tokenAmounts []*big.Int
-	for recipientAddress, amount := range recipients {
-		recipientAddresses = append(recipientAddresses, common.HexToAddress(recipientAddress))
-		tokenAmounts = append(tokenAmounts, amount)
-	}
-
 	// Increment nonce for bulk transfer transaction
 	nonce++ // Increment nonce for the next transaction
 
@@ -252,7 +244,7 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
-	tx, err = bulkSender.BulkTransfer(auth, recipientAddresses, tokenAmounts, common.HexToAddress(tokenAddress))
+	tx, err = bulkSender.BulkTransfer(auth, convertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}
@@ -270,8 +262,17 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		return nil, nil, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
 	}
 
-	// Return transaction hash
+	// Return transaction hash and token symbol
 	return &txHash, &tokenSymbol, nil
+}
+
+// Helper function to convert string addresses to common.Address type
+func convertToCommonAddresses(recipients []string) []common.Address {
+	var addresses []common.Address
+	for _, recipient := range recipients {
+		addresses = append(addresses, common.HexToAddress(recipient))
+	}
+	return addresses
 }
 
 // Helper function to get the ERC20 token instance
