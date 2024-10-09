@@ -6,6 +6,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/genefriendway/onchain-handler/constants"
 )
 
 type RedisConfiguration struct {
@@ -103,4 +105,21 @@ func GetConfiguration() *Configuration {
 
 func GetRedisConnectionURL() string {
 	return configuration.Redis.RedisAddress
+}
+
+func GetPoolAddress(poolName string) (string, error) {
+	switch poolName {
+	case constants.LPCommunity:
+		return configuration.Blockchain.LPCommunityPool.LPCommunityAddress, nil
+	case constants.LPStaking:
+		return configuration.Blockchain.LPStakingPool.LPStakingAddress, nil
+	case constants.LPRevenue:
+		return configuration.Blockchain.LPRevenuePool.LPRevenueAddress, nil
+	case constants.LPTreasury:
+		return configuration.Blockchain.LPTreasuryPool.LPTreasuryAddress, nil
+	case constants.USDTTreasury:
+		return configuration.Blockchain.USDTTreasuryPool.USDTTreasuryAddress, nil
+	default:
+		return "", fmt.Errorf("unrecognized pool name: %s", poolName)
+	}
 }
