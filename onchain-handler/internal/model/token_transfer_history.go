@@ -6,7 +6,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 )
 
-type TransferHistory struct {
+type TokenTransferHistory struct {
 	ID                       uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	TokenDistributionAddress string    `json:"token_distribution_address"`
 	RecipientAddress         string    `json:"recipient_address"`
@@ -19,12 +19,12 @@ type TransferHistory struct {
 	UpdatedAt                time.Time `json:"updated_at"`
 }
 
-func (m *TransferHistory) TableName() string {
+func (m *TokenTransferHistory) TableName() string {
 	return "onchain_transaction"
 }
 
-func (m *TransferHistory) ToDto() dto.TransferHistoryDTO {
-	return dto.TransferHistoryDTO{
+func (m *TokenTransferHistory) ToDto() dto.TokenTransferHistoryDTO {
+	return dto.TokenTransferHistoryDTO{
 		ID:                       m.ID,
 		TokenDistributionAddress: m.TokenDistributionAddress,
 		RecipientAddress:         m.RecipientAddress,

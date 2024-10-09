@@ -15,22 +15,22 @@ import (
 	"github.com/genefriendway/onchain-handler/utils"
 )
 
-type transferUCase struct {
-	TrasferRepository interfaces.TransferRepository
-	ETHClient         *ethclient.Client
-	Config            *conf.Configuration
+type tokenTransferUCase struct {
+	TokenTrasferRepository interfaces.TokenTransferRepository
+	ETHClient              *ethclient.Client
+	Config                 *conf.Configuration
 }
 
-func NewTransferUCase(transferRepository interfaces.TransferRepository, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TransferUCase {
-	return &transferUCase{
-		TrasferRepository: transferRepository,
-		ETHClient:         ethClient,
-		Config:            config,
+func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepository, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
+	return &tokenTransferUCase{
+		TokenTrasferRepository: tokenTransferRepository,
+		ETHClient:              ethClient,
+		Config:                 config,
 	}
 }
 
-// DistributeTokens handles the entire process of tokens distribution
-func (u *transferUCase) DistributeTokens(ctx context.Context, payloads []dto.TransferTokenPayloadDTO) error {
+// TransferTokens handles the entire process of tokens transfer
+func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TransferTokenPayloadDTO) error {
 	// Convert the payload into recipients
 	recipients, err := u.convertToRecipients(payloads)
 	if err != nil {
@@ -53,7 +53,7 @@ func (u *transferUCase) DistributeTokens(ctx context.Context, payloads []dto.Tra
 }
 
 // convertToRecipients converts the payload into recipients (address -> token amount in smallest unit)
-func (u *transferUCase) convertToRecipients(req []dto.TransferTokenPayloadDTO) (map[string]*big.Int, error) {
+func (u *tokenTransferUCase) convertToRecipients(req []dto.TransferTokenPayloadDTO) (map[string]*big.Int, error) {
 	recipients := make(map[string]*big.Int)
 
 	for _, payload := range req {
@@ -77,8 +77,8 @@ func (u *transferUCase) convertToRecipients(req []dto.TransferTokenPayloadDTO) (
 }
 
 // prepareTransferHistories prepares token transfer history based on the payload
-func (u *transferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadDTO) ([]model.TransferHistory, error) {
-	var rewards []model.TransferHistory
+func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadDTO) ([]model.TokenTransferHistory, error) {
+	var rewards []model.TokenTransferHistory
 
 	for _, payload := range req {
 		// Validate token amount
@@ -88,7 +88,7 @@ func (u *transferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadD
 		}
 
 		// Prepare reward entry
-		rewards = append(rewards, model.TransferHistory{
+		rewards = append(rewards, model.TokenTransferHistory{
 			TokenDistributionAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
 			RecipientAddress:         payload.RecipientAddress,
 			TokenAmount:              payload.TokenAmount,
@@ -101,7 +101,7 @@ func (u *transferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadD
 }
 
 // distributeAndSaveRewards distributes rewards and updates reward history
-func (u *transferUCase) distributeAndSaveTransferHistories(ctx context.Context, rewards []model.TransferHistory, recipients map[string]*big.Int) error {
+func (u *tokenTransferUCase) distributeAndSaveTransferHistories(ctx context.Context, rewards []model.TokenTransferHistory, recipients map[string]*big.Int) error {
 	txHash, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients)
 	for index := range rewards {
 		if err != nil {
@@ -114,7 +114,7 @@ func (u *transferUCase) distributeAndSaveTransferHistories(ctx context.Context, 
 	}
 
 	// Save reward history
-	err = u.TrasferRepository.CreateTransferHistories(ctx, rewards)
+	err = u.TokenTrasferRepository.CreateTokenTransferHistories(ctx, rewards)
 	if err != nil {
 		return fmt.Errorf("failed to save token transfer histories: %v", err)
 	}

@@ -10,17 +10,17 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
-type transferRepository struct {
+type tokenTransferRepository struct {
 	db *gorm.DB
 }
 
-func NewTransferRepository(db *gorm.DB) interfaces.TransferRepository {
-	return &transferRepository{
+func NewTokenTransferRepository(db *gorm.DB) interfaces.TokenTransferRepository {
+	return &tokenTransferRepository{
 		db: db,
 	}
 }
 
-func (r *transferRepository) CreateTransferHistories(ctx context.Context, models []model.TransferHistory) error {
+func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Context, models []model.TokenTransferHistory) error {
 	err := r.db.WithContext(ctx).Create(&models).Error
 	if err != nil {
 		return fmt.Errorf("failed to create transfer histories: %w", err)

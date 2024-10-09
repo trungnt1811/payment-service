@@ -1,6 +1,6 @@
 package dto
 
-type TransferHistoryDTO struct {
+type TokenTransferHistoryDTO struct {
 	ID                       uint64 `json:"id"`
 	TokenDistributionAddress string `json:"token_distribution_address"`
 	RecipientAddress         string `json:"recipient_address"`

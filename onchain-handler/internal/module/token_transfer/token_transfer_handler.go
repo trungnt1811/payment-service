@@ -12,13 +12,13 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
-type TransferHandler struct {
-	UCase interfaces.TransferUCase
+type TokenTransferHandler struct {
+	UCase interfaces.TokenTransferUCase
 }
 
 // NewRewardHandler initializes the RewardHandler
-func NewTransferHandler(ucase interfaces.TransferUCase) *TransferHandler {
-	return &TransferHandler{
+func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransferHandler {
+	return &TokenTransferHandler{
 		UCase: ucase,
 	}
 }
@@ -34,7 +34,7 @@ func NewTransferHandler(ucase interfaces.TransferUCase) *TransferHandler {
 // @Failure 400 {object} util.GeneralError "Invalid payload or invalid recipient address/transaction type"
 // @Failure 500 {object} util.GeneralError "Internal server error, failed to distribute tokens"
 // @Router /api/v1/transfer [post]
-func (h *TransferHandler) Transfer(ctx *gin.Context) {
+func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	var req []dto.TransferTokenPayloadDTO
 
 	// Parse and validate the request payload
@@ -68,7 +68,7 @@ func (h *TransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	// Proceed to distribute tokens if all checks pass
-	if err := h.UCase.DistributeTokens(ctx, req); err != nil {
+	if err := h.UCase.TransferTokens(ctx, req); err != nil {
 		log.LG.Errorf("Failed to distribute tokens: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
 		return
