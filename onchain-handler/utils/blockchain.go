@@ -20,6 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
+	"github.com/genefriendway/onchain-handler/contracts/abigen/lifepointtoken"
+	"github.com/genefriendway/onchain-handler/contracts/abigen/usdtmock"
+	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
 // ConnectToNetwork connects to the blockchain network via an RPC URL
@@ -152,7 +156,128 @@ func ParseHexToUint64(hexStr string) (uint64, error) {
 	return value, nil
 }
 
-// DistributeTokens distributes tokens from the token distribution address to user wallets using bulk transfer
-func DistributeTokens(client *ethclient.Client, config *conf.Configuration, recipients map[string]*big.Int) (*string, error) {
-	return nil, nil
+// ERC20Token defines the methods we expect for ERC20 tokens
+type ERC20Token interface {
+	Approve(auth *bind.TransactOpts, spender common.Address, amount *big.Int) (*types.Transaction, error)
+}
+
+// BulkTransfer transfers tokens from the pool address to user wallets using bulk transfer
+func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients map[string]*big.Int) (*string, error) {
+	chainID := config.Blockchain.ChainID
+	bulkSenderContractAddress := config.Blockchain.SmartContract.BulkSenderContractAddress
+
+	// Get the token address, pool private key, and symbol based on the pool address
+	tokenAddress, poolPrivateKey, symbol, err := getPoolDetails(poolAddress, config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get authentication for signing transactions
+	privateKeyECDSA, err := PrivateKeyFromHex(poolPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pool private key: %w", err)
+	}
+
+	auth, err := GetAuth(client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get auth: %w", err)
+	}
+
+	// Set up the ERC20 token contract instance (LifePoint or USDT, depending on pool)
+	erc20Token, err := getERC20TokenInstance(tokenAddress, symbol, client)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set up the bulk transfer contract instance
+	bulkSender, err := bulksender.NewBulksender(common.HexToAddress(bulkSenderContractAddress), client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
+	}
+
+	// Calculate total amount to transfer for approval
+	totalAmount := big.NewInt(0)
+	for _, amount := range recipients {
+		totalAmount = new(big.Int).Add(totalAmount, amount)
+	}
+
+	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
+	token, ok := erc20Token.(ERC20Token) // Type assertion to ERC20Token interface
+	if !ok {
+		return nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
+	}
+
+	tx, err := token.Approve(auth, common.HexToAddress(bulkSenderContractAddress), totalAmount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to approve bulk sender contract: %w", err)
+	}
+	log.LG.Infof("Approval transaction sent: %s\n", tx.Hash().Hex())
+
+	// Wait for approval to be mined
+	receipt, err := bind.WaitMined(context.Background(), client, tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to wait for approval transaction to be mined: %w", err)
+	}
+	if receipt.Status != 1 {
+		return nil, fmt.Errorf("approval transaction failed")
+	}
+
+	// Prepare recipient addresses and token amounts
+	var recipientAddresses []common.Address
+	var tokenAmounts []*big.Int
+	for recipientAddress, amount := range recipients {
+		recipientAddresses = append(recipientAddresses, common.HexToAddress(recipientAddress))
+		tokenAmounts = append(tokenAmounts, amount)
+	}
+
+	// Call the bulk transfer function on the bulk sender contract
+	tx, err = bulkSender.BulkTransfer(auth, common.HexToAddress(tokenAddress), recipientAddresses, tokenAmounts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
+	}
+
+	// Return transaction hash
+	txHash := tx.Hash().Hex()
+	return &txHash, nil
+}
+
+// Helper function to get the ERC20 token instance
+func getERC20TokenInstance(tokenAddress, symbol string, client *ethclient.Client) (interface{}, error) {
+	var erc20Token interface{}
+	var err error
+
+	if symbol == "USDT" {
+		erc20Token, err = usdtmock.NewUsdtmock(common.HexToAddress(tokenAddress), client)
+	} else {
+		erc20Token, err = lifepointtoken.NewLifepointtoken(common.HexToAddress(tokenAddress), client)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate ERC20 contract: %w", err)
+	}
+
+	return erc20Token, nil
+}
+
+// Helper function to get pool details based on the pool address
+func getPoolDetails(poolAddress string, config *conf.Configuration) (string, string, string, error) {
+	switch poolAddress {
+	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
+		return config.Blockchain.SmartContract.USDTContractAddress,
+			config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury, "USDT", nil
+	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
+		return config.Blockchain.SmartContract.LifePointContractAddress,
+			config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, "LP", nil
+	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
+		return config.Blockchain.SmartContract.LifePointContractAddress,
+			config.Blockchain.LPCommunityPool.PrivateKeyLPCommunity, "LP", nil
+	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
+		return config.Blockchain.SmartContract.LifePointContractAddress,
+			config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, "LP", nil
+	case config.Blockchain.LPStakingPool.LPStakingAddress:
+		return config.Blockchain.SmartContract.LifePointContractAddress,
+			config.Blockchain.LPStakingPool.PrivateKeyLPStaking, "LP", nil
+	default:
+		return "", "", "", fmt.Errorf("unrecognized pool address: %s", poolAddress)
+	}
 }
