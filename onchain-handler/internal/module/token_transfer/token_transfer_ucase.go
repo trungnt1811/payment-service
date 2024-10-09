@@ -102,7 +102,7 @@ func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TransferTokenPay
 
 // distributeAndSaveRewards distributes rewards and updates reward history
 func (u *tokenTransferUCase) distributeAndSaveTransferHistories(ctx context.Context, rewards []model.TokenTransferHistory, recipients map[string]*big.Int) error {
-	txHash, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients)
+	txHash, _, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients)
 	for index := range rewards {
 		if err != nil {
 			rewards[index].ErrorMessage = fmt.Sprintf("Failed to distribute: %v", err)
