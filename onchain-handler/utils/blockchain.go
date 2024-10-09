@@ -257,8 +257,20 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		return nil, nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}
 
-	// Return transaction hash
+	// Wait for the bulk transfer transaction to be mined and get the receipt
+	receipt, err = bind.WaitMined(context.Background(), client, tx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
+	}
+
 	txHash := tx.Hash().Hex()
+
+	// Check the transaction status
+	if receipt.Status != 1 {
+		return nil, nil, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
+	}
+
+	// Return transaction hash
 	return &txHash, &tokenSymbol, nil
 }
 
