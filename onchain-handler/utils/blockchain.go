@@ -179,10 +179,17 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		return nil, nil, fmt.Errorf("failed to get pool private key: %w", err)
 	}
 
+	// Get the initial nonce
+	nonce, err := client.PendingNonceAt(context.Background(), common.HexToAddress(poolAddress))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get nonce: %w", err)
+	}
+
 	auth, err := GetAuth(client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get auth: %w", err)
 	}
+	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Set up the ERC20 token contract instance (LifePoint or USDT, depending on pool)
 	erc20Token, err := getERC20TokenInstance(tokenAddress, symbol, client)
@@ -237,6 +244,12 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		recipientAddresses = append(recipientAddresses, common.HexToAddress(recipientAddress))
 		tokenAmounts = append(tokenAmounts, amount)
 	}
+
+	// Increment nonce for bulk transfer transaction
+	nonce++ // Increment nonce for the next transaction
+
+	// Create a new auth object for the bulk transfer transaction
+	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
 	tx, err = bulkSender.BulkTransfer(auth, common.HexToAddress(tokenAddress), recipientAddresses, tokenAmounts)
