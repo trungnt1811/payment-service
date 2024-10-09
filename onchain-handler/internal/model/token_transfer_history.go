@@ -7,31 +7,31 @@ import (
 )
 
 type TokenTransferHistory struct {
-	ID                       uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
-	TokenDistributionAddress string    `json:"token_distribution_address"`
-	RecipientAddress         string    `json:"recipient_address"`
-	TransactionHash          string    `json:"transaction_hash"`
-	TokenAmount              string    `json:"token_amount"`
-	Status                   int16     `json:"status"`
-	ErrorMessage             string    `json:"error_message"`
-	TxType                   string    `json:"tx_type"`
-	CreatedAt                time.Time `json:"created_at"`
-	UpdatedAt                time.Time `json:"updated_at"`
+	ID              uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
+	TransactionHash string    `json:"transaction_hash"`
+	FromAddress     string    `json:"from_address"`
+	ToAddress       string    `json:"to_address"`
+	TokenAmount     string    `json:"token_amount"`
+	Symbol          string    `json:"symbol"`
+	Status          bool      `json:"status"`
+	ErrorMessage    string    `json:"error_message"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 func (m *TokenTransferHistory) TableName() string {
-	return "onchain_transaction"
+	return "onchain_token_transfer"
 }
 
 func (m *TokenTransferHistory) ToDto() dto.TokenTransferHistoryDTO {
 	return dto.TokenTransferHistoryDTO{
-		ID:                       m.ID,
-		TokenDistributionAddress: m.TokenDistributionAddress,
-		RecipientAddress:         m.RecipientAddress,
-		TransactionHash:          m.TransactionHash,
-		TokenAmount:              m.TokenAmount,
-		Status:                   m.Status,
-		TxType:                   m.TxType,
-		ErrorMessage:             m.ErrorMessage,
+		ID:              m.ID,
+		TransactionHash: m.TransactionHash,
+		FromAddress:     m.FromAddress,
+		ToAddress:       m.ToAddress,
+		TokenAmount:     m.TokenAmount,
+		Symbol:          m.Symbol,
+		Status:          m.Status,
+		ErrorMessage:    m.ErrorMessage,
 	}
 }

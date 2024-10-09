@@ -12,5 +12,5 @@ type TokenTransferRepository interface {
 }
 
 type TokenTransferUCase interface {
-	TransferTokens(ctx context.Context, payloads []dto.TransferTokenPayloadDTO) error
+	TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) error
 }

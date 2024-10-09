@@ -29,13 +29,13 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransfer
 // @Tags transfer
 // @Accept json
 // @Produce json
-// @Param payload body []dto.TransferTokenPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
+// @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
 // @Success 200 {object} map[string]bool "Success response: {\"success\": true}"
 // @Failure 400 {object} util.GeneralError "Invalid payload or invalid recipient address/transaction type"
 // @Failure 500 {object} util.GeneralError "Internal server error, failed to distribute tokens"
 // @Router /api/v1/transfer [post]
 func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
-	var req []dto.TransferTokenPayloadDTO
+	var req []dto.TokenTransferPayloadDTO
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -53,15 +53,6 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid recipient address: " + payload.RecipientAddress,
 				"details": "RecipientAddress must be a valid Ethereum address",
-			})
-			return
-		}
-
-		// Check if the transaction type is valid
-		if payload.TxType != "PURCHASE" && payload.TxType != "COMMISSION" {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Invalid tx_type",
-				"details": "tx_type must be either PURCHASE or COMMISSION",
 			})
 			return
 		}

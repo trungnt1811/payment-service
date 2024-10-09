@@ -30,7 +30,7 @@ func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepos
 }
 
 // TransferTokens handles the entire process of tokens transfer
-func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TransferTokenPayloadDTO) error {
+func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) error {
 	// Convert the payload into recipients
 	recipients, err := u.convertToRecipients(payloads)
 	if err != nil {
@@ -53,7 +53,7 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 }
 
 // convertToRecipients converts the payload into recipients (address -> token amount in smallest unit)
-func (u *tokenTransferUCase) convertToRecipients(req []dto.TransferTokenPayloadDTO) (map[string]*big.Int, error) {
+func (u *tokenTransferUCase) convertToRecipients(req []dto.TokenTransferPayloadDTO) (map[string]*big.Int, error) {
 	recipients := make(map[string]*big.Int)
 
 	for _, payload := range req {
@@ -77,7 +77,7 @@ func (u *tokenTransferUCase) convertToRecipients(req []dto.TransferTokenPayloadD
 }
 
 // prepareTransferHistories prepares token transfer history based on the payload
-func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TransferTokenPayloadDTO) ([]model.TokenTransferHistory, error) {
+func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
 	var rewards []model.TokenTransferHistory
 
 	for _, payload := range req {
@@ -89,11 +89,10 @@ func (u *tokenTransferUCase) prepareTransferHistories(req []dto.TransferTokenPay
 
 		// Prepare reward entry
 		rewards = append(rewards, model.TokenTransferHistory{
-			TokenDistributionAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
-			RecipientAddress:         payload.RecipientAddress,
-			TokenAmount:              payload.TokenAmount,
-			Status:                   -1, // Default to failed status initially
-			TxType:                   payload.TxType,
+			FromAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
+			ToAddress:   payload.RecipientAddress,
+			TokenAmount: payload.TokenAmount,
+			Status:      false, // Default to failed status initially
 		})
 	}
 
@@ -106,10 +105,10 @@ func (u *tokenTransferUCase) distributeAndSaveTransferHistories(ctx context.Cont
 	for index := range rewards {
 		if err != nil {
 			rewards[index].ErrorMessage = fmt.Sprintf("Failed to distribute: %v", err)
-			rewards[index].Status = -1
+			rewards[index].Status = false
 		} else {
 			rewards[index].TransactionHash = *txHash
-			rewards[index].Status = 1
+			rewards[index].Status = false
 		}
 	}
 

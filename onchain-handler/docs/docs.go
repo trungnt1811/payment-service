@@ -15,114 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/lock/latest-events": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "This endpoint fetches a paginated list of lock events based on the provided user address.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "lock"
-                ],
-                "summary": "Get list of latest lock events by user address",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User's wallet address",
-                        "name": "userAddress",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page number, default is 1",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page size, default is 10",
-                        "name": "size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful retrieval of lock events",
-                        "schema": {
-                            "$ref": "#/definitions/dto.LockEventDTOResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid user address or missing parameters",
-                        "schema": {
-                            "$ref": "#/definitions/util.GeneralError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/util.GeneralError"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/membership/events": {
-            "get": {
-                "description": "This endpoint fetches a list of membership events based on the provided comma-separated list of order IDs.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "membership"
-                ],
-                "summary": "Retrieve membership events by order IDs",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Comma-separated list of order IDs",
-                        "name": "orderIds",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful retrieval of membership events",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.MembershipEventDTO"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid Order IDs or missing Order IDs",
-                        "schema": {
-                            "$ref": "#/definitions/util.GeneralError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/util.GeneralError"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/transfer": {
             "post": {
                 "description": "This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.",
@@ -145,7 +37,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dto.TransferTokenPayloadDTO"
+                                "$ref": "#/definitions/dto.TokenTransferPayloadDTO"
                             }
                         }
                     }
@@ -177,106 +69,13 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dto.LockEventDTO": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "current_balance": {
-                    "type": "string"
-                },
-                "deposit_amount": {
-                    "type": "string"
-                },
-                "end_duration": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "lock_action": {
-                    "type": "string"
-                },
-                "lock_duration": {
-                    "type": "integer"
-                },
-                "lock_id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "transaction_hash": {
-                    "type": "string"
-                },
-                "user_address": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.LockEventDTOResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LockEventDTO"
-                    }
-                },
-                "next_page": {
-                    "type": "integer"
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "size": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.MembershipEventDTO": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "string"
-                },
-                "end_duration": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "order_id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "transaction_hash": {
-                    "type": "string"
-                },
-                "user_address": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.TransferTokenPayloadDTO": {
+        "dto.TokenTransferPayloadDTO": {
             "type": "object",
             "properties": {
                 "recipient_address": {
                     "type": "string"
                 },
                 "token_amount": {
-                    "type": "string"
-                },
-                "tx_type": {
                     "type": "string"
                 }
             }
