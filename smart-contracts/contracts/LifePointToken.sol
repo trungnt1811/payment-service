@@ -21,18 +21,4 @@ contract LifePointToken is ERC20, Ownable {
     function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
-
-    // Bulk transfer function
-    function bulkTransfer(address[] calldata _to, uint256[] calldata _value) external {
-        require(_to.length == _value.length, "Recipients and values length mismatch");
-        require(_to.length <= 255, "Maximum 255 recipients allowed");
-
-        uint256 totalAmount = 0;
-        for (uint8 i = 0; i < _to.length; i++) {
-            _transfer(msg.sender, _to[i], _value[i]);
-            totalAmount += _value[i];
-        }
-
-        emit BulkTransfer(address(this), totalAmount);
-    }
 }
