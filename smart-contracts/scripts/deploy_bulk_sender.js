@@ -6,7 +6,7 @@ async function main() {
     // Display deployer information
     console.log("Deploying BulkSender contract with the account:", deployer.address);
     const balance = await deployer.getBalance();
-    console.log("Account balance:", ethers.utils.formatEther(balance), "ETH");
+    console.log("Account balance:", ethers.utils.formatEther(balance));
 
     // Get the contract factory and deploy the contract
     const BulkSender = await ethers.getContractFactory("BulkSender");
