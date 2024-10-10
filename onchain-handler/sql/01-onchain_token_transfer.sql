@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     from_address VARCHAR(42) NOT NULL,
     to_address VARCHAR(42) NOT NULL,
     token_amount NUMERIC(50, 18) NOT NULL,
+    fee NUMERIC(50, 18) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
     status BOOLEAN NOT NULL DEFAULT False,
     error_message TEXT,

@@ -13,6 +13,7 @@ type TokenTransferHistory struct {
 	FromAddress     string    `json:"from_address"`
 	ToAddress       string    `json:"to_address"`
 	TokenAmount     uint64    `json:"token_amount"`
+	Fee             float64   `json:"fee"`
 	Symbol          string    `json:"symbol"`
 	Status          bool      `json:"status"`
 	ErrorMessage    string    `json:"error_message"`
@@ -32,6 +33,7 @@ func (m *TokenTransferHistory) ToDto() dto.TokenTransferHistoryDTO {
 		FromAddress:     m.FromAddress,
 		ToAddress:       m.ToAddress,
 		TokenAmount:     m.TokenAmount,
+		Fee:             m.Fee,
 		Symbol:          m.Symbol,
 		Status:          m.Status,
 		ErrorMessage:    m.ErrorMessage,

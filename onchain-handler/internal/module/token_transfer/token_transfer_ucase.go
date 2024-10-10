@@ -99,7 +99,7 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	amounts []*big.Int,
 ) error {
 	// Call the BulkTransfer utility to send tokens
-	txHash, tokenSymbol, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients, amounts)
+	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients, amounts)
 	for index := range tokenTransfers {
 		if err != nil {
 			return fmt.Errorf("failed to bulk transfer token: %v", err)
@@ -108,6 +108,8 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 			tokenTransfers[index].TransactionHash = *txHash
 			tokenTransfers[index].Status = true
 			tokenTransfers[index].Symbol = *tokenSymbol
+			fee, _ := txFee.Float64()
+			tokenTransfers[index].Fee = fee
 		}
 	}
 

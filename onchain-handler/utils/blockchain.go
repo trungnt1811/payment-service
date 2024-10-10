@@ -23,7 +23,6 @@ import (
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/lifepointtoken"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/usdtmock"
-	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
 // ConnectToNetwork connects to the blockchain network via an RPC URL
@@ -163,44 +162,44 @@ type ERC20Token interface {
 }
 
 // BulkTransfer transfers tokens from the pool address to user wallets using bulk transfer
-func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients []string, amounts []*big.Int) (*string, *string, error) {
+func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients []string, amounts []*big.Int) (*string, *string, *big.Float, error) {
 	chainID := config.Blockchain.ChainID
 	bulkSenderContractAddress := config.Blockchain.SmartContract.BulkSenderContractAddress
 
 	// Get the token address, pool private key, and symbol based on the pool address
 	tokenAddress, poolPrivateKey, symbol, err := getPoolDetails(poolAddress, config)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Get authentication for signing transactions
 	privateKeyECDSA, err := PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get pool private key: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to get pool private key: %w", err)
 	}
 
 	// Get the initial nonce
 	nonce, err := client.PendingNonceAt(context.Background(), common.HexToAddress(poolAddress))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get nonce: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to get nonce: %w", err)
 	}
 
 	auth, err := GetAuth(client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get auth: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to get auth: %w", err)
 	}
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Set up the ERC20 token contract instance (LifePoint or USDT, depending on pool)
 	erc20Token, err := getERC20TokenInstance(tokenAddress, symbol, client)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Set up the bulk transfer contract instance
 	bulkSender, err := bulksender.NewBulksender(common.HexToAddress(bulkSenderContractAddress), client)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
 	}
 
 	// Calculate total amount to transfer for approval
@@ -212,58 +211,56 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
 	token, ok := erc20Token.(ERC20Token) // Type assertion to ERC20Token interface
 	if !ok {
-		return nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
+		return nil, nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
 	}
-
-	// Get the token symbol from the contract
-	tokenSymbol, err := token.Symbol(nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get token symbol from the contract: %w", err)
-	}
-	log.LG.Infof("Token symbol: %s", tokenSymbol)
 
 	tx, err := token.Approve(auth, common.HexToAddress(bulkSenderContractAddress), totalAmount)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to approve bulk sender contract: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to approve bulk sender contract: %w", err)
 	}
-	log.LG.Infof("Approval transaction sent: %s\n", tx.Hash().Hex())
 
 	// Wait for approval to be mined
 	receipt, err := bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to wait for approval transaction to be mined: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to wait for approval transaction to be mined: %w", err)
 	}
 	if receipt.Status != 1 {
-		return nil, nil, fmt.Errorf("approval transaction failed")
+		return nil, nil, nil, fmt.Errorf("approval transaction failed")
 	}
 
-	// Increment nonce for bulk transfer transaction
 	nonce++ // Increment nonce for the next transaction
-
-	// Create a new auth object for the bulk transfer transaction
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
 	tx, err = bulkSender.BulkTransfer(auth, convertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}
 
 	// Wait for the bulk transfer transaction to be mined and get the receipt
 	receipt, err = bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
 	}
 
 	txHash := tx.Hash().Hex()
 
 	// Check the transaction status
 	if receipt.Status != 1 {
-		return nil, nil, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
+		return nil, nil, nil, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
 	}
 
-	// Return transaction hash and token symbol
-	return &txHash, &tokenSymbol, nil
+	// Calculate transaction fee (gasUsed * gasPrice)
+	gasUsed := receipt.GasUsed
+	gasPrice := auth.GasPrice
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
+
+	// Convert txFee from wei to AVAX (1 AVAX = 10^18 wei)
+	weiInAVAX := big.NewFloat(1e18)
+	txFeeInAVAX := new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
+
+	// Return transaction hash, token symbol, and transaction fee
+	return &txHash, &symbol, txFeeInAVAX, nil
 }
 
 // Helper function to convert string addresses to common.Address type
