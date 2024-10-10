@@ -63,7 +63,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "This endpoint fetches a paginated list of token transfer histories.",
+                "description": "This endpoint fetches a paginated list of token transfer histories with optional filters.",
                 "consumes": [
                     "application/json"
                 ],
@@ -85,6 +85,30 @@
                         "type": "integer",
                         "description": "Page size, default is 10",
                         "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Transaction hash to filter",
+                        "name": "transaction_hash",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sender's address to filter",
+                        "name": "from_address",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Recipient's address to filter",
+                        "name": "to_address",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token symbol to filter",
+                        "name": "symbol",
                         "in": "query"
                     }
                 ],

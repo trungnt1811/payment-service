@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create indexes
+CREATE INDEX onchain_token_transfer_transaction_hash_idx ON onchain_token_transfer (transaction_hash);
+CREATE INDEX onchain_token_transfer_from_address_idx ON onchain_token_transfer (from_address);
+CREATE INDEX onchain_token_transfer_to_address_idx ON onchain_token_transfer (to_address);
+CREATE INDEX onchain_token_transfer_symbol_idx ON onchain_token_transfer (symbol);
+CREATE INDEX onchain_token_transfer_created_at_idx ON onchain_token_transfer (created_at);
+
 -- Create a trigger function to update 'updated_at' column on update
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

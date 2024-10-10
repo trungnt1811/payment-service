@@ -123,9 +123,13 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	return nil
 }
 
-// GetTokenTransferHistories fetchs token transfer histories from the repository
-func (s *tokenTransferUCase) GetTokenTransferHistories(ctx context.Context, page, size int) (dto.TokenTransferHistoryDTOResponse, error) {
-	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, page, size)
+// GetTokenTransferHistories fetches token transfer histories from the repository with optional filters
+func (s *tokenTransferUCase) GetTokenTransferHistories(ctx context.Context, filters dto.TokenTransferFilterDTO, page, size int) (dto.TokenTransferHistoryDTOResponse, error) {
+	// Convert filters DTO to a map
+	filterMap := filters.ToMap()
+
+	// Fetch the token transfer histories with filters
+	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, filterMap, page, size)
 	if err != nil {
 		return dto.TokenTransferHistoryDTOResponse{}, err
 	}

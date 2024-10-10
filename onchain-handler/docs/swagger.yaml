@@ -108,7 +108,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: This endpoint fetches a paginated list of token transfer histories.
+      description: This endpoint fetches a paginated list of token transfer histories
+        with optional filters.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -118,6 +119,22 @@ paths:
         in: query
         name: size
         type: integer
+      - description: Transaction hash to filter
+        in: query
+        name: transaction_hash
+        type: string
+      - description: Sender's address to filter
+        in: query
+        name: from_address
+        type: string
+      - description: Recipient's address to filter
+        in: query
+        name: to_address
+        type: string
+      - description: Token symbol to filter
+        in: query
+        name: symbol
+        type: string
       produces:
       - application/json
       responses:

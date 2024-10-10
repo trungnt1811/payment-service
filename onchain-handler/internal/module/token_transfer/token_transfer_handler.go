@@ -104,12 +104,16 @@ func getValidPools() string {
 
 // GetTokenTransferHistories retrieves the token transfer histories.
 // @Summary Get list of token transfer histories
-// @Description This endpoint fetches a paginated list of token transfer histories.
+// @Description This endpoint fetches a paginated list of token transfer histories with optional filters.
 // @Tags token-transfer
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
+// @Param transaction_hash query string false "Transaction hash to filter"
+// @Param from_address query string false "Sender's address to filter"
+// @Param to_address query string false "Recipient's address to filter"
+// @Param symbol query string false "Token symbol to filter"
 // @Success 200 {object} dto.TokenTransferHistoryDTOResponse "Successful retrieval of token transfer histories"
 // @Failure 400 {object} util.GeneralError "Invalid parameters"
 // @Failure 500 {object} util.GeneralError "Internal server error"
@@ -135,8 +139,22 @@ func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch token transfer histories using the use case
-	response, err := h.UCase.GetTokenTransferHistories(ctx, pageInt, sizeInt)
+	// Extract filter parameters from query string
+	transactionHash := ctx.Query("transaction_hash")
+	fromAddress := ctx.Query("from_address")
+	toAddress := ctx.Query("to_address")
+	symbol := ctx.Query("symbol")
+
+	// Create filter DTO
+	filters := dto.TokenTransferFilterDTO{
+		TransactionHash: &transactionHash,
+		FromAddress:     &fromAddress,
+		ToAddress:       &toAddress,
+		Symbol:          &symbol,
+	}
+
+	// Fetch token transfer histories using the use case, passing filters, page, and size
+	response, err := h.UCase.GetTokenTransferHistories(ctx, filters, pageInt, sizeInt)
 	if err != nil {
 		log.LG.Errorf("Failed to retrieve token transfer histories: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)
