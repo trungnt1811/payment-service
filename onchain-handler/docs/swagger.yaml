@@ -4,7 +4,7 @@ definitions:
       error_message:
         type: string
       fee:
-        type: number
+        type: string
       from_address:
         type: string
       id:
@@ -18,7 +18,7 @@ definitions:
       to_address:
         type: string
       token_amount:
-        type: integer
+        type: string
       transaction_hash:
         type: string
     type: object

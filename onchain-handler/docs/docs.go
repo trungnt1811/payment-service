@@ -130,7 +130,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "fee": {
-                    "type": "number"
+                    "type": "string"
                 },
                 "from_address": {
                     "type": "string"
@@ -151,7 +151,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "token_amount": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "transaction_hash": {
                     "type": "string"

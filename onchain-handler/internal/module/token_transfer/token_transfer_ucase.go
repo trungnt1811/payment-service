@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -75,20 +76,21 @@ func (u *tokenTransferUCase) convertToRecipientsAndAmounts(req []dto.TokenTransf
 
 // prepareTokenTransferHistories prepares token transfer history based on the payload
 func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
-	var rewards []model.TokenTransferHistory
+	var tokenTransfers []model.TokenTransferHistory
 
 	for _, payload := range req {
 		// Prepare reward entry
-		rewards = append(rewards, model.TokenTransferHistory{
+		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
 			RequestID:   payload.RequestID,
 			FromAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
 			ToAddress:   payload.ToAddress,
-			TokenAmount: payload.TokenAmount,
+			// Convert TokenAmount from uint64 to string
+			TokenAmount: strconv.FormatUint(payload.TokenAmount, 10),
 			Status:      false, // Default to failed status initially
 		})
 	}
 
-	return rewards, nil
+	return tokenTransfers, nil
 }
 
 // bulkTransferAndSaveTokenTransferHistories performs bulk token transfer and updates token transfer history
@@ -108,8 +110,7 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 			tokenTransfers[index].TransactionHash = *txHash
 			tokenTransfers[index].Status = true
 			tokenTransfers[index].Symbol = *tokenSymbol
-			fee, _ := txFee.Float64()
-			tokenTransfers[index].Fee = fee
+			tokenTransfers[index].Fee = txFee.String()
 		}
 	}
 
