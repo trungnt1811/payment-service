@@ -203,12 +203,19 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		totalAmount = new(big.Int).Add(totalAmount, amount)
 	}
 
-	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
-	token, ok := erc20Token.(interfaces.ERC20Token) // Type assertion to ERC20Token interface
+	// Type assertion to ERC20Token interface
+	token, ok := erc20Token.(interfaces.ERC20Token)
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
 	}
 
+	// Get the token symbol from the contract
+	tokenSymbol, err := token.Symbol(nil)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get token symbol from the contract: %w", err)
+	}
+
+	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
 	tx, err := token.Approve(auth, common.HexToAddress(bulkSenderContractAddress), totalAmount)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to approve bulk sender contract: %w", err)
@@ -255,7 +262,7 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 	txFeeInAVAX := new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
 
 	// Return transaction hash, token symbol, and transaction fee
-	return &txHash, &symbol, txFeeInAVAX, nil
+	return &txHash, &tokenSymbol, txFeeInAVAX, nil
 }
 
 // Helper function to convert string addresses to common.Address type
