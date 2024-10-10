@@ -100,14 +100,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Transaction hash to filter",
-                        "name": "transaction_hash",
+                        "description": "Pool's name to filter (LP_Treasury, LP_Revenue, LP_Staking, LP_Community, USDT_Treasury)",
+                        "name": "pool_name",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Sender's address to filter",
-                        "name": "from_address",
+                        "description": "Transaction hash to filter",
+                        "name": "transaction_hash",
                         "in": "query"
                     },
                     {

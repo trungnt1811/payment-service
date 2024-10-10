@@ -119,13 +119,14 @@ paths:
         in: query
         name: size
         type: integer
+      - description: Pool's name to filter (LP_Treasury, LP_Revenue, LP_Staking, LP_Community,
+          USDT_Treasury)
+        in: query
+        name: pool_name
+        type: string
       - description: Transaction hash to filter
         in: query
         name: transaction_hash
-        type: string
-      - description: Sender's address to filter
-        in: query
-        name: from_address
         type: string
       - description: Recipient's address to filter
         in: query

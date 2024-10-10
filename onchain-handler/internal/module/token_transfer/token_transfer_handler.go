@@ -110,8 +110,8 @@ func getValidPools() string {
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
+// @Param pool_name query string false "Pool's name to filter (LP_Treasury, LP_Revenue, LP_Staking, LP_Community, USDT_Treasury)"
 // @Param transaction_hash query string false "Transaction hash to filter"
-// @Param from_address query string false "Sender's address to filter"
 // @Param to_address query string false "Recipient's address to filter"
 // @Param symbol query string false "Token symbol to filter"
 // @Success 200 {object} dto.TokenTransferHistoryDTOResponse "Successful retrieval of token transfer histories"
@@ -141,14 +141,14 @@ func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 
 	// Extract filter parameters from query string
 	transactionHash := ctx.Query("transaction_hash")
-	fromAddress := ctx.Query("from_address")
+	poolName := ctx.Query("pool_name")
 	toAddress := ctx.Query("to_address")
 	symbol := ctx.Query("symbol")
 
 	// Create filter DTO
 	filters := dto.TokenTransferFilterDTO{
 		TransactionHash: &transactionHash,
-		FromAddress:     &fromAddress,
+		PoolName:        &poolName,
 		ToAddress:       &toAddress,
 		Symbol:          &symbol,
 	}

@@ -123,3 +123,20 @@ func GetPoolAddress(poolName string) (string, error) {
 		return "", fmt.Errorf("unrecognized pool name: %s", poolName)
 	}
 }
+
+func GetPoolName(poolAddress string) (string, error) {
+	switch poolAddress {
+	case configuration.Blockchain.LPCommunityPool.LPCommunityAddress:
+		return constants.LPCommunity, nil
+	case configuration.Blockchain.LPStakingPool.LPStakingAddress:
+		return constants.LPStaking, nil
+	case configuration.Blockchain.LPRevenuePool.LPRevenueAddress:
+		return constants.LPRevenue, nil
+	case configuration.Blockchain.LPTreasuryPool.LPTreasuryAddress:
+		return constants.LPTreasury, nil
+	case configuration.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
+		return constants.USDTTreasury, nil
+	default:
+		return "", fmt.Errorf("unrecognized pool address: %s", poolAddress)
+	}
+}
