@@ -6,55 +6,55 @@ services:
       context: .  # Path to Dockerfile
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"  # Expose port 8080
+      - "8080:8080"
     environment:
-      # Database configuration
       DB_USER: postgres
       DB_PASSWORD: 123456
       DB_HOST: db
       DB_PORT: 5432
-      # Blockchain configuration
       DB_NAME: onchain-handler
       RPC_URL: https://api.avax-test.network/ext/bc/C/rpc
       CHAIN_ID: 43113
-      # Event listener configuration
       START_BLOCK_LISTENER: 36004000
-      # Smart contract addresses
       LIFE_POINT_CONTRACT_ADDRESS: 0x174777c48ACbeB097af9fB2A59840Ed4823D5613
       USDT_CONTRACT_ADDRESS: 0xA998C670F0b5D3D5Ace30dA3F57dD153EaDE3B67
       BULK_SENDER_CONTRACT_ADDRESS: 0xf3c16A130aC33E9b3f0A786c5705a15830E12186
-      # Pool addresses
       LP_TREASURY_ADDRESS: 0x326ee3fbD294aCa6f33C60847A80883Ce25A92AD
       USDT_TREASURY_ADDRESS: 0xB9F2fa90DBB47cd08e43aFA1b4D2C2620D80d193
       LP_COMMUNITY_ADDRESS: 0x7395b6C80f32A1F410b8B0591143a164bf7117b9
       LP_REVENUE_ADDRESS: 0x8EDBFc7Dcda975c7e23a48FF143878574E854E97
       LP_STAKING_ADDRESS: 0x1e854bbd9d17E002024234D172BF7fB229ad9774
-      # Load the private keys via env
       PRIVATE_KEY_LP_TREASURY: ${PRIVATE_KEY_LP_TREASURY}
       PRIVATE_KEY_USDT_TREASURY: ${PRIVATE_KEY_USDT_TREASURY}
       PRIVATE_KEY_LP_COMMUNITY: ${PRIVATE_KEY_LP_COMMUNITY}
       PRIVATE_KEY_LP_REVENUE: ${PRIVATE_KEY_LP_REVENUE}
       PRIVATE_KEY_LP_STAKING: ${PRIVATE_KEY_LP_STAKING}
     depends_on:
-      - db  # Ensure that PostgreSQL starts first
+      db:
+        condition: service_healthy  # Wait for the db service to become healthy
     networks:
       - onchain-handler-network
 
   db:
-    image: postgres:14-alpine  # Use a lightweight PostgreSQL image
+    image: postgres:14-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456
       POSTGRES_DB: onchain-handler
     volumes:
-      - pgdata:/var/lib/postgresql/data  # Persist PostgreSQL data
+      - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"  # Expose PostgreSQL on port 5432
+      - "5432:5432"
     networks:
       - onchain-handler-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  pgdata:  # Persistent volume for PostgreSQL data
+  pgdata:
 
 networks:
-  onchain-handler-network:  # A custom network to connect onchain-handler and PostgreSQL
+  onchain-handler-network:
