@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     token_amount NUMERIC(50, 18) NOT NULL,
     fee NUMERIC(50, 18) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
+    from_pool_name VARCHAR(15) NOT NULL,
     status BOOLEAN NOT NULL DEFAULT False,
     error_message TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -18,6 +19,7 @@ CREATE INDEX onchain_token_transfer_transaction_hash_idx ON onchain_token_transf
 CREATE INDEX onchain_token_transfer_from_address_idx ON onchain_token_transfer (from_address);
 CREATE INDEX onchain_token_transfer_to_address_idx ON onchain_token_transfer (to_address);
 CREATE INDEX onchain_token_transfer_symbol_idx ON onchain_token_transfer (symbol);
+CREATE INDEX onchain_token_transfer_from_pool_name_idx ON onchain_token_transfer (from_pool_name);
 CREATE INDEX onchain_token_transfer_created_at_idx ON onchain_token_transfer (created_at);
 
 -- Create a trigger function to update 'updated_at' column on update

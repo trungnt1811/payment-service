@@ -90,13 +90,19 @@
                     {
                         "type": "string",
                         "description": "Pool's name to filter (LP_Treasury, LP_Revenue, LP_Staking, LP_Community, USDT_Treasury)",
-                        "name": "pool_name",
+                        "name": "from_pool_name",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "Transaction hash to filter",
                         "name": "transaction_hash",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sender's address to filter",
+                        "name": "from_address",
                         "in": "query"
                     },
                     {
@@ -146,6 +152,9 @@
                     "type": "string"
                 },
                 "from_address": {
+                    "type": "string"
+                },
+                "from_pool_name": {
                     "type": "string"
                 },
                 "id": {

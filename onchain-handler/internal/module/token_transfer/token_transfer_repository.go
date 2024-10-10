@@ -39,6 +39,9 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(ctx context.Context,
 		if transactionHash, ok := filters["transaction_hash"]; ok && transactionHash != "" {
 			query = query.Where("transaction_hash = ?", transactionHash)
 		}
+		if fromPoolName, ok := filters["from_pool_name"]; ok && fromPoolName != "" {
+			query = query.Where("from_pool_name = ?", fromPoolName)
+		}
 		if fromAddress, ok := filters["from_address"]; ok && fromAddress != "" {
 			query = query.Where("from_address = ?", fromAddress)
 		}

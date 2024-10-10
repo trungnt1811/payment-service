@@ -9,6 +9,7 @@ type TokenTransferHistoryDTO struct {
 	TokenAmount     string `json:"token_amount"`
 	Fee             string `json:"fee"`
 	Symbol          string `json:"symbol"`
+	FromPoolName    string `json:"from_pool_name"`
 	Status          bool   `json:"status"`
 	ErrorMessage    string `json:"error_message"`
 }

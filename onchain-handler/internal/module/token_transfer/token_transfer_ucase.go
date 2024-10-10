@@ -80,13 +80,18 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransf
 
 	for _, payload := range req {
 		// Prepare reward entry
+		fromAddress, err := conf.GetPoolAddress(payload.PoolName)
+		if err != nil {
+			return nil, err
+		}
 		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
 			RequestID:   payload.RequestID,
-			FromAddress: u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress,
+			FromAddress: fromAddress,
 			ToAddress:   payload.ToAddress,
 			// Convert TokenAmount from uint64 to string
-			TokenAmount: strconv.FormatUint(payload.TokenAmount, 10),
-			Status:      false, // Default to failed status initially
+			TokenAmount:  strconv.FormatUint(payload.TokenAmount, 10),
+			Status:       false, // Default to failed status initially
+			FromPoolName: payload.PoolName,
 		})
 	}
 
