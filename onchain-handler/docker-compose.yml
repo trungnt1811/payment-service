@@ -42,7 +42,8 @@ services:
       POSTGRES_PASSWORD: 123456
       POSTGRES_DB: onchain-handler
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data  # Persistent volume for PostgreSQL data
+      - ./sql:/docker-entrypoint-initdb.d  # Mount SQL scripts to initdb.d directory
     ports:
       - "5432:5432"
     networks:
