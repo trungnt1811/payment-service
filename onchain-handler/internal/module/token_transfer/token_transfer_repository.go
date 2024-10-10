@@ -27,3 +27,18 @@ func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Conte
 	}
 	return nil
 }
+
+func (r *tokenTransferRepository) GetTokenTransferHistories(ctx context.Context, page, size int) ([]model.TokenTransferHistory, error) {
+	var tokenTransfers []model.TokenTransferHistory
+	offset := (page - 1) * size
+
+	// Query to fetch token transfer histories with pagination
+	if err := r.db.WithContext(ctx).
+		Limit(size + 1). // Fetch one more than the size to check if there's a next page
+		Offset(offset).
+		Find(&tokenTransfers).Error; err != nil {
+		return nil, err
+	}
+
+	return tokenTransfers, nil
+}

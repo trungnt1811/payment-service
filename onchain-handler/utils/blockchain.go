@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/lifepointtoken"
@@ -155,12 +156,6 @@ func ParseHexToUint64(hexStr string) (uint64, error) {
 	return value, nil
 }
 
-// ERC20Token defines the methods we expect for ERC20 tokens
-type ERC20Token interface {
-	Approve(auth *bind.TransactOpts, spender common.Address, amount *big.Int) (*types.Transaction, error)
-	Symbol(opts *bind.CallOpts) (string, error)
-}
-
 // BulkTransfer transfers tokens from the pool address to user wallets using bulk transfer
 func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients []string, amounts []*big.Int) (*string, *string, *big.Float, error) {
 	chainID := config.Blockchain.ChainID
@@ -209,7 +204,7 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 	}
 
 	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
-	token, ok := erc20Token.(ERC20Token) // Type assertion to ERC20Token interface
+	token, ok := erc20Token.(interfaces.ERC20Token) // Type assertion to ERC20Token interface
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
 	}

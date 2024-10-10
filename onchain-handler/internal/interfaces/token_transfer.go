@@ -9,6 +9,7 @@ import (
 
 type TokenTransferRepository interface {
 	CreateTokenTransferHistories(ctx context.Context, models []model.TokenTransferHistory) error
+	GetTokenTransferHistories(ctx context.Context, page, size int) ([]model.TokenTransferHistory, error)
 }
 
 type TokenTransferUCase interface {
