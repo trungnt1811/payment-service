@@ -121,3 +121,35 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 
 	return nil
 }
+
+// GetTokenTransferHistories fetchs token transfer histories from the repository
+func (s *tokenTransferUCase) GetTokenTransferHistories(ctx context.Context, page, size int) (dto.TokenTransferHistoryDTOResponse, error) {
+	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, page, size)
+	if err != nil {
+		return dto.TokenTransferHistoryDTOResponse{}, err
+	}
+
+	var listTokenTransfersDTO []dto.TokenTransferHistoryDTO
+
+	// Convert the token transfer histories to DTO format
+	for i := range listTokenTransfers {
+		if i >= size {
+			break
+		}
+		listTokenTransfersDTO = append(listTokenTransfersDTO, listTokenTransfers[i].ToDto())
+	}
+
+	// Determine the next page if there are more token transfers
+	nextPage := page
+	if len(listTokenTransfers) > size {
+		nextPage += 1
+	}
+
+	// Return the response DTO
+	return dto.TokenTransferHistoryDTOResponse{
+		NextPage: nextPage,
+		Page:     page,
+		Size:     size,
+		Data:     listTokenTransfersDTO,
+	}, nil
+}
