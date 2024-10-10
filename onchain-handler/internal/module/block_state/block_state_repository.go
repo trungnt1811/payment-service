@@ -1,4 +1,4 @@
-package blockstate
+package block_state
 
 import (
 	"context"

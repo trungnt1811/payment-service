@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	transfer "github.com/genefriendway/onchain-handler/internal/module/token_transfer"
+	"github.com/genefriendway/onchain-handler/internal/module/token_transfer"
 )
 
 func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethClient *ethclient.Client, ctx context.Context) {
@@ -17,8 +17,8 @@ func RegisterRoutes(r *gin.Engine, config *conf.Configuration, db *gorm.DB, ethC
 	appRouter := v1.Group("")
 
 	// SECTION: tokens transfer
-	transferRepository := transfer.NewTokenTransferRepository(db)
-	transferUCase := transfer.NewTokenTransferUCase(transferRepository, ethClient, config)
-	transferHandler := transfer.NewTokenTransferHandler(transferUCase)
+	transferRepository := token_transfer.NewTokenTransferRepository(db)
+	transferUCase := token_transfer.NewTokenTransferUCase(transferRepository, ethClient, config)
+	transferHandler := token_transfer.NewTokenTransferHandler(transferUCase)
 	appRouter.POST("/token-transfer", transferHandler.Transfer)
 }

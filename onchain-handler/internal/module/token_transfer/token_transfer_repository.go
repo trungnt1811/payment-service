@@ -1,4 +1,4 @@
-package transfer
+package token_transfer
 
 import (
 	"context"
