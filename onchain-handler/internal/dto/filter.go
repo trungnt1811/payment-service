@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/genefriendway/onchain-handler/conf"
+
 type TokenTransferFilterDTO struct {
 	PoolName        *string `json:"pool_name,omitempty"`
 	TransactionHash *string `json:"transaction_hash,omitempty"`
@@ -15,7 +17,10 @@ func (d *TokenTransferFilterDTO) ToMap() map[string]interface{} {
 		filterMap["transaction_hash"] = *d.TransactionHash
 	}
 	if d.PoolName != nil && *d.PoolName != "" {
-		filterMap["pool_name"] = *d.PoolName
+		fromAddress, err := conf.GetPoolAddress(*d.PoolName)
+		if err == nil {
+			filterMap["from_address"] = fromAddress
+		}
 	}
 	if d.ToAddress != nil && *d.ToAddress != "" {
 		filterMap["to_address"] = *d.ToAddress
