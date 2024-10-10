@@ -3,6 +3,7 @@ package token_transfer
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
@@ -28,7 +29,7 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransfer
 // Transfer handles the distribution of tokens to recipients.
 // @Summary Distribute tokens to recipients
 // @Description This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.
-// @Tags transfer
+// @Tags token-transfer
 // @Accept json
 // @Produce json
 // @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
@@ -99,4 +100,49 @@ func getValidPools() string {
 		constants.LPTreasury,
 		constants.USDTTreasury,
 	)
+}
+
+// GetTokenTransferHistories retrieves the token transfer histories.
+// @Summary Get list of token transfer histories
+// @Description This endpoint fetches a paginated list of token transfer histories.
+// @Tags token-transfer
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number, default is 1"
+// @Param size query int false "Page size, default is 10"
+// @Success 200 {object} dto.TokenTransferHistoryDTOResponse "Successful retrieval of token transfer histories"
+// @Failure 400 {object} util.GeneralError "Invalid parameters"
+// @Failure 500 {object} util.GeneralError "Internal server error"
+// @Security ApiKeyAuth
+// @Router /api/v1/token-transfer/histories [get]
+func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
+	// Set default values for page and size if they are not provided
+	page := ctx.DefaultQuery("page", "1")
+	size := ctx.DefaultQuery("size", "10")
+
+	// Parse page and size into integers
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 1 {
+		log.LG.Errorf("Invalid page number: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+		return
+	}
+
+	sizeInt, err := strconv.Atoi(size)
+	if err != nil || sizeInt < 1 {
+		log.LG.Errorf("Invalid size: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
+		return
+	}
+
+	// Fetch token transfer histories using the use case
+	response, err := h.UCase.GetTokenTransferHistories(ctx, pageInt, sizeInt)
+	if err != nil {
+		log.LG.Errorf("Failed to retrieve token transfer histories: %v", err)
+		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)
+		return
+	}
+
+	// Return the response as a JSON response
+	ctx.JSON(http.StatusOK, response)
 }

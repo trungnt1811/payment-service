@@ -25,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "transfer"
+                    "token-transfer"
                 ],
                 "summary": "Distribute tokens to recipients",
                 "parameters": [
@@ -66,9 +66,121 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/v1/token-transfer/histories": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "This endpoint fetches a paginated list of token transfer histories.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "token-transfer"
+                ],
+                "summary": "Get list of token transfer histories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of token transfer histories",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TokenTransferHistoryDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/util.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/util.GeneralError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "dto.TokenTransferHistoryDTO": {
+            "type": "object",
+            "properties": {
+                "error_message": {
+                    "type": "string"
+                },
+                "fee": {
+                    "type": "number"
+                },
+                "from_address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "boolean"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "to_address": {
+                    "type": "string"
+                },
+                "token_amount": {
+                    "type": "integer"
+                },
+                "transaction_hash": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TokenTransferHistoryDTOResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TokenTransferHistoryDTO"
+                    }
+                },
+                "next_page": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.TokenTransferPayloadDTO": {
             "type": "object",
             "properties": {
