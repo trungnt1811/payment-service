@@ -88,17 +88,12 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransf
 
 	for _, payload := range req {
 		// Prepare reward entry
-		fromPoolName, err := conf.GetPoolName(payload.FromAddress)
-		if err != nil {
-			return nil, err
-		}
 		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
-			RequestID:    payload.RequestID,
-			FromAddress:  payload.FromAddress,
-			ToAddress:    payload.ToAddress,
-			TokenAmount:  payload.TokenAmount,
-			Status:       false, // Default to failed status initially
-			FromPoolName: fromPoolName,
+			RequestID:   payload.RequestID,
+			FromAddress: payload.FromAddress,
+			ToAddress:   payload.ToAddress,
+			TokenAmount: payload.TokenAmount,
+			Status:      false, // Default to failed status initially
 		})
 	}
 

@@ -165,9 +165,6 @@ const docTemplate = `{
                 "from_address": {
                     "type": "string"
                 },
-                "from_pool_name": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
