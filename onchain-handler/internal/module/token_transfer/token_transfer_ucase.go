@@ -30,9 +30,9 @@ func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepos
 }
 
 // TransferTokens handles the entire process of token transfers and returns the status of each transaction
-func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) (map[string]bool, error) {
-	// Initialize a map to track the status of each transfer
-	transferResults := make(map[string]bool)
+func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) (map[string]string, error) {
+	// Initialize a map to track the status of each transfer, with error details
+	transferResults := make(map[string]string)
 
 	// Group payloads by FromAddress and Symbol
 	groupedPayloads := u.groupPayloadsByFromAddressAndSymbol(payloads)
@@ -42,32 +42,32 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 
 		recipients, amounts, err := u.convertToRecipientsAndAmounts(grouped)
 		if err != nil {
-			// Log the error and mark the batch as failed
+			// Log the error and mark the batch as failed, including the error message
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = false
+				transferResults[payload.RequestID] = fmt.Sprintf("Failed: %v", err)
 			}
 			continue
 		}
 
 		tokenTransfers, err := u.prepareTokenTransferHistories(grouped)
 		if err != nil {
-			// Log the error and mark the batch as failed
+			// Log the error and mark the batch as failed, including the error message
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = false
+				transferResults[payload.RequestID] = fmt.Sprintf("Failed: %v", err)
 			}
 			continue
 		}
 
 		err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, fromAddress, symbol, recipients, amounts)
 		if err != nil {
-			// Log the error and mark the batch as failed
+			// Log the error and mark the batch as failed, including the error message
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = false
+				transferResults[payload.RequestID] = fmt.Sprintf("Failed: %v", err)
 			}
 		} else {
 			// Mark all transactions in the batch as successful
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = true
+				transferResults[payload.RequestID] = "Success"
 			}
 		}
 	}

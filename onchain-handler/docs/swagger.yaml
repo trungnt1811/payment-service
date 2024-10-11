@@ -89,7 +89,7 @@ paths:
       responses:
         "200":
           description: 'Success response: {\"success\": true, \"results\": {\"requestID1\":
-            true, \"requestID2\": false}}'
+            \"Success\", \"requestID2\": \"Failed: some error message\"}}'
           schema:
             additionalProperties: true
             type: object

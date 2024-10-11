@@ -33,7 +33,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"results\\\": {\\\"requestID1\\\": true, \\\"requestID2\\\": false}}",
+                        "description": "Success response: {\\\"success\\\": true, \\\"results\\\": {\\\"requestID1\\\": \\\"Success\\\", \\\"requestID2\\\": \\\"Failed: some error message\\\"}}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
