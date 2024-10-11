@@ -157,7 +157,7 @@ func ParseHexToUint64(hexStr string) (uint64, error) {
 	return value, nil
 }
 
-// BulkTransfer transfers tokens from the pool address to user wallets using bulk transfer
+// BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
 func BulkTransfer(
 	client *ethclient.Client,
 	config *conf.Configuration,
@@ -185,7 +185,6 @@ func BulkTransfer(
 		return nil, nil, nil, fmt.Errorf("failed to instantiate ERC20 contract: %w", err)
 	}
 
-	// Get authentication for signing transactions
 	privateKeyECDSA, err := PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get pool private key: %w", err)
