@@ -79,6 +79,14 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 			}
 			req[index].ToAddress = toAddress
 		}
+		// Check if payload.Symbol is USDT or LP
+		if payload.Symbol != constants.USDT && payload.Symbol != constants.LP {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid token symbol",
+				"details": "Token symbol must be USDT or LP",
+			})
+			return
+		}
 	}
 
 	// Proceed to distribute tokens if all checks pass

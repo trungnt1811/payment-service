@@ -36,14 +36,14 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 		return fmt.Errorf("failed to convert recipients: %v", err)
 	}
 
-	// Prepare reward history
-	rewardModels, err := u.prepareTokenTransferHistories(payloads)
+	// Prepare token transfer history
+	tokenTransfers, err := u.prepareTokenTransferHistories(payloads)
 	if err != nil {
 		return fmt.Errorf("failed to prepare token transfer histories: %v", err)
 	}
 
 	// Perform bulk token transfer
-	err = u.bulkTransferAndSaveTokenTransferHistories(ctx, rewardModels, payloads[0].FromAddress, recipients, amounts)
+	err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, payloads[0].FromAddress, payloads[0].Symbol, recipients, amounts)
 	if err != nil {
 		return fmt.Errorf("failed to distribute tokens: %v", err)
 	}
@@ -104,12 +104,12 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransf
 func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	ctx context.Context,
 	tokenTransfers []model.TokenTransferHistory,
-	fromAddress string,
+	fromAddress, symbol string,
 	recipients []string,
 	amounts []*big.Int,
 ) error {
 	// Call the BulkTransfer utility to send tokens
-	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(u.ETHClient, u.Config, fromAddress, recipients, amounts)
+	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(u.ETHClient, u.Config, fromAddress, symbol, recipients, amounts)
 	if err != nil {
 		return fmt.Errorf("failed to bulk transfer token: %v", err)
 	}

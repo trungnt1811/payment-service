@@ -21,6 +21,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/lifepointtoken"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/usdtmock"
@@ -157,14 +158,31 @@ func ParseHexToUint64(hexStr string) (uint64, error) {
 }
 
 // BulkTransfer transfers tokens from the pool address to user wallets using bulk transfer
-func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddress string, recipients []string, amounts []*big.Int) (*string, *string, *big.Float, error) {
+func BulkTransfer(
+	client *ethclient.Client,
+	config *conf.Configuration,
+	poolAddress, symbol string,
+	recipients []string,
+	amounts []*big.Int,
+) (*string, *string, *big.Float, error) {
 	chainID := config.Blockchain.ChainID
 	bulkSenderContractAddress := config.Blockchain.SmartContract.BulkSenderContractAddress
 
 	// Get the token address, pool private key, and symbol based on the pool address
-	tokenAddress, poolPrivateKey, symbol, err := getPoolDetails(poolAddress, config)
+	var erc20Token interface{}
+	var err error
+	var tokenAddress, poolPrivateKey string
+	if symbol == constants.USDT {
+		tokenAddress = config.Blockchain.SmartContract.USDTContractAddress
+		poolPrivateKey = config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury
+		erc20Token, err = usdtmock.NewUsdtmock(common.HexToAddress(tokenAddress), client)
+	} else {
+		tokenAddress = config.Blockchain.SmartContract.LifePointContractAddress
+		poolPrivateKey = config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury
+		erc20Token, err = lifepointtoken.NewLifepointtoken(common.HexToAddress(tokenAddress), client)
+	}
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed to instantiate ERC20 contract: %w", err)
 	}
 
 	// Get authentication for signing transactions
@@ -184,12 +202,6 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		return nil, nil, nil, fmt.Errorf("failed to get auth: %w", err)
 	}
 	auth.Nonce = new(big.Int).SetUint64(nonce)
-
-	// Set up the ERC20 token contract instance (LifePoint or USDT, depending on pool)
-	erc20Token, err := getERC20TokenInstance(tokenAddress, symbol, client)
-	if err != nil {
-		return nil, nil, nil, err
-	}
 
 	// Set up the bulk transfer contract instance
 	bulkSender, err := bulksender.NewBulksender(common.HexToAddress(bulkSenderContractAddress), client)
@@ -272,45 +284,4 @@ func convertToCommonAddresses(recipients []string) []common.Address {
 		addresses = append(addresses, common.HexToAddress(recipient))
 	}
 	return addresses
-}
-
-// Helper function to get the ERC20 token instance
-func getERC20TokenInstance(tokenAddress, symbol string, client *ethclient.Client) (interface{}, error) {
-	var erc20Token interface{}
-	var err error
-
-	if symbol == "USDT" {
-		erc20Token, err = usdtmock.NewUsdtmock(common.HexToAddress(tokenAddress), client)
-	} else {
-		erc20Token, err = lifepointtoken.NewLifepointtoken(common.HexToAddress(tokenAddress), client)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate ERC20 contract: %w", err)
-	}
-
-	return erc20Token, nil
-}
-
-// Helper function to get pool details based on the pool address
-func getPoolDetails(poolAddress string, config *conf.Configuration) (string, string, string, error) {
-	switch poolAddress {
-	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
-		return config.Blockchain.SmartContract.USDTContractAddress,
-			config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury, "USDT", nil
-	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
-		return config.Blockchain.SmartContract.LifePointContractAddress,
-			config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, "LP", nil
-	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
-		return config.Blockchain.SmartContract.LifePointContractAddress,
-			config.Blockchain.LPCommunityPool.PrivateKeyLPCommunity, "LP", nil
-	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
-		return config.Blockchain.SmartContract.LifePointContractAddress,
-			config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, "LP", nil
-	case config.Blockchain.LPStakingPool.LPStakingAddress:
-		return config.Blockchain.SmartContract.LifePointContractAddress,
-			config.Blockchain.LPStakingPool.PrivateKeyLPStaking, "LP", nil
-	default:
-		return "", "", "", fmt.Errorf("unrecognized pool address: %s", poolAddress)
-	}
 }

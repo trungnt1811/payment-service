@@ -5,4 +5,5 @@ type TokenTransferPayloadDTO struct {
 	ToAddress   string `json:"to_address"`
 	TokenAmount string `json:"token_amount"`
 	RequestID   string `json:"request_id"`
+	Symbol      string `json:"symbol"`
 }

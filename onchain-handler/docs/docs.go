@@ -220,6 +220,9 @@ const docTemplate = `{
                 "request_id": {
                     "type": "string"
                 },
+                "symbol": {
+                    "type": "string"
+                },
                 "to_address": {
                     "type": "string"
                 },
