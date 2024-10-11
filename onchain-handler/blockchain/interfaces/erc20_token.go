@@ -11,4 +11,5 @@ import (
 type ERC20Token interface {
 	Approve(auth *bind.TransactOpts, spender common.Address, amount *big.Int) (*types.Transaction, error)
 	Symbol(opts *bind.CallOpts) (string, error)
+	BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error)
 }

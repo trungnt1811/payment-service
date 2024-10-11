@@ -209,16 +209,27 @@ func BulkTransfer(
 		return nil, nil, nil, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
 	}
 
+	// Type assertion to ERC20Token interface
+	token, ok := erc20Token.(interfaces.ERC20Token)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
+	}
+
 	// Calculate total amount to transfer for approval
 	totalAmount := big.NewInt(0)
 	for _, amount := range amounts {
 		totalAmount = new(big.Int).Add(totalAmount, amount)
 	}
 
-	// Type assertion to ERC20Token interface
-	token, ok := erc20Token.(interfaces.ERC20Token)
-	if !ok {
-		return nil, nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
+	// Check pool address balance
+	poolBalance, err := token.BalanceOf(nil, common.HexToAddress(poolAddress))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get pool balance: %w", err)
+	}
+
+	// If pool has insufficient tokens, return an error
+	if poolBalance.Cmp(totalAmount) < 0 {
+		return nil, nil, nil, fmt.Errorf("insufficient pool balance: required %s, available %s", totalAmount.String(), poolBalance.String())
 	}
 
 	// Get the token symbol from the contract
