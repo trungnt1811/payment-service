@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     token_amount NUMERIC(50, 18) NOT NULL,
     fee NUMERIC(50, 18) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
-    status BOOLEAN NOT NULL DEFAULT False,
+    status BOOLEAN NOT NULL DEFAULT FALSE,
     error_message TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -3,6 +3,7 @@ package token_transfer
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -28,27 +29,25 @@ func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Conte
 	return nil
 }
 
-func (r *tokenTransferRepository) GetTokenTransferHistories(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]model.TokenTransferHistory, error) {
+func (r *tokenTransferRepository) GetTokenTransferHistories(
+	ctx context.Context,
+	limit, offset int,
+	requestIDs []string, // List of request IDs to filter
+	startTime, endTime time.Time, // Range of time to filter by
+) ([]model.TokenTransferHistory, error) {
 	var tokenTransfers []model.TokenTransferHistory
 
 	// Start with pagination setup
 	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
 
-	// Apply filters only if they are provided (filters is not nil)
-	if filters != nil {
-		filterConditions := map[string]string{
-			"transaction_hash": "transaction_hash = ?",
-			"from_pool_name":   "from_pool_name = ?",
-			"from_address":     "from_address = ?",
-			"to_address":       "to_address = ?",
-			"symbol":           "symbol = ?",
-		}
+	// Apply filter for request IDs if provided
+	if len(requestIDs) > 0 {
+		query = query.Where("request_id IN ?", requestIDs)
+	}
 
-		for key, condition := range filterConditions {
-			if value, ok := filters[key]; ok && value != "" {
-				query = query.Where(condition, value)
-			}
-		}
+	// Apply time range filter if both startTime and endTime are provided
+	if !startTime.IsZero() && !endTime.IsZero() {
+		query = query.Where("created_at BETWEEN ? AND ?", startTime, endTime)
 	}
 
 	// Execute query

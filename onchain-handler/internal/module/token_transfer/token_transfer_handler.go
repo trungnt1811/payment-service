@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
@@ -112,17 +113,15 @@ func getValidPools() string {
 
 // GetTokenTransferHistories retrieves the token transfer histories.
 // @Summary Get list of token transfer histories
-// @Description This endpoint fetches a paginated list of token transfer histories with optional filters.
+// @Description This endpoint fetches a paginated list of token transfer histories filtered by request IDs and time range.
 // @Tags token-transfer
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param from_pool_name query string false "Pool's name to filter (LP_Treasury, LP_Revenue, LP_Staking, LP_Community, USDT_Treasury)"
-// @Param transaction_hash query string false "Transaction hash to filter"
-// @Param from_address query string false "Sender's address to filter"
-// @Param to_address query string false "Recipient's address to filter"
-// @Param symbol query string false "Token symbol to filter"
+// @Param request_ids query []string false "List of request IDs to filter"
+// @Param start_time query string false "Start time in RFC3339 format to filter example("2024-01-01T00:00:00Z")"
+// @Param end_time query string false "End time in RFC3339 format to filter example("2024-02-01T00:00:00Z")"
 // @Success 200 {object} dto.TokenTransferHistoryDTOResponse "Successful retrieval of token transfer histories"
 // @Failure 400 {object} util.GeneralError "Invalid parameters"
 // @Failure 500 {object} util.GeneralError "Internal server error"
@@ -148,24 +147,35 @@ func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Extract filter parameters from query string
-	transactionHash := ctx.Query("transaction_hash")
-	fromPoolName := ctx.Query("from_pool_name")
-	fromAddress := ctx.Query("from_address")
-	toAddress := ctx.Query("to_address")
-	symbol := ctx.Query("symbol")
+	// Extract and parse request IDs from query string
+	requestIDs := ctx.QueryArray("request_ids")
 
-	// Create filter DTO
-	filters := dto.TokenTransferFilterDTO{
-		TransactionHash: &transactionHash,
-		FromPoolName:    &fromPoolName,
-		FromAddress:     &fromAddress,
-		ToAddress:       &toAddress,
-		Symbol:          &symbol,
+	// Parse and validate the start_time query parameter
+	startTimeStr := ctx.Query("start_time")
+	startTime, err := time.Parse(time.RFC3339, startTimeStr)
+	if startTimeStr != "" && err != nil {
+		log.LG.Errorf("Invalid start time: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start time. Must be in RFC3339 format."})
+		return
 	}
 
-	// Fetch token transfer histories using the use case, passing filters, page, and size
-	response, err := h.UCase.GetTokenTransferHistories(ctx, filters, pageInt, sizeInt)
+	// Parse and validate the end_time query parameter
+	endTimeStr := ctx.Query("end_time")
+	endTime, err := time.Parse(time.RFC3339, endTimeStr)
+	if endTimeStr != "" && err != nil {
+		log.LG.Errorf("Invalid end time: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end time. Must be in RFC3339 format."})
+		return
+	}
+
+	// Validate that start time is before end time
+	if !startTime.IsZero() && !endTime.IsZero() && startTime.After(endTime) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Start time must be before end time."})
+		return
+	}
+
+	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
+	response, err := h.UCase.GetTokenTransferHistories(ctx, requestIDs, startTime, endTime, pageInt, sizeInt)
 	if err != nil {
 		log.LG.Errorf("Failed to retrieve token transfer histories: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)

@@ -63,7 +63,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "This endpoint fetches a paginated list of token transfer histories with optional filters.",
+                "description": "This endpoint fetches a paginated list of token transfer histories filtered by request IDs and time range.",
                 "consumes": [
                     "application/json"
                 ],
@@ -88,33 +88,27 @@
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Pool's name to filter (LP_Treasury, LP_Revenue, LP_Staking, LP_Community, USDT_Treasury)",
-                        "name": "from_pool_name",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "List of request IDs to filter",
+                        "name": "request_ids",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Transaction hash to filter",
-                        "name": "transaction_hash",
+                        "example": "\"2024-01-01T00:00:00Z\"",
+                        "description": "Start time in RFC3339 format to filter example(",
+                        "name": "start_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Sender's address to filter",
-                        "name": "from_address",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Recipient's address to filter",
-                        "name": "to_address",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Token symbol to filter",
-                        "name": "symbol",
+                        "example": "\"2024-02-01T00:00:00Z\"",
+                        "description": "End time in RFC3339 format to filter example(",
+                        "name": "end_time",
                         "in": "query"
                     }
                 ],

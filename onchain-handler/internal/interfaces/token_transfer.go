@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"time"
 
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/model"
@@ -9,10 +10,20 @@ import (
 
 type TokenTransferRepository interface {
 	CreateTokenTransferHistories(ctx context.Context, models []model.TokenTransferHistory) error
-	GetTokenTransferHistories(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]model.TokenTransferHistory, error)
+	GetTokenTransferHistories(
+		ctx context.Context,
+		limit, offset int,
+		requestIDs []string,
+		startTime, endTime time.Time,
+	) ([]model.TokenTransferHistory, error)
 }
 
 type TokenTransferUCase interface {
 	TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) error
-	GetTokenTransferHistories(ctx context.Context, filters dto.TokenTransferFilterDTO, page, size int) (dto.TokenTransferHistoryDTOResponse, error)
+	GetTokenTransferHistories(
+		ctx context.Context,
+		requestIDs []string,
+		startTime, endTime time.Time,
+		page, size int,
+	) (dto.TokenTransferHistoryDTOResponse, error)
 }

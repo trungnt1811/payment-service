@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -161,14 +162,18 @@ func (u *tokenTransferUCase) groupPayloadsByFromAddressAndSymbol(payloads []dto.
 }
 
 // GetTokenTransferHistories fetches token transfer histories from the repository with optional filters
-func (s *tokenTransferUCase) GetTokenTransferHistories(ctx context.Context, filters dto.TokenTransferFilterDTO, page, size int) (dto.TokenTransferHistoryDTOResponse, error) {
-	// Convert filters DTO to a map
-	filterMap := filters.ToMap()
-
-	// Fetch the token transfer histories with filters
+func (s *tokenTransferUCase) GetTokenTransferHistories(
+	ctx context.Context,
+	requestIDs []string, // List of request IDs to filter
+	startTime, endTime time.Time, // Time range to filter by
+	page, size int,
+) (dto.TokenTransferHistoryDTOResponse, error) {
+	// Setup pagination variables
 	limit := size + 1
 	offset := (page - 1) * size
-	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, filterMap, limit, offset)
+
+	// Fetch the token transfer histories using request IDs and time range
+	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, limit, offset, requestIDs, startTime, endTime)
 	if err != nil {
 		return dto.TokenTransferHistoryDTOResponse{}, err
 	}
