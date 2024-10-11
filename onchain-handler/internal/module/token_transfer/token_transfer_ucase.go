@@ -30,22 +30,30 @@ func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepos
 
 // TransferTokens handles the entire process of tokens transfer
 func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) error {
-	// Convert the payload into two lists: one for recipients and one for amounts
-	recipients, amounts, err := u.convertToRecipientsAndAmounts(payloads)
-	if err != nil {
-		return fmt.Errorf("failed to convert recipients: %v", err)
-	}
+	// Group payloads by FromAddress and Symbol
+	groupedPayloads := u.groupPayloadsByFromAddressAndSymbol(payloads)
 
-	// Prepare token transfer history
-	tokenTransfers, err := u.prepareTokenTransferHistories(payloads)
-	if err != nil {
-		return fmt.Errorf("failed to prepare token transfer histories: %v", err)
-	}
+	for key, grouped := range groupedPayloads {
+		// Extract FromAddress and Symbol from the key
+		fromAddress, symbol := key.FromAddress, key.Symbol
 
-	// Perform bulk token transfer
-	err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, payloads[0].FromAddress, payloads[0].Symbol, recipients, amounts)
-	if err != nil {
-		return fmt.Errorf("failed to distribute tokens: %v", err)
+		// Convert the grouped payloads into recipients and amounts
+		recipients, amounts, err := u.convertToRecipientsAndAmounts(grouped)
+		if err != nil {
+			return fmt.Errorf("failed to convert recipients: %v", err)
+		}
+
+		// Prepare token transfer history
+		tokenTransfers, err := u.prepareTokenTransferHistories(grouped)
+		if err != nil {
+			return fmt.Errorf("failed to prepare token transfer histories: %v", err)
+		}
+
+		// Perform bulk token transfer
+		err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, fromAddress, symbol, recipients, amounts)
+		if err != nil {
+			return fmt.Errorf("failed to distribute tokens: %v", err)
+		}
 	}
 
 	return nil
@@ -128,6 +136,28 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	}
 
 	return nil
+}
+
+// groupKey is used to create a unique key for grouping by FromAddress and Symbol
+type groupKey struct {
+	FromAddress string
+	Symbol      string
+}
+
+// groupPayloadsByFromAddressAndSymbol groups payloads by FromAddress and Symbol
+func (u *tokenTransferUCase) groupPayloadsByFromAddressAndSymbol(payloads []dto.TokenTransferPayloadDTO) map[groupKey][]dto.TokenTransferPayloadDTO {
+	groupedPayloads := make(map[groupKey][]dto.TokenTransferPayloadDTO)
+
+	for _, payload := range payloads {
+		key := groupKey{
+			FromAddress: payload.FromAddress,
+			Symbol:      payload.Symbol,
+		}
+
+		groupedPayloads[key] = append(groupedPayloads[key], payload)
+	}
+
+	return groupedPayloads
 }
 
 // GetTokenTransferHistories fetches token transfer histories from the repository with optional filters
