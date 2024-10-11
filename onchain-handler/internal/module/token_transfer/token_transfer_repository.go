@@ -28,28 +28,26 @@ func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Conte
 	return nil
 }
 
-func (r *tokenTransferRepository) GetTokenTransferHistories(ctx context.Context, filters map[string]interface{}, page, size int) ([]model.TokenTransferHistory, error) {
+func (r *tokenTransferRepository) GetTokenTransferHistories(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]model.TokenTransferHistory, error) {
 	var tokenTransfers []model.TokenTransferHistory
-	offset := (page - 1) * size
 
-	query := r.db.WithContext(ctx).Limit(size + 1).Offset(offset) // Start with pagination setup
+	// Start with pagination setup
+	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
 
 	// Apply filters only if they are provided (filters is not nil)
 	if filters != nil {
-		if transactionHash, ok := filters["transaction_hash"]; ok && transactionHash != "" {
-			query = query.Where("transaction_hash = ?", transactionHash)
+		filterConditions := map[string]string{
+			"transaction_hash": "transaction_hash = ?",
+			"from_pool_name":   "from_pool_name = ?",
+			"from_address":     "from_address = ?",
+			"to_address":       "to_address = ?",
+			"symbol":           "symbol = ?",
 		}
-		if fromPoolName, ok := filters["from_pool_name"]; ok && fromPoolName != "" {
-			query = query.Where("from_pool_name = ?", fromPoolName)
-		}
-		if fromAddress, ok := filters["from_address"]; ok && fromAddress != "" {
-			query = query.Where("from_address = ?", fromAddress)
-		}
-		if toAddress, ok := filters["to_address"]; ok && toAddress != "" {
-			query = query.Where("to_address = ?", toAddress)
-		}
-		if symbol, ok := filters["symbol"]; ok && symbol != "" {
-			query = query.Where("symbol = ?", symbol)
+
+		for key, condition := range filterConditions {
+			if value, ok := filters[key]; ok && value != "" {
+				query = query.Where(condition, value)
+			}
 		}
 	}
 

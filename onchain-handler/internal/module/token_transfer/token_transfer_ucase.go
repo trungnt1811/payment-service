@@ -134,7 +134,9 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(ctx context.Context, filt
 	filterMap := filters.ToMap()
 
 	// Fetch the token transfer histories with filters
-	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, filterMap, page, size)
+	limit := size + 1
+	offset := (page - 1) * size
+	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, filterMap, limit, offset)
 	if err != nil {
 		return dto.TokenTransferHistoryDTOResponse{}, err
 	}
