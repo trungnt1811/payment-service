@@ -35,7 +35,7 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransfer
 // @Accept json
 // @Produce json
 // @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
-// @Success 200 {object} map[string]bool "Success response: {\"success\": true}"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"results\": {\"requestID1\": true, \"requestID2\": false}}"
 // @Failure 400 {object} util.GeneralError "Invalid payload or invalid recipient address/transaction type"
 // @Failure 500 {object} util.GeneralError "Internal server error, failed to distribute tokens"
 // @Router /api/v1/token-transfer [post]
@@ -91,13 +91,18 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	// Proceed to distribute tokens if all checks pass
-	if err := h.UCase.TransferTokens(ctx, req); err != nil {
+	transferResults, err := h.UCase.TransferTokens(ctx, req)
+	if err != nil {
 		log.LG.Errorf("Failed to distribute tokens: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"success": true})
+	// Return the result of each transaction (success or failure)
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"results": transferResults,
+	})
 }
 
 // getValidPools returns a comma-separated string of all valid pool names

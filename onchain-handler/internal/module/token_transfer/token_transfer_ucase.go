@@ -29,35 +29,50 @@ func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepos
 	}
 }
 
-// TransferTokens handles the entire process of tokens transfer
-func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) error {
+// TransferTokens handles the entire process of token transfers and returns the status of each transaction
+func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) (map[string]bool, error) {
+	// Initialize a map to track the status of each transfer
+	transferResults := make(map[string]bool)
+
 	// Group payloads by FromAddress and Symbol
 	groupedPayloads := u.groupPayloadsByFromAddressAndSymbol(payloads)
 
 	for key, grouped := range groupedPayloads {
-		// Extract FromAddress and Symbol from the key
 		fromAddress, symbol := key.FromAddress, key.Symbol
 
-		// Convert the grouped payloads into recipients and amounts
 		recipients, amounts, err := u.convertToRecipientsAndAmounts(grouped)
 		if err != nil {
-			return fmt.Errorf("failed to convert recipients: %v", err)
+			// Log the error and mark the batch as failed
+			for _, payload := range grouped {
+				transferResults[payload.RequestID] = false
+			}
+			continue
 		}
 
-		// Prepare token transfer history
 		tokenTransfers, err := u.prepareTokenTransferHistories(grouped)
 		if err != nil {
-			return fmt.Errorf("failed to prepare token transfer histories: %v", err)
+			// Log the error and mark the batch as failed
+			for _, payload := range grouped {
+				transferResults[payload.RequestID] = false
+			}
+			continue
 		}
 
-		// Perform bulk token transfer
 		err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, fromAddress, symbol, recipients, amounts)
 		if err != nil {
-			return fmt.Errorf("failed to distribute tokens: %v", err)
+			// Log the error and mark the batch as failed
+			for _, payload := range grouped {
+				transferResults[payload.RequestID] = false
+			}
+		} else {
+			// Mark all transactions in the batch as successful
+			for _, payload := range grouped {
+				transferResults[payload.RequestID] = true
+			}
 		}
 	}
 
-	return nil
+	return transferResults, nil
 }
 
 // convertToRecipientsAndAmounts converts the payload into two lists: recipients and amounts (token amounts in smallest unit)

@@ -44,12 +44,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true}",
+                        "description": "Success response: {\\\"success\\\": true, \\\"results\\\": {\\\"requestID1\\\": true, \\\"requestID2\\\": false}}",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "boolean"
-                            }
+                            "additionalProperties": true
                         }
                     },
                     "400": {

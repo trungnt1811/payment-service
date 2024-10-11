@@ -88,10 +88,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Success response: {\"success\": true}'
+          description: 'Success response: {\"success\": true, \"results\": {\"requestID1\":
+            true, \"requestID2\": false}}'
           schema:
-            additionalProperties:
-              type: boolean
+            additionalProperties: true
             type: object
         "400":
           description: Invalid payload or invalid recipient address/transaction type
