@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 
+	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -50,24 +51,33 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 		return
 	}
 
-	for _, payload := range req {
-		// Validate the sender using constants for recognized pool names
-		if !isValidPool(payload.PoolName) {
-			validPools := getValidPools()
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Invalid sender pool: " + payload.PoolName,
-				"details": "FromAddress must be one of the recognized pools: " + validPools,
-			})
-			return
+	for index, payload := range req {
+		// Check if the sender address is a valid Ethereum address
+		if !common.IsHexAddress(payload.FromAddress) {
+			fromAddress, err := conf.GetPoolAddress(payload.FromAddress)
+			if err != nil {
+				validPools := getValidPools()
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error":   "Invalid recipient address: " + payload.ToAddress,
+					"details": "SenderAddress must be a valid Ethereum address or must be one of the recognized pools: " + validPools,
+				})
+				return
+			}
+			req[index].FromAddress = fromAddress
 		}
 
 		// Check if the recipient address is a valid Ethereum address
 		if !common.IsHexAddress(payload.ToAddress) {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Invalid recipient address: " + payload.ToAddress,
-				"details": "RecipientAddress must be a valid Ethereum address",
-			})
-			return
+			toAddress, err := conf.GetPoolAddress(payload.ToAddress)
+			if err != nil {
+				validPools := getValidPools()
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error":   "Invalid recipient address: " + payload.ToAddress,
+					"details": "RecipientAddress must be a valid Ethereum address or must be one of the recognized pools: " + validPools,
+				})
+				return
+			}
+			req[index].ToAddress = toAddress
 		}
 	}
 
@@ -79,16 +89,6 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"success": true})
-}
-
-// isValidPool checks if the given pool name is valid by comparing it with known constants.
-func isValidPool(poolName string) bool {
-	switch poolName {
-	case constants.LPCommunity, constants.LPStaking, constants.LPRevenue, constants.LPTreasury, constants.USDTTreasury:
-		return true
-	default:
-		return false
-	}
 }
 
 // getValidPools returns a comma-separated string of all valid pool names

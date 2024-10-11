@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
@@ -59,12 +57,22 @@ func (u *tokenTransferUCase) convertToRecipientsAndAmounts(req []dto.TokenTransf
 	var amounts []*big.Int
 
 	for _, payload := range req {
-		// Convert token amount to big.Int
-		tokenAmount := new(big.Int)
-		tokenAmount.SetUint64(payload.TokenAmount)
+		// Convert token amount to big.Float to handle fractional amounts
+		tokenAmount := new(big.Float)
+		_, ok := tokenAmount.SetString(payload.TokenAmount)
+		if !ok {
+			return nil, nil, fmt.Errorf("invalid token amount: %s", payload.TokenAmount)
+		}
 
-		// Multiply by 10^18 to convert to the smallest unit of the token (like wei for ETH)
-		tokenAmountInSmallestUnit := new(big.Int).Mul(tokenAmount, new(big.Int).Exp(big.NewInt(10), big.NewInt(constants.LifePointDecimals), nil))
+		// Create a multiplier for 10^18
+		multiplier := new(big.Float).SetFloat64(float64(1e18)) // Adjust this based on your token's decimal places
+
+		// Multiply the token amount by the multiplier
+		tokenAmountInSmallestUnitFloat := new(big.Float).Mul(tokenAmount, multiplier)
+
+		// Convert the big.Float amount to big.Int (smallest unit for blockchain transfer)
+		tokenAmountInSmallestUnit := new(big.Int)
+		tokenAmountInSmallestUnitFloat.Int(tokenAmountInSmallestUnit) // Truncate the fractional part
 
 		// Append recipient address and token amount to their respective lists
 		recipients = append(recipients, payload.ToAddress)
@@ -80,18 +88,17 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransf
 
 	for _, payload := range req {
 		// Prepare reward entry
-		fromAddress, err := conf.GetPoolAddress(payload.PoolName)
+		fromPoolName, err := conf.GetPoolName(payload.FromAddress)
 		if err != nil {
 			return nil, err
 		}
 		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
-			RequestID:   payload.RequestID,
-			FromAddress: fromAddress,
-			ToAddress:   payload.ToAddress,
-			// Convert TokenAmount from uint64 to string
-			TokenAmount:  strconv.FormatUint(payload.TokenAmount, 10),
+			RequestID:    payload.RequestID,
+			FromAddress:  payload.FromAddress,
+			ToAddress:    payload.ToAddress,
+			TokenAmount:  payload.TokenAmount,
 			Status:       false, // Default to failed status initially
-			FromPoolName: payload.PoolName,
+			FromPoolName: fromPoolName,
 		})
 	}
 
