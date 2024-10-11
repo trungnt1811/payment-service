@@ -43,7 +43,7 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 	}
 
 	// Perform bulk token transfer
-	err = u.bulkTransferAndSaveTokenTransferHistories(ctx, rewardModels, recipients, amounts)
+	err = u.bulkTransferAndSaveTokenTransferHistories(ctx, rewardModels, payloads[0].FromAddress, recipients, amounts)
 	if err != nil {
 		return fmt.Errorf("failed to distribute tokens: %v", err)
 	}
@@ -109,21 +109,21 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransf
 func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	ctx context.Context,
 	tokenTransfers []model.TokenTransferHistory,
+	fromAddress string,
 	recipients []string,
 	amounts []*big.Int,
 ) error {
 	// Call the BulkTransfer utility to send tokens
-	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(u.ETHClient, u.Config, u.Config.Blockchain.LPTreasuryPool.LPTreasuryAddress, recipients, amounts)
+	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(u.ETHClient, u.Config, fromAddress, recipients, amounts)
+	if err != nil {
+		return fmt.Errorf("failed to bulk transfer token: %v", err)
+	}
 	for index := range tokenTransfers {
-		if err != nil {
-			return fmt.Errorf("failed to bulk transfer token: %v", err)
-		} else {
-			// Update the token transfer history with transaction details
-			tokenTransfers[index].TransactionHash = *txHash
-			tokenTransfers[index].Status = true
-			tokenTransfers[index].Symbol = *tokenSymbol
-			tokenTransfers[index].Fee = txFee.String()
-		}
+		// Update the token transfer history with transaction details
+		tokenTransfers[index].TransactionHash = *txHash
+		tokenTransfers[index].Status = true
+		tokenTransfers[index].Symbol = *tokenSymbol
+		tokenTransfers[index].Fee = txFee.String()
 	}
 
 	// Save the updated reward history

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     id SERIAL PRIMARY KEY,  -- SERIAL takes care of auto-increment
-    request_id VARCHAR(15) NOT NULL,
+    request_id VARCHAR(255) NOT NULL,
     transaction_hash VARCHAR(66) NOT NULL,
     from_address VARCHAR(42) NOT NULL,
     to_address VARCHAR(42) NOT NULL,

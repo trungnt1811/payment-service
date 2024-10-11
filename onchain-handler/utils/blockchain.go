@@ -167,6 +167,11 @@ func BulkTransfer(client *ethclient.Client, config *conf.Configuration, poolAddr
 		return nil, nil, nil, err
 	}
 
+	fmt.Println("CHECK")
+	fmt.Println(poolAddress)
+	fmt.Println(tokenAddress)
+	fmt.Println(symbol)
+
 	// Get authentication for signing transactions
 	privateKeyECDSA, err := PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {

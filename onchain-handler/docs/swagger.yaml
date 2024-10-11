@@ -41,7 +41,7 @@ definitions:
     type: object
   dto.TokenTransferPayloadDTO:
     properties:
-      from_name:
+      from_address:
         type: string
       request_id:
         type: string

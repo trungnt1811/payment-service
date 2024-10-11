@@ -2,13 +2,16 @@
 pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract USDT is ERC20 {
-    constructor(uint256 initialSupply) ERC20("Tether USD", "USDT") {
-        _mint(msg.sender, initialSupply * (10 ** decimals()));
+contract MockUSDT is ERC20, Ownable {
+    // Constructor to mint initial tokens
+    constructor() ERC20("Mock USDT", "USDT") {
+        _mint(msg.sender, 1_000_000 * 10**decimals()); // Mint initial supply to the contract deployer 1,000,000
     }
 
-    function decimals() public pure override returns (uint8) {
-        return 6; // USDT typically has 6 decimal places
+    // Allow owner to mint new tokens
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
     }
 }
