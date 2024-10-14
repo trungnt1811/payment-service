@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -177,7 +178,7 @@ func BulkTransfer(
 	var txHash, tokenSymbol string
 	var txFeeInAVAX *big.Float
 
-	// Get the token address, pool private key, and symbol based on the pool address
+	// Get token address, pool private key, and symbol based on the symbol
 	var erc20Token interface{}
 	var err error
 	var tokenAddress, poolPrivateKey string
@@ -199,17 +200,18 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve pool private key: %w", err)
 	}
 
-	// Get the initial nonce
-	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
+	// Function to handle nonce retrieval and retry logic
+	var nonce uint64
+	nonce, err = getNonceWithRetry(ctx, client, poolAddress)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve nonce for pool address %s: %w", poolAddress, err)
+		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve nonce after retry: %w", err)
 	}
 
 	auth, err := GetAuth(ctx, client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to create auth object for pool %s: %w", poolAddress, err)
 	}
-	auth.Nonce = new(big.Int).SetUint64(nonce)
+	auth.Nonce = new(big.Int).SetUint64(nonce) // Set the correct nonce
 
 	// Set up the bulk transfer contract instance
 	bulkSender, err := bulksender.NewBulksender(common.HexToAddress(bulkSenderContractAddress), client)
@@ -232,7 +234,7 @@ func BulkTransfer(
 	// Calculate total amount to transfer for approval
 	totalAmount := big.NewInt(0)
 	for _, amount := range amounts {
-		totalAmount = new(big.Int).Add(totalAmount, amount)
+		totalAmount.Add(totalAmount, amount)
 	}
 
 	// Check pool address balance
@@ -241,7 +243,7 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to get pool balance: %w", err)
 	}
 
-	// If pool has insufficient tokens, return an error
+	// Ensure the pool has enough balance
 	if poolBalance.Cmp(totalAmount) < 0 {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("insufficient pool balance: required %s %s, available %s %s", totalAmount.String(), tokenSymbol, poolBalance.String(), tokenSymbol)
 	}
@@ -262,16 +264,8 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("approval transaction failed for %s", txHash)
 	}
 
-	// Calculate transaction fee (gasUsed * gasPrice)
-	gasUsed := receipt.GasUsed
-	gasPrice := auth.GasPrice
-	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
-
-	// Convert txFee from wei to AVAX (1 AVAX = 10^18 wei)
-	weiInAVAX := big.NewFloat(1e18)
-	txFeeInAVAX = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
-
-	nonce++ // Increment nonce for the next transaction
+	// Increment nonce for the next transaction
+	nonce++
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
@@ -288,8 +282,9 @@ func BulkTransfer(
 	}
 
 	// Calculate final transaction fee (gasUsed * gasPrice)
-	gasUsed = receipt.GasUsed
-	txFee = new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
+	gasUsed := receipt.GasUsed
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), auth.GasPrice)
+	weiInAVAX := big.NewFloat(constants.LifePointDecimals)
 	txFeeInAVAX = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
 
 	// Check the transaction status
@@ -297,8 +292,21 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
 	}
 
-	// Return transaction hash, token symbol, and transaction fee
 	return &txHash, &tokenSymbol, txFeeInAVAX, nil
+}
+
+// Helper function to retry nonce retrieval
+func getNonceWithRetry(ctx context.Context, client *ethclient.Client, poolAddress string) (uint64, error) {
+	var nonce uint64
+	var err error
+	for retryCount := 0; retryCount < 3; retryCount++ {
+		nonce, err = client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
+		if err == nil {
+			return nonce, nil
+		}
+		time.Sleep(2 * time.Second) // Backoff before retrying
+	}
+	return 0, fmt.Errorf("failed to retrieve nonce after 3 retries: %w", err)
 }
 
 // Helper function to convert string addresses to common.Address type
