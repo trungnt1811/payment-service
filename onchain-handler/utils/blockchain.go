@@ -182,13 +182,32 @@ func BulkTransfer(
 	var erc20Token interface{}
 	var err error
 	var tokenAddress, poolPrivateKey string
+	// Get pool private key
+	switch poolAddress {
+	// LP Treasury pool
+	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
+		poolPrivateKey = config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury
+	// LP Community pool
+	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
+		poolPrivateKey = config.Blockchain.LPCommunityPool.LPCommunityAddress
+	// LP Revenue pool
+	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
+		poolPrivateKey = config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue
+	// LP Staking pool
+	case config.Blockchain.LPStakingPool.LPStakingAddress:
+		poolPrivateKey = config.Blockchain.LPStakingPool.PrivateKeyLPStaking
+	// USDT Treasury pool
+	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
+		poolPrivateKey = config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury
+	default:
+		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
+	}
+	// Get erc20 token
 	if symbol == constants.USDT {
 		tokenAddress = config.Blockchain.SmartContract.USDTContractAddress
-		poolPrivateKey = config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury
 		erc20Token, err = usdtmock.NewUsdtmock(common.HexToAddress(tokenAddress), client)
 	} else {
 		tokenAddress = config.Blockchain.SmartContract.LifePointContractAddress
-		poolPrivateKey = config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury
 		erc20Token, err = lifepointtoken.NewLifepointtoken(common.HexToAddress(tokenAddress), client)
 	}
 	if err != nil {
