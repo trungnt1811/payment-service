@@ -163,6 +163,29 @@ func ParseHexToUint64(hexStr string) (uint64, error) {
 	return value, nil
 }
 
+// Helper function to get pools' private key by pools' addresses
+func getPoolPrivateKey(config *conf.Configuration, poolAddress string) (string, error) {
+	switch poolAddress {
+	// LP Treasury pool
+	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
+		return config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, nil
+	// LP Community pool
+	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
+		return config.Blockchain.LPCommunityPool.LPCommunityAddress, nil
+	// LP Revenue pool
+	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
+		return config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, nil
+	// LP Staking pool
+	case config.Blockchain.LPStakingPool.LPStakingAddress:
+		return config.Blockchain.LPStakingPool.PrivateKeyLPStaking, nil
+	// USDT Treasury pool
+	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
+		return config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury, nil
+	default:
+		return "", fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
+	}
+}
+
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
 func BulkTransfer(
 	ctx context.Context,
@@ -183,23 +206,8 @@ func BulkTransfer(
 	var err error
 	var tokenAddress, poolPrivateKey string
 	// Get pool private key
-	switch poolAddress {
-	// LP Treasury pool
-	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
-		poolPrivateKey = config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury
-	// LP Community pool
-	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
-		poolPrivateKey = config.Blockchain.LPCommunityPool.LPCommunityAddress
-	// LP Revenue pool
-	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
-		poolPrivateKey = config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue
-	// LP Staking pool
-	case config.Blockchain.LPStakingPool.LPStakingAddress:
-		poolPrivateKey = config.Blockchain.LPStakingPool.PrivateKeyLPStaking
-	// USDT Treasury pool
-	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
-		poolPrivateKey = config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury
-	default:
+	poolPrivateKey, err = getPoolPrivateKey(config, poolAddress)
+	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
 	}
 	// Get erc20 token
