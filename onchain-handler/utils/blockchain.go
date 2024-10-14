@@ -72,9 +72,9 @@ func GetAuth(
 	}
 
 	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)     // 0 wei, since we're not sending Ether
-	auth.GasLimit = uint64(300000) // Set the gas limit (adjust as needed)
-	auth.GasPrice = gasPrice       // Set the gas price
+	auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
+	// auth.GasLimit = uint64(300000) // Set the gas limit (adjust as needed)
+	auth.GasPrice = gasPrice // Set the gas price
 
 	return auth, nil
 }
