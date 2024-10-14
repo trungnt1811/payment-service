@@ -2,7 +2,7 @@ package constants
 
 // Token decimals
 const (
-	LifePointDecimals = 18
+	LifePointDecimals = 1e18
 )
 
 // Pool names

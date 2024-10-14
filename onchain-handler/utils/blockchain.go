@@ -308,9 +308,11 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
 	}
 
-	// Calculate final transaction fee (gasUsed * gasPrice)
+	// Calculate transaction fee (gasUsed * gasPrice)
 	gasUsed := receipt.GasUsed
-	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), auth.GasPrice)
+	gasPrice := auth.GasPrice
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
+	// Convert txFee from wei to AVAX (1 AVAX = 10^18 wei)
 	weiInAVAX := big.NewFloat(constants.LifePointDecimals)
 	txFeeInAVAX = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
 
