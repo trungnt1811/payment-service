@@ -131,7 +131,7 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransf
 	return tokenTransfers, nil
 }
 
-// bulkTransferAndSaveTokenTransferHistories performs bulk token transfer and updates token transfer history
+// bulkTransferAndSaveTokenTransferHistories performs bulk token transfer and updates token transfer history.
 func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	ctx context.Context,
 	tokenTransfers []model.TokenTransferHistory,
@@ -139,29 +139,62 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	recipients []string,
 	amounts []*big.Int,
 ) ([]model.TokenTransferHistory, error) {
-	// Call the BulkTransfer utility to send tokens
+	// Perform the bulk transfer.
 	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(ctx, u.ETHClient, u.Config, fromAddress, symbol, recipients, amounts)
+
+	// Process the transfer results.
 	for index := range tokenTransfers {
-		// Update the token transfer history with transaction details
-		if err == nil {
-			tokenTransfers[index].TransactionHash = *txHash
-			tokenTransfers[index].Status = true
-			tokenTransfers[index].Symbol = *tokenSymbol
-			tokenTransfers[index].Fee = txFee.String()
+		if err != nil {
+			u.handleTransferError(&tokenTransfers[index], err, txHash, tokenSymbol, txFee)
 		} else {
-			tokenTransfers[index].Status = false
-			tokenTransfers[index].ErrorMessage = err.Error()
-			tokenTransfers[index].Fee = "0"
+			u.handleTransferSuccess(&tokenTransfers[index], txHash, tokenSymbol, txFee)
 		}
 	}
 
-	// Save the updated reward history
-	err = u.TokenTransferRepository.CreateTokenTransferHistories(ctx, tokenTransfers)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save token transfer histories: %v", err)
+	// Save the updated token transfer histories.
+	if saveErr := u.TokenTransferRepository.CreateTokenTransferHistories(ctx, tokenTransfers); saveErr != nil {
+		return nil, fmt.Errorf("failed to save token transfer histories: %v", saveErr)
 	}
 
 	return tokenTransfers, nil
+}
+
+// handleTransferSuccess updates token transfer history on success.
+func (u *tokenTransferUCase) handleTransferSuccess(
+	tokenTransfer *model.TokenTransferHistory,
+	txHash *string,
+	tokenSymbol *string,
+	txFee *big.Float,
+) {
+	tokenTransfer.TransactionHash = *txHash
+	tokenTransfer.Status = true
+	tokenTransfer.Symbol = *tokenSymbol
+	tokenTransfer.Fee = txFee.String()
+}
+
+// handleTransferError updates token transfer history on error.
+func (u *tokenTransferUCase) handleTransferError(
+	tokenTransfer *model.TokenTransferHistory,
+	err error,
+	txHash *string,
+	tokenSymbol *string,
+	txFee *big.Float,
+) {
+	tokenTransfer.Status = false
+	tokenTransfer.ErrorMessage = err.Error()
+
+	if tokenSymbol != nil {
+		tokenTransfer.Symbol = *tokenSymbol
+	}
+
+	if txHash != nil {
+		tokenTransfer.TransactionHash = *txHash
+	}
+
+	tokenTransfer.Fee = "0"
+	if txFee != nil {
+		tokenTransfer.Fee = txFee.String()
+	}
 }
 
 // groupKey is used to create a unique key for grouping by FromAddress and Symbol
