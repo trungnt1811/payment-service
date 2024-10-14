@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -153,7 +154,11 @@ func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	}
 
 	// Extract and parse request IDs from query string
-	requestIDs := ctx.QueryArray("request_ids")
+	requestIDsStr := ctx.Query("request_ids")
+	var requestIDs []string
+	if requestIDsStr != "" {
+		requestIDs = strings.Split(requestIDsStr, ",")
+	}
 
 	// Parse and validate the start_time query parameter
 	startTimeStr := ctx.Query("start_time")
