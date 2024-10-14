@@ -214,6 +214,12 @@ func BulkTransfer(
 		return nil, nil, nil, fmt.Errorf("erc20Token does not implement ERC20Token interface")
 	}
 
+	// Get the token symbol from the contract
+	tokenSymbol, err := token.Symbol(nil)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get token symbol from the contract: %w", err)
+	}
+
 	// Calculate total amount to transfer for approval
 	totalAmount := big.NewInt(0)
 	for _, amount := range amounts {
@@ -228,13 +234,7 @@ func BulkTransfer(
 
 	// If pool has insufficient tokens, return an error
 	if poolBalance.Cmp(totalAmount) < 0 {
-		return nil, nil, nil, fmt.Errorf("insufficient pool balance: required %s, available %s", totalAmount.String(), poolBalance.String())
-	}
-
-	// Get the token symbol from the contract
-	tokenSymbol, err := token.Symbol(nil)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to get token symbol from the contract: %w", err)
+		return nil, nil, nil, fmt.Errorf("insufficient pool balance: required %s %s, available %s %s", totalAmount.String(), tokenSymbol, poolBalance.String(), tokenSymbol)
 	}
 
 	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
