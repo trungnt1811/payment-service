@@ -248,10 +248,10 @@ func BulkTransfer(
 
 	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
 	tx, err := token.Approve(auth, common.HexToAddress(bulkSenderContractAddress), totalAmount)
-	txHash = tx.Hash().Hex() // Get the transaction hash
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to approve bulk sender contract: %w", err)
 	}
+	txHash = tx.Hash().Hex() // Get the transaction hash
 
 	// Wait for approval to be mined
 	receipt, err := bind.WaitMined(ctx, client, tx)
@@ -276,10 +276,10 @@ func BulkTransfer(
 
 	// Call the bulk transfer function on the bulk sender contract
 	tx, err = bulkSender.BulkTransfer(auth, convertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
-	txHash = tx.Hash().Hex() // Update transaction hash for bulk transfer
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}
+	txHash = tx.Hash().Hex() // Update transaction hash for bulk transfer
 
 	// Wait for the bulk transfer transaction to be mined
 	receipt, err = bind.WaitMined(ctx, client, tx)
