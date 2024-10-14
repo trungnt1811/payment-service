@@ -30,9 +30,9 @@ func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepos
 }
 
 // TransferTokens handles the entire process of token transfers and returns the status of each transaction
-func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) (map[string]string, error) {
-	// Initialize a map to track the status of each transfer, with error details
-	transferResults := make(map[string]string)
+func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) ([]dto.TokenTransferResultDTOResponse, error) {
+	// Initialize a slice to track the status of each transfer
+	var transferResults []dto.TokenTransferResultDTOResponse
 
 	// Group payloads by FromAddress and Symbol
 	groupedPayloads := u.groupPayloadsByFromAddressAndSymbol(payloads)
@@ -42,32 +42,48 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 
 		recipients, amounts, err := u.convertToRecipientsAndAmounts(grouped)
 		if err != nil {
-			// Log the error and mark the batch as failed, including the error message
+			// Log the error and mark each request in the group as failed
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = fmt.Sprintf("Failed: %v", err)
+				transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
+					RequestID:    payload.RequestID,
+					Status:       false,
+					ErrorMessage: fmt.Sprintf("Failed to convert to recipients and amounts: %v", err),
+				})
 			}
 			continue
 		}
 
 		tokenTransfers, err := u.prepareTokenTransferHistories(grouped)
 		if err != nil {
-			// Log the error and mark the batch as failed, including the error message
+			// Log the error and mark each request in the group as failed
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = fmt.Sprintf("Failed: %v", err)
+				transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
+					RequestID:    payload.RequestID,
+					Status:       false,
+					ErrorMessage: fmt.Sprintf("Failed to prepare token transfer histories: %v", err),
+				})
 			}
 			continue
 		}
 
 		err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, fromAddress, symbol, recipients, amounts)
 		if err != nil {
-			// Log the error and mark the batch as failed, including the error message
+			// Log the error and mark each request in the group as failed
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = fmt.Sprintf("Failed: %v", err)
+				transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
+					RequestID:    payload.RequestID,
+					Status:       false,
+					ErrorMessage: fmt.Sprintf("Bulk transfer failed: %v", err),
+				})
 			}
 		} else {
-			// Mark all transactions in the batch as successful
+			// Mark all transactions in the group as successful
 			for _, payload := range grouped {
-				transferResults[payload.RequestID] = "Success"
+				transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
+					RequestID:    payload.RequestID,
+					Status:       true,
+					ErrorMessage: "", // No error on success
+				})
 			}
 		}
 	}

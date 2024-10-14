@@ -35,7 +35,7 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransfer
 // @Accept json
 // @Produce json
 // @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
-// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"results\": {\"requestID1\": \"Success\", \"requestID2\": \"Failed: some error message\"}}"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"results\": [{\"request_id\": \"requestID1\", \"status\": true, \"error_message\": \"\"}, {\"request_id\": \"requestID2\", \"status\": false, \"error_message\": \"Failed: some error message\"}]}"
 // @Failure 400 {object} util.GeneralError "Invalid payload or invalid recipient address/transaction type"
 // @Failure 500 {object} util.GeneralError "Internal server error, failed to distribute tokens"
 // @Router /api/v1/token-transfer [post]

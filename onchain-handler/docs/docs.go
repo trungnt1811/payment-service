@@ -44,7 +44,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"results\\\": {\\\"requestID1\\\": \\\"Success\\\", \\\"requestID2\\\": \\\"Failed: some error message\\\"}}",
+                        "description": "Success response: {\\\"success\\\": true, \\\"results\\\": [{\\\"request_id\\\": \\\"requestID1\\\", \\\"status\\\": true, \\\"error_message\\\": \\\"\\\"}, {\\\"request_id\\\": \\\"requestID2\\\", \\\"status\\\": false, \\\"error_message\\\": \\\"Failed: some error message\\\"}]}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
