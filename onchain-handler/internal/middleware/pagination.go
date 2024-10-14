@@ -12,8 +12,8 @@ const (
 	DEFAULT_SIZE_TEXT    = "size"
 	DEFAULT_PAGE         = "1"
 	DEFAULT_PAGE_SIZE    = "10"
-	DEFAULT_MIN_PAGESIZE = 4
-	DEFAULT_MAX_PAGESIZE = 50
+	DEFAULT_MIN_PAGESIZE = 5
+	DEFAULT_MAX_PAGESIZE = 100
 )
 
 // Default Create a new pagination middleware with default values
