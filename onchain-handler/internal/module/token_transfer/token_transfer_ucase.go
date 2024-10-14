@@ -66,25 +66,16 @@ func (u *tokenTransferUCase) TransferTokens(ctx context.Context, payloads []dto.
 			continue
 		}
 
-		err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, fromAddress, symbol, recipients, amounts)
+		tokenTransfers, err = u.bulkTransferAndSaveTokenTransferHistories(ctx, tokenTransfers, fromAddress, symbol, recipients, amounts)
 		if err != nil {
-			// Log the error and mark each request in the group as failed
-			for _, payload := range grouped {
-				transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
-					RequestID:    payload.RequestID,
-					Status:       false,
-					ErrorMessage: fmt.Sprintf("Bulk transfer failed: %v", err),
-				})
-			}
-		} else {
-			// Mark all transactions in the group as successful
-			for _, payload := range grouped {
-				transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
-					RequestID:    payload.RequestID,
-					Status:       true,
-					ErrorMessage: "", // No error on success
-				})
-			}
+			return nil, fmt.Errorf("failed to TransferTokens: %v", err)
+		}
+		for _, tokenTransfer := range tokenTransfers {
+			transferResults = append(transferResults, dto.TokenTransferResultDTOResponse{
+				RequestID:    tokenTransfer.RequestID,
+				Status:       tokenTransfer.Status,
+				ErrorMessage: tokenTransfer.ErrorMessage,
+			})
 		}
 	}
 
@@ -147,27 +138,30 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	fromAddress, symbol string,
 	recipients []string,
 	amounts []*big.Int,
-) error {
+) ([]model.TokenTransferHistory, error) {
 	// Call the BulkTransfer utility to send tokens
-	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(u.ETHClient, u.Config, fromAddress, symbol, recipients, amounts)
-	if err != nil {
-		return fmt.Errorf("failed to bulk transfer token: %v", err)
-	}
+	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(ctx, u.ETHClient, u.Config, fromAddress, symbol, recipients, amounts)
 	for index := range tokenTransfers {
 		// Update the token transfer history with transaction details
-		tokenTransfers[index].TransactionHash = *txHash
-		tokenTransfers[index].Status = true
-		tokenTransfers[index].Symbol = *tokenSymbol
-		tokenTransfers[index].Fee = txFee.String()
+		if err == nil {
+			tokenTransfers[index].TransactionHash = *txHash
+			tokenTransfers[index].Status = true
+			tokenTransfers[index].Symbol = *tokenSymbol
+			tokenTransfers[index].Fee = txFee.String()
+		} else {
+			tokenTransfers[index].Status = false
+			tokenTransfers[index].ErrorMessage = err.Error()
+			tokenTransfers[index].Fee = "0"
+		}
 	}
 
 	// Save the updated reward history
 	err = u.TokenTransferRepository.CreateTokenTransferHistories(ctx, tokenTransfers)
 	if err != nil {
-		return fmt.Errorf("failed to save token transfer histories: %v", err)
+		return nil, fmt.Errorf("failed to save token transfer histories: %v", err)
 	}
 
-	return nil
+	return tokenTransfers, nil
 }
 
 // groupKey is used to create a unique key for grouping by FromAddress and Symbol

@@ -48,14 +48,19 @@ func GetFromAddress(privateKey *ecdsa.PrivateKey) (string, error) {
 }
 
 // GetAuth creates a new keyed transactor for signing transactions with the given private key and network chain ID
-func GetAuth(client *ethclient.Client, privateKey *ecdsa.PrivateKey, chainID *big.Int) (*bind.TransactOpts, error) {
+func GetAuth(
+	ctx context.Context,
+	client *ethclient.Client,
+	privateKey *ecdsa.PrivateKey,
+	chainID *big.Int,
+) (*bind.TransactOpts, error) {
 	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	nonce, err := client.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get nonce: %w", err)
 	}
 
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	gasPrice, err := client.SuggestGasPrice(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get gas price: %w", err)
 	}
@@ -159,6 +164,7 @@ func ParseHexToUint64(hexStr string) (uint64, error) {
 
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
 func BulkTransfer(
+	ctx context.Context,
 	client *ethclient.Client,
 	config *conf.Configuration,
 	poolAddress, symbol string,
@@ -191,12 +197,12 @@ func BulkTransfer(
 	}
 
 	// Get the initial nonce
-	nonce, err := client.PendingNonceAt(context.Background(), common.HexToAddress(poolAddress))
+	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get nonce: %w", err)
 	}
 
-	auth, err := GetAuth(client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
+	auth, err := GetAuth(ctx, client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get auth: %w", err)
 	}
@@ -244,7 +250,7 @@ func BulkTransfer(
 	}
 
 	// Wait for approval to be mined
-	receipt, err := bind.WaitMined(context.Background(), client, tx)
+	receipt, err := bind.WaitMined(ctx, client, tx)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to wait for approval transaction to be mined: %w", err)
 	}
@@ -262,17 +268,12 @@ func BulkTransfer(
 	}
 
 	// Wait for the bulk transfer transaction to be mined and get the receipt
-	receipt, err = bind.WaitMined(context.Background(), client, tx)
+	receipt, err = bind.WaitMined(ctx, client, tx)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
 	}
 
 	txHash := tx.Hash().Hex()
-
-	// Check the transaction status
-	if receipt.Status != 1 {
-		return nil, nil, nil, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
-	}
 
 	// Calculate transaction fee (gasUsed * gasPrice)
 	gasUsed := receipt.GasUsed
@@ -282,6 +283,11 @@ func BulkTransfer(
 	// Convert txFee from wei to AVAX (1 AVAX = 10^18 wei)
 	weiInAVAX := big.NewFloat(1e18)
 	txFeeInAVAX := new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
+
+	// Check the transaction status
+	if receipt.Status != 1 {
+		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
+	}
 
 	// Return transaction hash, token symbol, and transaction fee
 	return &txHash, &tokenSymbol, txFeeInAVAX, nil
