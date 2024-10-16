@@ -171,7 +171,7 @@ func getPoolPrivateKey(config *conf.Configuration, poolAddress string) (string, 
 		return config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, nil
 	// LP Community pool
 	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
-		return config.Blockchain.LPCommunityPool.LPCommunityAddress, nil
+		return config.Blockchain.LPCommunityPool.PrivateKeyLPCommunity, nil
 	// LP Revenue pool
 	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
 		return config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, nil
