@@ -25,5 +25,5 @@ type TokenTransferUCase interface {
 		requestIDs []string,
 		startTime, endTime time.Time,
 		page, size int,
-	) (dto.TokenTransferHistoryDTOResponse, error)
+	) (dto.PaginationDTOResponse, error)
 }

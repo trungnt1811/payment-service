@@ -9,23 +9,24 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
-	"github.com/genefriendway/onchain-handler/utils"
+	"github.com/genefriendway/onchain-handler/internal/utils"
 )
 
 type tokenTransferUCase struct {
-	TokenTransferRepository interfaces.TokenTransferRepository
-	ETHClient               *ethclient.Client
-	Config                  *conf.Configuration
+	tokenTransferRepository interfaces.TokenTransferRepository
+	ethClient               *ethclient.Client
+	config                  *conf.Configuration
 }
 
 func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepository, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
 	return &tokenTransferUCase{
-		TokenTransferRepository: tokenTransferRepository,
-		ETHClient:               ethClient,
-		Config:                  config,
+		tokenTransferRepository: tokenTransferRepository,
+		ethClient:               ethClient,
+		config:                  config,
 	}
 }
 
@@ -96,7 +97,7 @@ func (u *tokenTransferUCase) convertToRecipientsAndAmounts(req []dto.TokenTransf
 		}
 
 		// Create a multiplier for 10^18
-		multiplier := new(big.Float).SetFloat64(float64(1e18)) // Adjust this based on your token's decimal places
+		multiplier := new(big.Float).SetFloat64(float64(constants.TokenDecimalsMultiplier))
 
 		// Multiply the token amount by the multiplier
 		tokenAmountInSmallestUnitFloat := new(big.Float).Mul(tokenAmount, multiplier)
@@ -114,10 +115,10 @@ func (u *tokenTransferUCase) convertToRecipientsAndAmounts(req []dto.TokenTransf
 }
 
 // prepareTokenTransferHistories prepares token transfer history based on the payload
-func (u *tokenTransferUCase) prepareTokenTransferHistories(req []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
+func (u *tokenTransferUCase) prepareTokenTransferHistories(payloads []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
 	var tokenTransfers []model.TokenTransferHistory
 
-	for _, payload := range req {
+	for _, payload := range payloads {
 		// Prepare reward entry
 		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
 			RequestID:   payload.RequestID,
@@ -140,7 +141,7 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	amounts []*big.Int,
 ) ([]model.TokenTransferHistory, error) {
 	// Perform the bulk transfer.
-	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(ctx, u.ETHClient, u.Config, fromAddress, symbol, recipients, amounts)
+	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(ctx, u.ethClient, u.config, fromAddress, symbol, recipients, amounts)
 
 	// Process the transfer results.
 	for index := range tokenTransfers {
@@ -152,7 +153,7 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	}
 
 	// Save the updated token transfer histories.
-	if saveErr := u.TokenTransferRepository.CreateTokenTransferHistories(ctx, tokenTransfers); saveErr != nil {
+	if saveErr := u.tokenTransferRepository.CreateTokenTransferHistories(ctx, tokenTransfers); saveErr != nil {
 		return nil, fmt.Errorf("failed to save token transfer histories: %v", saveErr)
 	}
 
@@ -225,18 +226,18 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 	requestIDs []string, // List of request IDs to filter
 	startTime, endTime time.Time, // Time range to filter by
 	page, size int,
-) (dto.TokenTransferHistoryDTOResponse, error) {
+) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
 	limit := size + 1
 	offset := (page - 1) * size
 
 	// Fetch the token transfer histories using request IDs and time range
-	listTokenTransfers, err := s.TokenTransferRepository.GetTokenTransferHistories(ctx, limit, offset, requestIDs, startTime, endTime)
+	listTokenTransfers, err := s.tokenTransferRepository.GetTokenTransferHistories(ctx, limit, offset, requestIDs, startTime, endTime)
 	if err != nil {
-		return dto.TokenTransferHistoryDTOResponse{}, err
+		return dto.PaginationDTOResponse{}, err
 	}
 
-	var listTokenTransfersDTO []dto.TokenTransferHistoryDTO
+	var listTokenTransfersDTO []interface{}
 
 	// Convert the token transfer histories to DTO format
 	for i := range listTokenTransfers {
@@ -253,7 +254,7 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 	}
 
 	// Return the response DTO
-	return dto.TokenTransferHistoryDTOResponse{
+	return dto.PaginationDTOResponse{
 		NextPage: nextPage,
 		Page:     page,
 		Size:     size,

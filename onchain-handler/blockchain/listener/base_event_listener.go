@@ -1,4 +1,4 @@
-package listeners
+package listener
 
 import (
 	"context"
@@ -9,39 +9,35 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	listener_interfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
+	listenerinterfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
+	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 	"github.com/genefriendway/onchain-handler/utils"
 )
 
-const (
-	DefaultEventChannelBufferSize = 100             // Buffer size for event channel
-	DefaultBlockOffset            = 10              // Default block offset if last processed block is missing
-	MaxBlockRange                 = 2048            // Maximum number of blocks to query at once
-	MaxRetries                    = 3               // Maximum number of retries when polling fails
-	RetryDelay                    = 3 * time.Second // Delay between retries
-)
-
-// BaseEventListener represents the shared behavior of any blockchain event listener.
-type BaseEventListener struct {
-	ETHClient     *ethclient.Client
-	EventChan     chan interface{}
-	LastBlockRepo interfaces.BlockStateRepository
-	CurrentBlock  uint64
-	EventHandlers map[common.Address]func(log types.Log) (interface{}, error) // Map to handle events per contract
+// baseEventListener represents the shared behavior of any blockchain event listener.
+type baseEventListener struct {
+	ethClient       *ethclient.Client
+	eventChan       chan interface{}
+	blockStateUCase interfaces.BlockStateUCase
+	currentBlock    uint64
+	cacheRepo       caching.CacheRepository
+	eventHandlers   map[common.Address]func(log types.Log) (interface{}, error) // Map to handle events per contract
 }
 
 // NewBaseEventListener initializes a base listener.
 func NewBaseEventListener(
 	client *ethclient.Client,
-	lastBlockRepo interfaces.BlockStateRepository,
+	cacheRepo caching.CacheRepository,
+	blockStateUCase interfaces.BlockStateUCase,
 	startBlockListener *uint64,
-) listener_interfaces.BaseEventListener {
-	eventChan := make(chan interface{}, DefaultEventChannelBufferSize)
+) listenerinterfaces.BaseEventListener {
+	eventChan := make(chan interface{}, constants.DefaultEventChannelBufferSize)
 
 	// Fetch the last processed block from the repository
-	lastBlock, err := lastBlockRepo.GetLastProcessedBlock(context.Background())
+	lastBlock, err := blockStateUCase.GetLastProcessedBlock(context.Background())
 	if err != nil || lastBlock == 0 {
 		log.LG.Warnf("Failed to get last processed block or it was zero: %v", err)
 	}
@@ -55,23 +51,24 @@ func NewBaseEventListener(
 		log.LG.Debugf("Using startBlockListener: %d instead of last processed block: %d", *startBlockListener, lastBlock)
 	}
 
-	return &BaseEventListener{
-		ETHClient:     client,
-		EventChan:     eventChan,
-		LastBlockRepo: lastBlockRepo,
-		CurrentBlock:  currentBlock, // Store the final determined current block
-		EventHandlers: make(map[common.Address]func(log types.Log) (interface{}, error)),
+	return &baseEventListener{
+		ethClient:       client,
+		cacheRepo:       cacheRepo,
+		eventChan:       eventChan,
+		blockStateUCase: blockStateUCase,
+		currentBlock:    currentBlock, // Store the final determined current block
+		eventHandlers:   make(map[common.Address]func(log types.Log) (interface{}, error)),
 	}
 }
 
 // registerEventListener registers an event listener for a specific contract
-func (listener *BaseEventListener) RegisterEventListener(contractAddress string, handler func(log types.Log) (interface{}, error)) {
+func (listener *baseEventListener) RegisterEventListener(contractAddress string, handler func(log types.Log) (interface{}, error)) {
 	address := common.HexToAddress(contractAddress)
-	listener.EventHandlers[address] = handler
+	listener.eventHandlers[address] = handler
 }
 
 // RunListener starts the listener and processes incoming events.
-func (listener *BaseEventListener) RunListener(ctx context.Context) error {
+func (listener *baseEventListener) RunListener(ctx context.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(2) // Two goroutines: listen and processEvents
 
@@ -92,86 +89,109 @@ func (listener *BaseEventListener) RunListener(ctx context.Context) error {
 	wg.Wait()
 
 	// Ensure the channel is closed when the listener stops
-	close(listener.EventChan)
+	close(listener.eventChan)
 	return nil
 }
 
+func (listener *baseEventListener) getLatestBlockFromCacheOrBlockchain(ctx context.Context) (uint64, error) {
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey}
+
+	var latestBlock uint64
+	err := listener.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
+	if err == nil {
+		log.LG.Debugf("Retrieved latest block number from cache: %d", latestBlock)
+		return latestBlock, nil
+	}
+
+	// If cache is empty, load from blockchain
+	latest, err := utils.GetLatestBlockNumber(ctx, listener.ethClient)
+	if err != nil {
+		log.LG.Errorf("Failed to retrieve the latest block number from blockchain: %v", err)
+		return 0, err
+	}
+
+	log.LG.Debugf("Retrieved latest block number from blockchain: %d", latest.Uint64())
+	return latest.Uint64(), nil
+}
+
 // listen polls the blockchain for logs and parses them.
-func (listener *BaseEventListener) listen(ctx context.Context) {
+func (listener *baseEventListener) listen(ctx context.Context) {
 	log.LG.Info("Starting event listener...")
 
 	// Get the last processed block from the repository, defaulting to an offset if not found.
-	lastBlock, err := listener.LastBlockRepo.GetLastProcessedBlock(ctx)
+	lastBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx)
 	if err != nil || lastBlock == 0 {
 		log.LG.Warnf("Failed to get last processed block or it was zero: %v", err)
-		latestBlock, err := utils.GetLatestBlockNumber(ctx, listener.ETHClient)
+
+		// Try to retrieve the latest block from cache or blockchain
+		latestBlock, err := listener.getLatestBlockFromCacheOrBlockchain(ctx)
 		if err != nil {
 			log.LG.Errorf("Failed to retrieve the latest block number from blockchain: %v", err)
 			return
 		}
-		log.LG.Debugf("Retrieved latest block number from blockchain: %d", latestBlock.Uint64())
+		log.LG.Debugf("Retrieved latest block number: %d", latestBlock)
 
-		if latestBlock.Uint64() > DefaultBlockOffset {
-			lastBlock = latestBlock.Uint64() - DefaultBlockOffset
+		if latestBlock > constants.DefaultBlockOffset {
+			lastBlock = latestBlock - constants.DefaultBlockOffset
 		} else {
 			lastBlock = 0
 		}
 	}
 
 	// Initialize currentBlock based on the stored value
-	currentBlock := listener.CurrentBlock
+	currentBlock := listener.currentBlock
 	if currentBlock == 0 {
 		currentBlock = lastBlock + 1
 	}
 
 	// Continuously listen for new events.
 	for {
-		// Retrieve the latest block number from the blockchain to stay up-to-date.
-		latestBlock, err := utils.GetLatestBlockNumber(ctx, listener.ETHClient)
+		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
+		latestBlock, err := listener.getLatestBlockFromCacheOrBlockchain(ctx)
 		if err != nil {
 			log.LG.Errorf("Failed to retrieve the latest block number from blockchain: %v", err)
-			time.Sleep(RetryDelay)
+			time.Sleep(constants.RetryDelay)
 			continue
 		}
 
 		// Ensure we do not go beyond the latest block.
-		if currentBlock > latestBlock.Uint64() {
+		if currentBlock > latestBlock {
 			log.LG.Debugf("No new blocks to process. Waiting for new blocks...")
-			time.Sleep(RetryDelay) // Wait before rechecking to prevent excessive polling
+			time.Sleep(constants.RetryDelay) // Wait before rechecking to prevent excessive polling
 			continue
 		}
 
 		log.LG.Debugf("Listening for events starting at block: %d", currentBlock)
 
-		// Determine the end block while respecting MaxBlockRange and the latest block.
-		endBlock := currentBlock + MaxBlockRange/8
-		if endBlock > latestBlock.Uint64() {
-			endBlock = latestBlock.Uint64()
+		// Determine the end block while respecting ApiMaxBlocksPerRequest and the latest block.
+		endBlock := currentBlock + constants.ApiMaxBlocksPerRequest/8
+		if endBlock > latestBlock {
+			endBlock = latestBlock
 		}
 
 		// Extract contract addresses from EventHandlers map
-		contractAddresses := make([]common.Address, 0, len(listener.EventHandlers))
-		for address := range listener.EventHandlers {
+		contractAddresses := make([]common.Address, 0, len(listener.eventHandlers))
+		for address := range listener.eventHandlers {
 			contractAddresses = append(contractAddresses, address)
 		}
 
 		// Process the blocks in chunks of 10 blocks (or DefaultBlockOffset).
-		for chunkStart := currentBlock; chunkStart <= endBlock; chunkStart += DefaultBlockOffset {
-			chunkEnd := chunkStart + DefaultBlockOffset - 1
+		for chunkStart := currentBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
+			chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
 			if chunkEnd > endBlock {
 				chunkEnd = endBlock
 			}
 
-			log.LG.Debugf("Processing block chunk: %d to %d", chunkStart, chunkEnd)
+			log.LG.Debugf("Base Event Listener: Processing block chunk: %d to %d", chunkStart, chunkEnd)
 
 			var logs []types.Log
 			// Poll logs from the blockchain with retries in case of failure.
-			for retries := 0; retries < MaxRetries; retries++ {
+			for retries := 0; retries < constants.MaxRetries; retries++ {
 				// Poll logs from the chunk of blocks.
-				logs, err = utils.PollForLogsFromBlock(ctx, listener.ETHClient, contractAddresses, chunkStart, chunkEnd)
+				logs, err = utils.PollForLogsFromBlock(ctx, listener.ethClient, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
 					log.LG.Warnf("Failed to poll logs from block %d to %d: %v. Retrying...", chunkStart, chunkEnd, err)
-					time.Sleep(RetryDelay)
+					time.Sleep(constants.RetryDelay)
 					continue
 				}
 				break
@@ -183,7 +203,7 @@ func (listener *BaseEventListener) listen(ctx context.Context) {
 
 			// Apply each parseAndProcessFunc to the logs
 			for _, logEntry := range logs {
-				if eventHandler, exists := listener.EventHandlers[logEntry.Address]; exists {
+				if eventHandler, exists := listener.eventHandlers[logEntry.Address]; exists {
 					processedEvent, err := eventHandler(logEntry)
 					if err != nil {
 						log.LG.Warnf("Failed to process log entry: %v", err)
@@ -191,7 +211,7 @@ func (listener *BaseEventListener) listen(ctx context.Context) {
 					}
 
 					// Send the processed event to the channel
-					listener.EventChan <- processedEvent
+					listener.eventChan <- processedEvent
 				} else {
 					log.LG.Warnf("No event handler for log address: %s", logEntry.Address.Hex())
 				}
@@ -202,17 +222,17 @@ func (listener *BaseEventListener) listen(ctx context.Context) {
 		}
 
 		// Update the last processed block in the repository.
-		if err := listener.LastBlockRepo.UpdateLastProcessedBlock(ctx, currentBlock); err != nil {
+		if err := listener.blockStateUCase.UpdateLastProcessedBlock(ctx, currentBlock); err != nil {
 			log.LG.Errorf("Failed to update last processed block in repository: %v", err)
 		}
 	}
 }
 
 // processEvents handles events from the EventChan.
-func (listener *BaseEventListener) processEvents(ctx context.Context) {
+func (listener *baseEventListener) processEvents(ctx context.Context) {
 	for {
 		select {
-		case event := <-listener.EventChan:
+		case event := <-listener.eventChan:
 			log.LG.Debugf("Processed event: %+v", event)
 
 		case <-ctx.Done():

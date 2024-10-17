@@ -3,6 +3,8 @@ package conf
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -21,6 +23,12 @@ type DatabaseConfiguration struct {
 	DbHost     string `mapstructure:"DB_HOST"`
 	DbPort     string `mapstructure:"DB_PORT"`
 	DbName     string `mapstructure:"DB_NAME"`
+}
+
+type PaymentGatewayConfiguration struct {
+	InitWalletCount  uint   `mapstructure:"INIT_WALLET_COUNT"`
+	ExpiredOrderTime uint   `mapstructure:"EXPIRED_ORDER_TIME"`
+	PaymentCovering  string `mapstructure:"PAYMENT_COVERING"`
 }
 
 type BlockchainConfiguration struct {
@@ -67,12 +75,14 @@ type SmartContractConfiguration struct {
 }
 
 type Configuration struct {
-	Database   DatabaseConfiguration   `mapstructure:",squash"`
-	Redis      RedisConfiguration      `mapstructure:",squash"`
-	Blockchain BlockchainConfiguration `mapstructure:",squash"`
-	AppName    string                  `mapstructure:"APP_NAME"`
-	AppPort    uint32                  `mapstructure:"APP_PORT"`
-	Env        string                  `mapstructure:"ENV"`
+	Database       DatabaseConfiguration       `mapstructure:",squash"`
+	Redis          RedisConfiguration          `mapstructure:",squash"`
+	Blockchain     BlockchainConfiguration     `mapstructure:",squash"`
+	PaymentGateway PaymentGatewayConfiguration `mapstructure:",squash"`
+	AppName        string                      `mapstructure:"APP_NAME"`
+	AppPort        uint32                      `mapstructure:"APP_PORT"`
+	EncryptionKey  string                      `mapstructure:"ENCRYPTION_KEY"`
+	Env            string                      `mapstructure:"ENV"`
 }
 
 var configuration Configuration
@@ -107,36 +117,60 @@ func GetRedisConnectionURL() string {
 	return configuration.Redis.RedisAddress
 }
 
-func GetPoolAddress(poolName string) (string, error) {
+// Helper function to get pools' private key by pools' addresses
+func (config Configuration) GetPoolPrivateKey(poolAddress string) (string, error) {
+	switch poolAddress {
+	// LP Treasury pool
+	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
+		return config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, nil
+	// LP Community pool
+	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
+		return config.Blockchain.LPCommunityPool.PrivateKeyLPCommunity, nil
+	// LP Revenue pool
+	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
+		return config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, nil
+	// LP Staking pool
+	case config.Blockchain.LPStakingPool.LPStakingAddress:
+		return config.Blockchain.LPStakingPool.PrivateKeyLPStaking, nil
+	// USDT Treasury pool
+	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
+		return config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury, nil
+	default:
+		return "", fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
+	}
+}
+
+func (config Configuration) GetPoolAddress(poolName string) (string, error) {
 	switch poolName {
 	case constants.LPCommunity:
-		return configuration.Blockchain.LPCommunityPool.LPCommunityAddress, nil
+		return config.Blockchain.LPCommunityPool.LPCommunityAddress, nil
 	case constants.LPStaking:
-		return configuration.Blockchain.LPStakingPool.LPStakingAddress, nil
+		return config.Blockchain.LPStakingPool.LPStakingAddress, nil
 	case constants.LPRevenue:
-		return configuration.Blockchain.LPRevenuePool.LPRevenueAddress, nil
+		return config.Blockchain.LPRevenuePool.LPRevenueAddress, nil
 	case constants.LPTreasury:
-		return configuration.Blockchain.LPTreasuryPool.LPTreasuryAddress, nil
+		return config.Blockchain.LPTreasuryPool.LPTreasuryAddress, nil
 	case constants.USDTTreasury:
-		return configuration.Blockchain.USDTTreasuryPool.USDTTreasuryAddress, nil
+		return config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress, nil
 	default:
 		return "", fmt.Errorf("unrecognized pool name: %s", poolName)
 	}
 }
 
-func GetPoolName(poolAddress string) (string, error) {
-	switch poolAddress {
-	case configuration.Blockchain.LPCommunityPool.LPCommunityAddress:
-		return constants.LPCommunity, nil
-	case configuration.Blockchain.LPStakingPool.LPStakingAddress:
-		return constants.LPStaking, nil
-	case configuration.Blockchain.LPRevenuePool.LPRevenueAddress:
-		return constants.LPRevenue, nil
-	case configuration.Blockchain.LPTreasuryPool.LPTreasuryAddress:
-		return constants.LPTreasury, nil
-	case configuration.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
-		return constants.USDTTreasury, nil
-	default:
-		return "", fmt.Errorf("unrecognized pool address: %s", poolAddress)
+func (config Configuration) GetExpiredOrderTime() time.Duration {
+	return time.Duration(config.PaymentGateway.ExpiredOrderTime) * time.Minute
+}
+
+func (config Configuration) GetEncryptionKey() string {
+	return config.EncryptionKey
+}
+
+func (config Configuration) GetPaymentCovering() float64 {
+	paymentCoveringStr := config.PaymentGateway.PaymentCovering
+	paymentCoveringFloat, err := strconv.ParseFloat(paymentCoveringStr, 64)
+	if err != nil {
+		log.Logger.Printf("Error converting PaymentCovering to float64: %v", err)
+		return 0.0
 	}
+	return float64(paymentCoveringFloat)
 }

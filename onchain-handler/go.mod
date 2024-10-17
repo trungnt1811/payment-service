@@ -6,6 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.14.9
 	github.com/gin-gonic/gin v1.10.0
 	github.com/jackc/pgx/v5 v5.5.5
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/viper v1.19.0

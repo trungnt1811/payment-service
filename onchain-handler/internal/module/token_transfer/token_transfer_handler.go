@@ -18,14 +18,16 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
-type TokenTransferHandler struct {
-	UCase interfaces.TokenTransferUCase
+type tokenTransferHandler struct {
+	ucase  interfaces.TokenTransferUCase
+	config *conf.Configuration
 }
 
 // NewRewardHandler initializes the RewardHandler
-func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransferHandler {
-	return &TokenTransferHandler{
-		UCase: ucase,
+func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase, config *conf.Configuration) *tokenTransferHandler {
+	return &tokenTransferHandler{
+		ucase:  ucase,
+		config: config,
 	}
 }
 
@@ -37,10 +39,10 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase) *TokenTransfer
 // @Produce json
 // @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"results\": [{\"request_id\": \"requestID1\", \"status\": true, \"error_message\": \"\"}, {\"request_id\": \"requestID2\", \"status\": false, \"error_message\": \"Failed: some error message\"}]}"
-// @Failure 400 {object} util.GeneralError "Invalid payload or invalid recipient address/transaction type"
-// @Failure 500 {object} util.GeneralError "Internal server error, failed to distribute tokens"
+// @Failure 400 {object} utils.GeneralError "Invalid payload or invalid recipient address/transaction type"
+// @Failure 500 {object} utils.GeneralError "Internal server error, failed to distribute tokens"
 // @Router /api/v1/token-transfer [post]
-func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
+func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 	var req []dto.TokenTransferPayloadDTO
 
 	// Parse and validate the request payload
@@ -56,7 +58,7 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	for index, payload := range req {
 		// Check if the sender address is a valid Ethereum address
 		if !common.IsHexAddress(payload.FromAddress) {
-			fromAddress, err := conf.GetPoolAddress(payload.FromAddress)
+			fromAddress, err := h.config.GetPoolAddress(payload.FromAddress)
 			if err != nil {
 				validPools := getValidPools()
 				ctx.JSON(http.StatusBadRequest, gin.H{
@@ -70,7 +72,7 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 
 		// Check if the recipient address is a valid Ethereum address
 		if !common.IsHexAddress(payload.ToAddress) {
-			toAddress, err := conf.GetPoolAddress(payload.ToAddress)
+			toAddress, err := h.config.GetPoolAddress(payload.ToAddress)
 			if err != nil {
 				validPools := getValidPools()
 				ctx.JSON(http.StatusBadRequest, gin.H{
@@ -92,7 +94,7 @@ func (h *TokenTransferHandler) Transfer(ctx *gin.Context) {
 	}
 
 	// Proceed to distribute tokens if all checks pass
-	transferResults, err := h.UCase.TransferTokens(ctx, req)
+	transferResults, err := h.ucase.TransferTokens(ctx, req)
 	if err != nil {
 		log.LG.Errorf("Failed to distribute tokens: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
@@ -128,12 +130,12 @@ func getValidPools() string {
 // @Param request_ids query []string false "List of request IDs to filter"
 // @Param start_time query string false "Start time in RFC3339 format to filter example("2024-01-01T00:00:00Z")"
 // @Param end_time query string false "End time in RFC3339 format to filter example("2024-02-01T00:00:00Z")"
-// @Success 200 {object} dto.TokenTransferHistoryDTOResponse "Successful retrieval of token transfer histories"
-// @Failure 400 {object} util.GeneralError "Invalid parameters"
-// @Failure 500 {object} util.GeneralError "Internal server error"
+// @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
+// @Failure 400 {object} utils.GeneralError "Invalid parameters"
+// @Failure 500 {object} utils.GeneralError "Internal server error"
 // @Security ApiKeyAuth
 // @Router /api/v1/token-transfer/histories [get]
-func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
+func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Set default values for page and size if they are not provided
 	page := ctx.DefaultQuery("page", "1")
 	size := ctx.DefaultQuery("size", "10")
@@ -185,7 +187,7 @@ func (h *TokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	}
 
 	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
-	response, err := h.UCase.GetTokenTransferHistories(ctx, requestIDs, startTime, endTime, pageInt, sizeInt)
+	response, err := h.ucase.GetTokenTransferHistories(ctx, requestIDs, startTime, endTime, pageInt, sizeInt)
 	if err != nil {
 		log.LG.Errorf("Failed to retrieve token transfer histories: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)

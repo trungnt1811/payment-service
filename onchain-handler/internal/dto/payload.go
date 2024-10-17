@@ -7,3 +7,8 @@ type TokenTransferPayloadDTO struct {
 	RequestID   string `json:"request_id"`
 	Symbol      string `json:"symbol"`
 }
+
+type PaymentOrderPayloadDTO struct {
+	UserID uint64 `json:"user_id"`
+	Amount string `json:"amount"`
+}

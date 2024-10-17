@@ -1,8 +1,11 @@
 package constants
 
+import "time"
+
 // Token decimals
 const (
-	LifePointDecimals = 1e18
+	TokenDecimalsMultiplier = 1e18
+	DecimalPlaces           = 18
 )
 
 // Pool names
@@ -18,4 +21,62 @@ const (
 const (
 	USDT = "USDT"
 	LP   = "LP"
+)
+
+// Global cache key
+const (
+	LatestBlockCacheKey  = "latest_block"
+	LatestBlockCacheTime = 5 * time.Minute
+)
+
+// Payment orders status
+const (
+	Pending = "PENDING"
+	Success = "SUCCESS"
+	Partial = "PARTIAL"
+	Expired = "EXPIRED"
+	Failed  = "FAILED"
+)
+
+// ERC-20 transfer event ABI
+const (
+	Erc20TransferEventABI = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
+)
+
+// Event listener config
+const (
+	DefaultEventChannelBufferSize = 100             // Buffer size for event channel
+	DefaultBlockOffset            = 10              // Default block offset if last processed block is missing
+	ApiMaxBlocksPerRequest        = 2048            // Maximum number of blocks to query at once
+	MaxRetries                    = 3               // Maximum number of retries when polling fails
+	RetryDelay                    = 3 * time.Second // Delay between retries
+)
+
+// Queue config
+const (
+	MaxSizeQueue    = 100
+	DequeueInterval = 15 * time.Second
+)
+
+// Cache config
+const (
+	DefaultExpiration = 30 * time.Second
+	CleanupInterval   = 1 * time.Minute
+)
+
+// Worker config
+const (
+	BlockFetchingInterval       = 5 * time.Second
+	ExpiredOrderCatchupInterval = 60 * time.Minute
+	ReleaseWalletInterval       = 2 * time.Hour
+)
+
+// Event
+const (
+	TransferEventName = "Transfer"
+)
+
+// Payment order config
+const (
+	OrderCutoffTime = 24 * time.Hour
 )
