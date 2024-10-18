@@ -39,5 +39,5 @@ type PaymentOrderUCase interface {
 		blockHeight uint64,
 	) error
 	BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error
-	GetPendingPaymentOrders(ctx context.Context, size int) ([]dto.PaymentOrderDTO, error)
+	GetPendingPaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
 }

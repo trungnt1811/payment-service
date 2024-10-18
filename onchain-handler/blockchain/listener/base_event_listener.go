@@ -170,7 +170,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 		}
 
 		// Extract contract addresses from EventHandlers map
-		contractAddresses := make([]common.Address, 0, len(listener.eventHandlers))
+		var contractAddresses []common.Address
 		for address := range listener.eventHandlers {
 			contractAddresses = append(contractAddresses, address)
 		}

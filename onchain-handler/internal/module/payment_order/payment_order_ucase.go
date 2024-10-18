@@ -142,8 +142,8 @@ func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders
 	return u.paymentOrderRepository.BatchUpdateOrderStatuses(ctx, orderIDs, newStatuses)
 }
 
-func (u *paymentOrderUCase) GetPendingPaymentOrders(ctx context.Context, size int) ([]dto.PaymentOrderDTO, error) {
-	orders, err := u.paymentOrderRepository.GetPendingPaymentOrders(ctx, size, 0)
+func (u *paymentOrderUCase) GetPendingPaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
+	orders, err := u.paymentOrderRepository.GetPendingPaymentOrders(ctx, limit, offset)
 	if err != nil {
 		return nil, err
 	}

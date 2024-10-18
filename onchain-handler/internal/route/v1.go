@@ -61,7 +61,7 @@ func RegisterRoutes(
 	}
 
 	// Create a new payment order queue
-	paymentOrderQueue, err := queue.NewQueue[dto.PaymentOrderDTO](ctx, constants.MaxSizeQueue, paymentOrderUCase.GetPendingPaymentOrders)
+	paymentOrderQueue, err := queue.NewQueue[dto.PaymentOrderDTO](ctx, constants.MinQueueLimit, paymentOrderUCase.GetPendingPaymentOrders)
 	if err != nil {
 		log.LG.Fatalf("create payment order queue error: %v", err)
 	}

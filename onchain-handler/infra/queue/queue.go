@@ -3,124 +3,180 @@ package queue
 import (
 	"context"
 	"fmt"
+	"log"
+	"reflect"
 	"sync"
+
+	"github.com/genefriendway/onchain-handler/constants"
 )
 
-// Queue is a generic structure that holds items of any type.
 type Queue[T comparable] struct {
 	ctx     context.Context
 	mu      sync.Mutex
 	items   []T
-	itemSet map[T]struct{} // A map to track the existence of items
+	itemSet map[T]struct{}
 	limit   int
-	loader  func(ctx context.Context, limit int) ([]T, error)
+	loader  func(ctx context.Context, limit, offset int) ([]T, error)
 }
 
-// NewQueue creates a new generic queue with a specified limit and loader function.
-func NewQueue[T comparable](ctx context.Context, limit int, loader func(ctx context.Context, limit int) ([]T, error)) (*Queue[T], error) {
+// NewQueue creates a new queue with an initial load of items.
+func NewQueue[T comparable](ctx context.Context, limit int, loader func(ctx context.Context, limit, offset int) ([]T, error)) (*Queue[T], error) {
 	q := &Queue[T]{
 		ctx:     ctx,
 		items:   make([]T, 0, limit),
-		itemSet: make(map[T]struct{}), // Initialize the map for tracking items
+		itemSet: make(map[T]struct{}),
 		limit:   limit,
 		loader:  loader,
 	}
 
-	// Load initial items
-	initialItems, err := loader(ctx, limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load initial items: %v", err)
+	if err := q.loadInitialItems(); err != nil {
+		return nil, err
 	}
-
-	// Add initial items and populate the map
-	for _, item := range initialItems {
-		q.items = append(q.items, item)
-		q.itemSet[item] = struct{}{}
-	}
-
 	return q, nil
 }
 
-// Enqueue adds a new item to the queue, ensuring that the limit is not exceeded and avoiding duplicates.
+// loadInitialItems populates the queue with the first set of items.
+func (q *Queue[T]) loadInitialItems() error {
+	items, err := q.loader(q.ctx, q.limit, 0)
+	if err != nil {
+		return fmt.Errorf("failed to load initial items: %w", err)
+	}
+
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	for _, item := range items {
+		q.items = append(q.items, item)
+		q.itemSet[item] = struct{}{}
+	}
+	return nil
+}
+
+// Enqueue adds a new item, ensuring no duplicates and enforcing the limit.
 func (q *Queue[T]) Enqueue(item T) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	// Check if the item already exists in the map (for faster duplicate checking)
 	if _, exists := q.itemSet[item]; exists {
-		return fmt.Errorf("item already exists in the queue")
+		return fmt.Errorf("item %v already exists in the queue", item)
 	}
 
 	if len(q.items) >= q.limit {
 		return fmt.Errorf("queue is full")
 	}
 
-	// Add item to both the slice and the map
+	if reflect.ValueOf(item).IsNil() {
+		return fmt.Errorf("cannot enqueue a nil item")
+	}
+
 	q.items = append(q.items, item)
-	q.itemSet[item] = struct{}{} // Add to map for fast lookups
+	q.itemSet[item] = struct{}{}
 	return nil
 }
 
-// Dequeue removes an item from the queue, typically when processing is complete.
+// Dequeue removes the first item that matches the condition.
 func (q *Queue[T]) Dequeue(condition func(T) bool) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	var removed bool
 	for i, item := range q.items {
 		if condition(item) {
-			q.items = append(q.items[:i], q.items[i+1:]...)
-			delete(q.itemSet, item) // Remove from map as well
-			removed = true
-			break
+			log.Printf("Dequeueing item: %v", item)
+			// Fast removal, maintaining order
+			copy(q.items[i:], q.items[i+1:])
+			q.items = q.items[:len(q.items)-1]
+			delete(q.itemSet, item)
+
+			// Check if shrinking is necessary
+			if q.limit > constants.MinQueueLimit {
+				q.maybeShrink()
+			}
+			return nil
 		}
 	}
-
-	if !removed {
-		return fmt.Errorf("item not found in the queue")
-	}
-
-	return nil
+	return fmt.Errorf("item not found")
 }
 
-// FillQueue fills the queue up to the limit by loading more items if necessary.
+// FillQueue loads more items to fill up to the limit.
 func (q *Queue[T]) FillQueue() error {
 	q.mu.Lock()
-	defer q.mu.Unlock()
+	offset := len(q.items)
+	remainingCapacity := q.limit - offset
+	q.mu.Unlock()
 
-	// Calculate how many more items we need to load
-	itemsToLoad := q.limit - len(q.items)
-	if itemsToLoad <= 0 {
-		return nil // Queue is already full or at limit
+	if remainingCapacity <= 0 {
+		return nil
 	}
 
 	// Load more items
-	newItems, err := q.loader(q.ctx, itemsToLoad)
+	newItems, err := q.loader(q.ctx, remainingCapacity+1, offset)
 	if err != nil {
+		log.Printf("Error loading items: %v", err)
 		return fmt.Errorf("failed to load more items: %w", err)
 	}
+	log.Printf("Loaded %d new items", len(newItems))
 
-	// Append new items to the queue and update the map
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	// Scale if necessary
+	if len(newItems) > remainingCapacity {
+		q.scaleQueue()
+	}
+
+	// Add unique new items
 	for _, item := range newItems {
 		if _, exists := q.itemSet[item]; !exists {
 			q.items = append(q.items, item)
 			q.itemSet[item] = struct{}{}
 		}
 	}
-
 	return nil
 }
 
-// GetItems returns all the current items in the queue.
+// scaleQueue scales the queue when needed.
+func (q *Queue[T]) scaleQueue() {
+	newLimit := int(float64(q.limit) * constants.ScaleFactor)
+	if newLimit > constants.MaxQueueLimit {
+		q.limit = constants.MaxQueueLimit
+	} else {
+		q.limit = newLimit
+	}
+	log.Printf("Scaling queue to new limit: %d", q.limit)
+}
+
+// maybeShrink reduces the queue's size if it's consistently underutilized.
+func (q *Queue[T]) maybeShrink() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if len(q.items) >= int(float64(q.limit)*constants.ShrinkThreshold) {
+		return
+	}
+
+	if q.limit > constants.MinQueueLimit {
+		newLimit := int(float64(q.limit) * constants.ShrinkFactor)
+		if newLimit < constants.MinQueueLimit {
+			q.limit = constants.MinQueueLimit
+		} else {
+			q.limit = newLimit
+		}
+	}
+	log.Printf("Shrinking queue to new limit: %d", q.limit)
+}
+
+// GetItems returns a copy of all current items.
 func (q *Queue[T]) GetItems() []T {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	return q.items
+	// Return a copy to avoid race conditions
+	itemsCopy := make([]T, len(q.items))
+	copy(itemsCopy, q.items)
+	return itemsCopy
 }
 
-// GetSmallestValue returns the smallest value based on a custom comparator function.
-// The comparator should return true if the first item is smaller than the second.
+// GetSmallestValue finds the smallest value according to a comparator function.
 func (q *Queue[T]) GetSmallestValue(compare func(T, T) bool) (T, error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -140,14 +196,8 @@ func (q *Queue[T]) GetSmallestValue(compare func(T, T) bool) (T, error) {
 	return smallest, nil
 }
 
-func (q *Queue[T]) Lock() {
-	q.mu.Lock()
-}
-
-func (q *Queue[T]) Unlock() {
-	q.mu.Unlock()
-}
-
 func (q *Queue[T]) GetLimit() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	return q.limit
 }
