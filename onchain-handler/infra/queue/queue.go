@@ -104,10 +104,6 @@ func (q *Queue[T]) FillQueue() error {
 	remainingCapacity := q.limit - offset
 	q.mu.Unlock()
 
-	if remainingCapacity <= 0 {
-		return nil
-	}
-
 	// Load more items
 	newItems, err := q.loader(q.ctx, remainingCapacity+1, offset)
 	if err != nil {
