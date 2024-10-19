@@ -7,8 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -21,6 +23,7 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routeV1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
@@ -30,53 +33,102 @@ import (
 )
 
 func RunApp(config *conf.Configuration) {
-	// Create a context to handle shutdown signals
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Use release mode in production
+	// Initialize logger and environment settings
+	initializeLoggerAndMode(config)
+
+	// Initialize Gin router with middleware
+	r := initializeRouter()
+
+	// Initialize database connection
+	db := database.DBConnWithLoglevel(logger.Info)
+
+	// Initialize ETH client
+	ethClient := initializeEthClient(config)
+	defer ethClient.Close()
+
+	// Initialize caching
+	cacheRepository := initializeCache(ctx)
+
+	// Initialize payment wallets
+	initializePaymentWallets(ctx, config, db)
+
+	// Initialize use cases and queue
+	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
+	paymentOrderQueue := initializePaymentOrderQueue(ctx, db, cacheRepository, config)
+
+	// Start workers and listeners
+	startWorkersAndListeners(ctx, config, db, cacheRepository, ethClient, paymentOrderUCase, paymentOrderQueue)
+
+	// Register routes and start server
+	registerRoutesAndStartServer(ctx, r, config, db, cacheRepository, ethClient)
+
+	// Handle shutdown signals
+	waitForShutdownSignal(cancel)
+}
+
+// Helper Functions
+
+func initializeLoggerAndMode(config *conf.Configuration) {
 	if config.Env == "PROD" {
 		log.LG = log.NewZerologLogger(os.Stdout, zerolog.InfoLevel)
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		log.LG = log.NewZerologLogger(os.Stdout, zerolog.DebugLevel)
 	}
+}
 
+func initializeRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.DefaultPagination())
 	r.Use(middleware.RequestLogger(log.LG.Instance))
 	r.Use(gin.Recovery())
+	return r
+}
 
-	db := database.DBConnWithLoglevel(logger.Info)
-
-	// SECTION: init eth client
+func initializeEthClient(config *conf.Configuration) *ethclient.Client {
 	ethClient, err := utils.InitEthClient(config.Blockchain.RpcUrl)
 	if err != nil {
-		log.LG.Fatalf("failed to connect to eth client: %v", err)
+		log.LG.Fatalf("Failed to connect to ETH client: %v", err)
 	}
-	defer ethClient.Close()
+	return ethClient
+}
 
-	// SECTION: init cache
+func initializeCache(ctx context.Context) caching.CacheRepository {
 	cacheClient := caching.NewGoCacheClient()
-	cacheRepository := caching.NewCachingRepository(ctx, cacheClient)
+	return caching.NewCachingRepository(ctx, cacheClient)
+}
 
-	// SECTION: init payment wallets
+func initializePaymentWallets(ctx context.Context, config *conf.Configuration, db *gorm.DB) {
 	paymentWalletRepository, _ := wire.InitializePaymentWalletRepository(db, config)
-	err = utils.InitPaymentWallets(ctx, config, paymentWalletRepository)
+	err := utils.InitPaymentWallets(ctx, config, paymentWalletRepository)
 	if err != nil {
-		log.LG.Fatalf("init payment wallets error: %v", err)
+		log.LG.Fatalf("Init payment wallets error: %v", err)
 	}
+}
 
-	// SECTION: block state ucase
-	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
-
-	// SECTION: create a new payment order queue
+func initializePaymentOrderQueue(ctx context.Context, db *gorm.DB, cacheRepository caching.CacheRepository, config *conf.Configuration) *queue.Queue[dto.PaymentOrderDTO] {
 	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	paymentOrderQueue, err := queue.NewQueue[dto.PaymentOrderDTO](ctx, constants.MinQueueLimit, paymentOrderUCase.GetPendingPaymentOrders)
 	if err != nil {
-		log.LG.Fatalf("create payment order queue error: %v", err)
+		log.LG.Fatalf("Create payment order queue error: %v", err)
 	}
+	return paymentOrderQueue
+}
 
-	// SECTION: start workers
+func startWorkersAndListeners(
+	ctx context.Context,
+	config *conf.Configuration,
+	db *gorm.DB,
+	cacheRepository caching.CacheRepository,
+	ethClient *ethclient.Client,
+	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
+) {
+	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
+
 	latestBlockWorker := worker.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient)
 	go latestBlockWorker.Start(ctx)
 
@@ -92,15 +144,25 @@ func RunApp(config *conf.Configuration) {
 	releaseWalletWorker := worker.NewReleaseWalletWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
 
-	// SECTION: start events listener
-	// start base event listener for common listener logic
+	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentOrderQueue)
+}
+
+func startEventListeners(
+	ctx context.Context,
+	config *conf.Configuration,
+	ethClient *ethclient.Client,
+	cacheRepository caching.CacheRepository,
+	blockstateUcase interfaces.BlockStateUCase,
+	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
+) {
 	baseEventListener := listener.NewBaseEventListener(
 		ethClient,
 		cacheRepository,
 		blockstateUcase,
 		&config.Blockchain.StartBlockListener,
 	)
-	// register token transfer event listener
+
 	tokenTransferListener, err := listener.NewTokenTransferListener(
 		ctx,
 		config,
@@ -112,36 +174,44 @@ func RunApp(config *conf.Configuration) {
 	if err != nil {
 		log.LG.Fatalf("Failed to initialize tokenTransferListener: %v", err)
 	}
+
 	tokenTransferListener.Register(ctx)
-	// run event listeners
 	go func() {
 		if err := baseEventListener.RunListener(ctx); err != nil {
 			log.LG.Errorf("Error running event listeners: %v", err)
 		}
 	}()
+}
 
-	// SECTION: register routes with context
+func registerRoutesAndStartServer(
+	ctx context.Context,
+	r *gin.Engine,
+	config *conf.Configuration,
+	db *gorm.DB,
+	cacheRepository caching.CacheRepository,
+	ethClient *ethclient.Client,
+) {
 	routeV1.RegisterRoutes(ctx, r, config, db, cacheRepository, ethClient)
 
-	// Register general handlers
 	r.GET("/healthcheck", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": fmt.Sprintf("%s is still alive", config.AppName),
 		})
 	})
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// SECTION: run Gin router
 	go func() {
 		if err := r.Run(fmt.Sprintf("0.0.0.0:%v", config.AppPort)); err != nil {
-			log.LG.Fatalf("failed to run gin router: %v", err)
+			log.LG.Fatalf("Failed to run gin router: %v", err)
 		}
 	}()
+}
 
-	// Handle shutdown signals
+func waitForShutdownSignal(cancel context.CancelFunc) {
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, syscall.SIGTERM, syscall.SIGINT)
 	<-sigC
 	log.LG.Info("Shutting down gracefully...")
-	cancel() // Cancel the context to stop the event listener
+	cancel()
 }
