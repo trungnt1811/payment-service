@@ -10,20 +10,20 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 )
 
-type releaseWalletWorker struct {
+type orderCleanWorker struct {
 	paymentOrderUCase interfaces.PaymentOrderUCase
 	isRunning         bool
 	mu                sync.Mutex
 }
 
-func NewReleaseWalletWorker(paymentOrderUCase interfaces.PaymentOrderUCase) Worker {
-	return &releaseWalletWorker{
+func NewOrderCleanWorker(paymentOrderUCase interfaces.PaymentOrderUCase) Worker {
+	return &orderCleanWorker{
 		paymentOrderUCase: paymentOrderUCase,
 	}
 }
 
-func (w *releaseWalletWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(constants.ReleaseWalletInterval)
+func (w *orderCleanWorker) Start(ctx context.Context) {
+	ticker := time.NewTicker(constants.OrderCleanInterval)
 	defer ticker.Stop()
 
 	for {
@@ -31,16 +31,16 @@ func (w *releaseWalletWorker) Start(ctx context.Context) {
 		case <-ticker.C:
 			go w.run(ctx)
 		case <-ctx.Done():
-			log.LG.Info("Shutting down releaseWalletWorker")
+			log.LG.Info("Shutting down orderClearWorker")
 			return
 		}
 	}
 }
 
-func (w *releaseWalletWorker) run(ctx context.Context) {
+func (w *orderCleanWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		log.LG.Warn("Previous releaseWalletWorker run still in progress, skipping this cycle")
+		log.LG.Warn("Previous orderClearWorker run still in progress, skipping this cycle")
 		w.mu.Unlock()
 		return
 	}
@@ -49,8 +49,8 @@ func (w *releaseWalletWorker) run(ctx context.Context) {
 	w.isRunning = true
 	w.mu.Unlock()
 
-	// Perform the release wallet process
 	w.releaseWallet(ctx)
+	w.updateActiveOrdersToExpired(ctx)
 
 	// Mark as not running
 	w.mu.Lock()
@@ -58,10 +58,18 @@ func (w *releaseWalletWorker) run(ctx context.Context) {
 	w.mu.Unlock()
 }
 
-func (w *releaseWalletWorker) releaseWallet(ctx context.Context) {
+func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 	err := w.paymentOrderUCase.UpdateExpiredOrdersToFailed(ctx)
 	if err != nil {
 		log.LG.Errorf("Failed to update expired orders to failed and release wallet: %v", err)
+		return
+	}
+}
+
+func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
+	err := w.paymentOrderUCase.UpdateActiveOrdersToExpired(ctx)
+	if err != nil {
+		log.LG.Errorf("Failed to update active orders to expired: %v", err)
 		return
 	}
 }

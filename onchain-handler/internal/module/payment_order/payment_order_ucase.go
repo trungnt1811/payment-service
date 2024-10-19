@@ -116,6 +116,10 @@ func (u *paymentOrderUCase) UpdateExpiredOrdersToFailed(ctx context.Context) err
 	return u.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx)
 }
 
+func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) error {
+	return u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
+}
+
 func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context) ([]model.PaymentOrder, error) {
 	return u.paymentOrderRepository.GetExpiredPaymentOrders(ctx)
 }

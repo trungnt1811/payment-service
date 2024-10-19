@@ -145,14 +145,14 @@ func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context) ([
 	return orders, nil
 }
 
-// UpdateExpiredOrdersToFailed updates all expired orders (longer than 1 day) to "FAILED"
+// UpdateExpiredOrdersToFailed updates all expired orders (longer than 1 day) to "Failed"
 // and sets their associated wallets' "in_use" status to false.
 func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context) error {
-	// Calculate the cutoff time in Go (1 day before the current time)
+	// Calculate the cutoff time (1 day before the current time)
 	cutoffTime := time.Now().UTC().Add(-constants.OrderCutoffTime)
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Step 1: Update the status of expired payment orders to "FAILED"
+		// Step 1: Update the status of expired payment orders to "Failed"
 		if err := tx.Model(&model.PaymentOrder{}).
 			Where("status = ?", constants.Expired).
 			Where("expired_time <= ?", cutoffTime).
@@ -172,4 +172,22 @@ func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 
 		return nil
 	})
+}
+
+// UpdateActiveOrdersToExpired updates all active orders to "Expired"
+func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context) error {
+	currentTime := time.Now().UTC()
+	// Calculate the cutoff time (1 day before the current time)
+	cutoffTime := currentTime.Add(-constants.OrderCutoffTime)
+	result := r.db.WithContext(ctx).
+		Model(&model.PaymentOrder{}).
+		Where("status IN (?)", []string{constants.Pending, constants.Partial}).
+		Where("expired_time > ? AND expired_time <= ?", cutoffTime, currentTime).
+		Update("status", constants.Expired)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update active orders: %w", result.Error)
+	}
+
+	return nil
 }

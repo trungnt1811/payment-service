@@ -140,7 +140,7 @@ func startWorkersAndListeners(
 	)
 	go expiredOrderCatchupWorker.Start(ctx)
 
-	releaseWalletWorker := worker.NewReleaseWalletWorker(paymentOrderUCase)
+	releaseWalletWorker := worker.NewOrderCleanWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
 
 	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentOrderQueue)

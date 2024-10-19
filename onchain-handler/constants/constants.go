@@ -72,7 +72,7 @@ const (
 const (
 	BlockFetchingInterval       = 5 * time.Second
 	ExpiredOrderCatchupInterval = 15 * time.Minute
-	ReleaseWalletInterval       = 1 * time.Hour
+	OrderCleanInterval          = 15 * time.Minute
 )
 
 // Event

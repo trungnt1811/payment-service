@@ -21,6 +21,7 @@ type PaymentOrderRepository interface {
 	BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error
 	GetExpiredPaymentOrders(ctx context.Context) ([]model.PaymentOrder, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) error
+	UpdateActiveOrdersToExpired(ctx context.Context) error
 }
 
 type PaymentOrderUCase interface {
@@ -30,6 +31,7 @@ type PaymentOrderUCase interface {
 		expiredOrderTime time.Duration,
 	) ([]dto.PaymentOrderDTO, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) error
+	UpdateActiveOrdersToExpired(ctx context.Context) error
 	GetExpiredPaymentOrders(ctx context.Context) ([]model.PaymentOrder, error)
 	UpdatePaymentOrder(
 		ctx context.Context,
