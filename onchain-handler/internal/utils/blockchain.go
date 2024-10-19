@@ -16,8 +16,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
-	"github.com/genefriendway/onchain-handler/contracts/abigen/lifepointtoken"
-	"github.com/genefriendway/onchain-handler/contracts/abigen/usdtmock"
+	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
 )
 
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
@@ -47,11 +46,10 @@ func BulkTransfer(
 	// Get erc20 token
 	if symbol == constants.USDT {
 		tokenAddress = config.Blockchain.SmartContract.USDTContractAddress
-		erc20Token, err = usdtmock.NewUsdtmock(common.HexToAddress(tokenAddress), client)
 	} else {
 		tokenAddress = config.Blockchain.SmartContract.LifePointContractAddress
-		erc20Token, err = lifepointtoken.NewLifepointtoken(common.HexToAddress(tokenAddress), client)
 	}
+	erc20Token, err = erc20token.NewErc20token(common.HexToAddress(tokenAddress), client)
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to instantiate ERC20 contract for %s: %w", symbol, err)
 	}
