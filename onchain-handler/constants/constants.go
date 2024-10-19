@@ -71,8 +71,8 @@ const (
 // Worker config
 const (
 	BlockFetchingInterval       = 5 * time.Second
-	ExpiredOrderCatchupInterval = 60 * time.Minute
-	ReleaseWalletInterval       = 2 * time.Hour
+	ExpiredOrderCatchupInterval = 15 * time.Minute
+	ReleaseWalletInterval       = 1 * time.Hour
 )
 
 // Event
