@@ -1,9 +1,9 @@
 package main
 
 import (
+	app "github.com/genefriendway/onchain-handler/cmd/app"
 	"github.com/genefriendway/onchain-handler/conf"
 	_ "github.com/genefriendway/onchain-handler/docs"
-	app "github.com/genefriendway/onchain-handler/internal"
 )
 
 func main() {

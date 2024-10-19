@@ -15,6 +15,31 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// GenerateKeyPair generates a new private key and associated address.
+func GenerateKeyPair() (privateKeyStr, address string, err error) {
+	// Generate a new private key
+	privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	// Convert the private key to its string form (without "0x" prefix)
+	privateKeyBytes := crypto.FromECDSA(privateKey)
+	privateKeyStr = hex.EncodeToString(privateKeyBytes) // Encodes private key as string without "0x"
+
+	// Derive the public key from the private key
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return "", "", fmt.Errorf("failed to cast public key to ECDSA")
+	}
+
+	// Derive the address from the public key
+	address = crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+
+	return privateKeyStr, address, nil
+}
+
 // Encrypt text using AES-GCM encryption
 func Encrypt(data, encryptionKeyBase64 string) (string, error) {
 	if encryptionKeyBase64 == "" {
@@ -109,29 +134,4 @@ func Decrypt(encryptedText string) (string, error) {
 	}
 
 	return string(plainText), nil
-}
-
-// GenerateKeyPair generates a new private key and associated address.
-func GenerateKeyPair() (privateKeyStr, address string, err error) {
-	// Generate a new private key
-	privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate private key: %w", err)
-	}
-
-	// Convert the private key to its string form (without "0x" prefix)
-	privateKeyBytes := crypto.FromECDSA(privateKey)
-	privateKeyStr = hex.EncodeToString(privateKeyBytes) // Encodes private key as string without "0x"
-
-	// Derive the public key from the private key
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return "", "", fmt.Errorf("failed to cast public key to ECDSA")
-	}
-
-	// Derive the address from the public key
-	address = crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
-
-	return privateKeyStr, address, nil
 }

@@ -110,3 +110,11 @@ func ConvertWeiToAvax(amount string) (string, error) {
 	amountInAvax := avaxValue.Text('f', 18) // 18 decimal places for precision in AVAX
 	return amountInAvax, nil
 }
+
+func InitEthClient(rpcUrl string) (*ethclient.Client, error) {
+	ethClient, err := ethclient.Dial(rpcUrl)
+	if err != nil {
+		return nil, err
+	}
+	return ethClient, nil
+}
