@@ -57,13 +57,13 @@ func RunApp(config *conf.Configuration) {
 
 	// Initialize use cases and queue
 	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
-	paymentOrderQueue := initializePaymentOrderQueue(ctx, db, cacheRepository, config)
+	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase)
 
 	// Start workers and listeners
 	startWorkersAndListeners(ctx, config, db, cacheRepository, ethClient, paymentOrderUCase, paymentOrderQueue)
 
 	// Register routes and start server
-	registerRoutesAndStartServer(ctx, r, config, db, cacheRepository, ethClient)
+	registerRoutesAndStartServer(ctx, r, config, db, paymentOrderUCase, cacheRepository, ethClient)
 
 	// Handle shutdown signals
 	waitForShutdownSignal(cancel)
@@ -109,9 +109,8 @@ func initializePaymentWallets(ctx context.Context, config *conf.Configuration, d
 	}
 }
 
-func initializePaymentOrderQueue(ctx context.Context, db *gorm.DB, cacheRepository caching.CacheRepository, config *conf.Configuration) *queue.Queue[dto.PaymentOrderDTO] {
-	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
-	paymentOrderQueue, err := queue.NewQueue[dto.PaymentOrderDTO](ctx, constants.MinQueueLimit, paymentOrderUCase.GetPendingPaymentOrders)
+func initializePaymentOrderQueue(ctx context.Context, paymentOrderUCase interfaces.PaymentOrderUCase) *queue.Queue[dto.PaymentOrderDTO] {
+	paymentOrderQueue, err := queue.NewQueue[dto.PaymentOrderDTO](ctx, constants.MinQueueLimit, paymentOrderUCase.GetActivePaymentOrders)
 	if err != nil {
 		log.LG.Fatalf("Create payment order queue error: %v", err)
 	}
@@ -188,10 +187,11 @@ func registerRoutesAndStartServer(
 	r *gin.Engine,
 	config *conf.Configuration,
 	db *gorm.DB,
+	paymentOrderUCase interfaces.PaymentOrderUCase,
 	cacheRepository caching.CacheRepository,
 	ethClient *ethclient.Client,
 ) {
-	routeV1.RegisterRoutes(ctx, r, config, db, cacheRepository, ethClient)
+	routeV1.RegisterRoutes(ctx, r, config, db, paymentOrderUCase, cacheRepository, ethClient)
 
 	r.GET("/healthcheck", func(c *gin.Context) {
 		c.JSON(200, gin.H{

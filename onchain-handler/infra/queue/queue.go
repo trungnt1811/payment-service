@@ -165,11 +165,7 @@ func (q *Queue[T]) maybeShrink() {
 func (q *Queue[T]) GetItems() []T {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-
-	// Return a copy to avoid race conditions
-	itemsCopy := make([]T, len(q.items))
-	copy(itemsCopy, q.items)
-	return itemsCopy
+	return q.items
 }
 
 // GetSmallestValue finds the smallest value according to a comparator function.

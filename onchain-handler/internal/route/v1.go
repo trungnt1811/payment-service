@@ -10,6 +10,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	paymentorder "github.com/genefriendway/onchain-handler/internal/module/payment_order"
 	tokentransfer "github.com/genefriendway/onchain-handler/internal/module/token_transfer"
 	"github.com/genefriendway/onchain-handler/wire"
@@ -20,6 +21,7 @@ func RegisterRoutes(
 	r *gin.Engine,
 	config *conf.Configuration,
 	db *gorm.DB,
+	paymentOrderUCase interfaces.PaymentOrderUCase,
 	cacheRepository caching.CacheRepository,
 	ethClient *ethclient.Client,
 ) {
@@ -33,7 +35,6 @@ func RegisterRoutes(
 	appRouter.GET("/token-transfer/histories", transferHandler.GetTokenTransferHistories)
 
 	// SECTION: payment order
-	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	paymentOrderHandler := paymentorder.NewPaymentOrderHandler(paymentOrderUCase, config)
 	appRouter.POST("/payment-orders", paymentOrderHandler.CreateOrders)
 }

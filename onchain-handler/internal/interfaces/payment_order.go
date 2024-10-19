@@ -10,7 +10,7 @@ import (
 
 type PaymentOrderRepository interface {
 	CreatePaymentOrders(ctx context.Context, orders []model.PaymentOrder) ([]model.PaymentOrder, error)
-	GetPendingPaymentOrders(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error)
+	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error)
 	UpdatePaymentOrder(
 		ctx context.Context,
 		orderID uint64,
@@ -39,5 +39,5 @@ type PaymentOrderUCase interface {
 		blockHeight uint64,
 	) error
 	BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error
-	GetPendingPaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
+	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
 }

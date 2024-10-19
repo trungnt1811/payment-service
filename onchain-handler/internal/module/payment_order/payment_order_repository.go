@@ -30,8 +30,8 @@ func (r *paymentOrderRepository) CreatePaymentOrders(ctx context.Context, orders
 	return orders, nil
 }
 
-// GetPendingPaymentOrders retrieves "Pending" orders that have not expired.
-func (r *paymentOrderRepository) GetPendingPaymentOrders(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error) {
+// GetActivePaymentOrders retrieves active orders that have not expired.
+func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error) {
 	var orders []model.PaymentOrder
 	currentTime := time.Now().UTC() // Calculate current time in Go
 
@@ -40,8 +40,8 @@ func (r *paymentOrderRepository) GetPendingPaymentOrders(ctx context.Context, li
 		Preload("Wallet").                                                           // Preload the associated Wallet
 		Limit(limit).
 		Offset(offset).
-		Where("payment_order.status = ? AND payment_order.expired_time > ?", constants.Pending, currentTime). // Use Go-calculated currentTime
-		Order("payment_order.expired_time ASC").                                                              // Order results by expiration time.
+		Where("payment_order.status IN (?) AND payment_order.expired_time > ?", []string{constants.Pending, constants.Partial}, currentTime). // Use Go-calculated currentTime
+		Order("payment_order.expired_time ASC").                                                                                              // Order results by expiration time.
 		Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve pending orders: %w", err)
 	}
