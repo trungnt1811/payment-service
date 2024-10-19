@@ -135,8 +135,8 @@ func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context) ([
 	if err := r.db.WithContext(ctx).
 		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id"). // Join PaymentWallet with PaymentOrder.
 		Preload("Wallet").                                                           // Preload the associated Wallet.
-		Where("payment_order.status != ? AND payment_order.expired_time <= ? AND payment_order.expired_time > ?",
-			constants.Success, now, cutoffTime).
+		Where("payment_order.status NOT IN (?) AND payment_order.expired_time <= ? AND payment_order.expired_time > ?",
+			[]string{constants.Success, constants.Failed}, now, cutoffTime).
 		Order("payment_order.block_height ASC").
 		Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve expired orders: %w", err)
