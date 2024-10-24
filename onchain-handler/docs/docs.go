@@ -30,7 +30,7 @@ const docTemplate = `{
                 "summary": "Create payment orders",
                 "parameters": [
                     {
-                        "description": "List of payment orders. Each order must include user ID and amount.",
+                        "description": "List of payment orders. Each order must include request id, amount and symbol.",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -224,8 +224,11 @@ const docTemplate = `{
                 "amount": {
                     "type": "string"
                 },
-                "user_id": {
-                    "type": "integer"
+                "request_id": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
                 }
             }
         },

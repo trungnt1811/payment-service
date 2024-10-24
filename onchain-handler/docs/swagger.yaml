@@ -17,8 +17,10 @@ definitions:
     properties:
       amount:
         type: string
-      user_id:
-        type: integer
+      request_id:
+        type: string
+      symbol:
+        type: string
     type: object
   dto.TokenTransferPayloadDTO:
     properties:
@@ -56,7 +58,8 @@ paths:
       - application/json
       description: This endpoint allows creating payment orders for users.
       parameters:
-      - description: List of payment orders. Each order must include user ID and amount.
+      - description: List of payment orders. Each order must include request id, amount
+          and symbol.
         in: body
         name: payload
         required: true

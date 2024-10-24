@@ -79,7 +79,8 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 				Amount:      payload.Amount,
 				WalletID:    assignWallet.ID, // Associate the order with the claimed wallet
 				Transferred: "0",             // Default transferred status
-				UserID:      payload.UserID,
+				RequestID:   payload.RequestID,
+				Symbol:      payload.Symbol,
 				BlockHeight: latestBlock,       // Use the latest block height
 				Status:      constants.Pending, // Set order status to pending
 				ExpiredTime: time.Now().UTC().Add(expiredOrderTime),

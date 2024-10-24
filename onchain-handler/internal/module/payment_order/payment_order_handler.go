@@ -1,12 +1,14 @@
 package payment_order
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
@@ -32,7 +34,7 @@ func NewPaymentOrderHandler(
 // @Tags payment-order
 // @Accept json
 // @Produce json
-// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include user ID and amount."
+// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount and symbol."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []interface{}}"
 // @Failure 400 {object} map[string]interface{} "Invalid payload"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
@@ -50,14 +52,13 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 		return
 	}
 
-	// Validate the amount field for each payment order
+	// Validate each payment order
 	for _, order := range req {
-		// Try to convert the amount string to a float
-		if _, err := strconv.ParseFloat(order.Amount, 64); err != nil {
-			log.LG.Errorf("Invalid amount for user %d: %v", order.UserID, err)
+		if err := validatePaymentOrder(order); err != nil {
+			log.LG.Errorf("Validation failed for request id %s: %v", order.RequestID, err)
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Invalid amount",
-				"details": "Amount must be a valid number",
+				"error":   "Validation error",
+				"details": err.Error(),
 			})
 			return
 		}
@@ -79,4 +80,23 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 		"success": true,
 		"data":    response,
 	})
+}
+
+// validatePaymentOrder performs validation checks on the payment order.
+func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
+	// Validate amount is a valid float
+	if _, err := strconv.ParseFloat(order.Amount, 64); err != nil {
+		return fmt.Errorf("invalid amount: %v", err)
+	}
+
+	// Validate symbol is either USDT or LP
+	validSymbols := map[string]bool{
+		constants.USDT: true,
+		constants.LP:   true,
+	}
+	if !validSymbols[order.Symbol] {
+		return fmt.Errorf("invalid symbol: %s, must be USDT or LP", order.Symbol)
+	}
+
+	return nil
 }
