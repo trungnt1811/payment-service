@@ -47,8 +47,8 @@ func GetLatestBlockNumber(ctx context.Context, client *ethclient.Client) (*big.I
 	return header.Number, nil
 }
 
-// ConvertFloatAvaxToWei converts a float string amount in AVAX into its equivalent in Wei (big.Int).
-func ConvertFloatAvaxToWei(amount string) (*big.Int, error) {
+// ConvertFloatEthToWei converts a float string amount in Eth into its equivalent in Wei (big.Int).
+func ConvertFloatEthToWei(amount string) (*big.Int, error) {
 	// Split the amount into integer and fractional parts.
 	parts := strings.Split(amount, ".")
 	if len(parts) > 2 {
@@ -95,7 +95,7 @@ func ConvertFloatAvaxToWei(amount string) (*big.Int, error) {
 	return result, nil
 }
 
-func ConvertWeiToAvax(amount string) (string, error) {
+func ConvertWeiToEth(amount string) (string, error) {
 	weiAmount := new(big.Int)
 	_, ok := weiAmount.SetString(amount, 10)
 	if !ok {

@@ -206,13 +206,13 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		return nil
 	}
 	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
-	orderAmount, err := utils.ConvertFloatAvaxToWei(order.Amount)
+	orderAmount, err := utils.ConvertFloatEthToWei(order.Amount)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := utils.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
 
-	transferredAmount, err := utils.ConvertFloatAvaxToWei(order.Transferred)
+	transferredAmount, err := utils.ConvertFloatEthToWei(order.Transferred)
 	if err != nil {
 		return fmt.Errorf("failed to convert transferred amount to wei: %v", err)
 	}
@@ -251,8 +251,8 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	inUse bool,
 	blockHeight uint64,
 ) error {
-	// Convert transferredAmount from Wei to ETH (Ether)
-	transferredAmountInAvax, err := utils.ConvertWeiToAvax(transferredAmount)
+	// Convert transferredAmount from Wei to Eth (Ether)
+	transferredAmountInAvax, err := utils.ConvertWeiToEth(transferredAmount)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}

@@ -142,13 +142,13 @@ func (listener *tokenTransferListener) isMatchingWalletAddress(eventWallet, orde
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
 func (listener *tokenTransferListener) processOrderPayment(order *dto.PaymentOrderDTO, transferEvent event.TransferEvent, blockHeight uint64) error {
-	orderAmount, err := utils.ConvertFloatAvaxToWei(order.Amount)
+	orderAmount, err := utils.ConvertFloatEthToWei(order.Amount)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := utils.CalculatePaymentCovering(orderAmount, listener.config.GetPaymentCovering())
 
-	transferredAmount, err := utils.ConvertFloatAvaxToWei(order.Transferred)
+	transferredAmount, err := utils.ConvertFloatEthToWei(order.Transferred)
 	if err != nil {
 		return fmt.Errorf("failed to convert transferred amount: %v", err)
 	}
@@ -188,18 +188,18 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	walletStatus bool,
 	blockHeight uint64,
 ) error {
-	// Convert transferredAmount from Wei to ETH (Ether)
-	transferredAmountInAvax, err := utils.ConvertWeiToAvax(transferredAmount)
+	// Convert transferredAmount from Wei to Eth
+	transferredAmountInEth, err := utils.ConvertWeiToEth(transferredAmount)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}
 
 	// Also update item in queue
-	order.Transferred = transferredAmountInAvax
+	order.Transferred = transferredAmountInEth
 	order.Status = status
 
-	// Call the repository method to update the payment order
-	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, status, transferredAmountInAvax, walletStatus, blockHeight)
+	// Call the method to update the payment order
+	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, status, transferredAmountInEth, walletStatus, blockHeight)
 }
 
 // dequeueOrders removes expired or successful orders from the queue and refills it to maintain the limit.
