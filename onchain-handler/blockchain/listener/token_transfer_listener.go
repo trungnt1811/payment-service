@@ -145,8 +145,8 @@ func (listener *tokenTransferListener) isMatchingTokenSymbol(tokenAddress, order
 	return false
 }
 
-func (listener *tokenTransferListener) isMatchingWalletAddress(eventAddress, orderWalletAddress string) bool {
-	return strings.EqualFold(eventAddress, orderWalletAddress)
+func (listener *tokenTransferListener) isMatchingWalletAddress(eventToAddress, orderWalletAddress string) bool {
+	return strings.EqualFold(eventToAddress, orderWalletAddress)
 }
 
 // processOrderPayment handles the payment for an order based on the transfer event details.

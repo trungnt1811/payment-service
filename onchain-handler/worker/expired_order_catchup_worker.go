@@ -286,8 +286,8 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	return nil
 }
 
-func (w *expiredOrderCatchupWorker) isMatchingWalletAddress(eventWallet, orderWallet string) bool {
-	return strings.EqualFold(eventWallet, orderWallet)
+func (w *expiredOrderCatchupWorker) isMatchingWalletAddress(eventToAddress, orderWallet string) bool {
+	return strings.EqualFold(eventToAddress, orderWallet)
 }
 
 func (w *expiredOrderCatchupWorker) isMatchingTokenSymbol(tokenAddress, orderSymbol string) bool {
