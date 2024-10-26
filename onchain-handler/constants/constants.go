@@ -84,3 +84,8 @@ const (
 const (
 	OrderCutoffTime = 24 * time.Hour
 )
+
+// Block confirmations
+const (
+	ConfirmationDepth = 30
+)

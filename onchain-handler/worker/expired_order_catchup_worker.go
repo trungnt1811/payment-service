@@ -126,12 +126,27 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 		return
 	}
 
+	// Calculate the effective latest block considering the confirmation depth.
+	effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
+
+	// Check for invalid effective block height
+	if effectiveLatestBlock <= 0 {
+		log.LG.Warnf("Effective latest block (%d) is non-positive. Skipping processing for expired orders.", effectiveLatestBlock)
+		return
+	}
+
+	// Safeguard if startBlock is beyond the effective latest block
+	if startBlock > effectiveLatestBlock {
+		log.LG.Warnf("Start block %d is beyond the effective latest block %d. No logs to process.", startBlock, effectiveLatestBlock)
+		return
+	}
+
 	// Process logs in chunks of DefaultBlockOffset
 	address := common.HexToAddress(w.contractAddress)
-	for chunkStart := startBlock; chunkStart <= latestBlock; chunkStart += constants.DefaultBlockOffset {
+	for chunkStart := startBlock; chunkStart <= effectiveLatestBlock; chunkStart += constants.DefaultBlockOffset {
 		chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
-		if chunkEnd > latestBlock {
-			chunkEnd = latestBlock
+		if chunkEnd > effectiveLatestBlock {
+			chunkEnd = effectiveLatestBlock
 		}
 
 		log.LG.Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d", chunkStart, chunkEnd)
@@ -173,8 +188,9 @@ func (w *expiredOrderCatchupWorker) processLog(
 	// Iterate over all expired orders to find a matching wallet address
 	for index, order := range orders {
 		// Check if the event's "To" address matches the order's wallet address
-		if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) {
-			// We found a matching order, now process the payment for that order
+		if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) &&
+			w.isMatchingTokenSymbol(transferEvent.From.Hex(), order.Symbol) {
+			// Found a matching order, now process the payment for that order
 			log.LG.Infof("Matched transfer to wallet %s for order ID: %d", transferEvent.To.Hex(), order.ID)
 
 			// Call processOrderPayment to handle the order update logic based on the transfer event
@@ -272,6 +288,14 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 
 func (w *expiredOrderCatchupWorker) isMatchingWalletAddress(eventWallet, orderWallet string) bool {
 	return strings.EqualFold(eventWallet, orderWallet)
+}
+
+func (w *expiredOrderCatchupWorker) isMatchingTokenSymbol(tokenAddress, orderSymbol string) bool {
+	// Get the token symbol for the provided address
+	if tokenSymbol, err := w.config.GetTokenSymbol(tokenAddress); err == nil && tokenSymbol == orderSymbol {
+		return true
+	}
+	return false
 }
 
 func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (event.TransferEvent, error) {

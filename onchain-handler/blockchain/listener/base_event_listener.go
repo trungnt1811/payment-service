@@ -154,19 +154,20 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 			continue
 		}
 
-		// Ensure we do not go beyond the latest block.
-		if currentBlock > latestBlock {
-			log.LG.Debugf("No new blocks to process. Waiting for new blocks...")
+		// Calculate the effective latest block considering the confirmation depth.
+		effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
+		if currentBlock > effectiveLatestBlock {
+			log.LG.Debugf("No new confirmed blocks to process. Waiting for new blocks...")
 			time.Sleep(constants.RetryDelay) // Wait before rechecking to prevent excessive polling
 			continue
 		}
 
 		log.LG.Debugf("Listening for events starting at block: %d", currentBlock)
 
-		// Determine the end block while respecting ApiMaxBlocksPerRequest and the latest block.
+		// Determine the end block while respecting ApiMaxBlocksPerRequest and the effective latest block.
 		endBlock := currentBlock + constants.ApiMaxBlocksPerRequest/8
-		if endBlock > latestBlock {
-			endBlock = latestBlock
+		if endBlock > effectiveLatestBlock {
+			endBlock = effectiveLatestBlock
 		}
 
 		// Extract contract addresses from EventHandlers map
@@ -175,7 +176,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 			contractAddresses = append(contractAddresses, address)
 		}
 
-		// Process the blocks in chunks of 10 blocks (or DefaultBlockOffset).
+		// Process the blocks in chunks.
 		for chunkStart := currentBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
 			chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
 			if chunkEnd > endBlock {
