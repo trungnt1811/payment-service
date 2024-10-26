@@ -87,6 +87,11 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 
 // parseAndProcessTransferEvent parses and processes a transfer event, checking if it matches any payment order in the queue.
 func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.Log) (interface{}, error) {
+	tokenSymbol, err := listener.config.GetTokenSymbol(vLog.Address.Hex())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token symbol from token contract address: %w", err)
+	}
+
 	// Handle expired orders and success orders before processing the event
 	listener.dequeueOrders()
 
@@ -104,7 +109,7 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 	for index, order := range queueItems {
 		// Check if transfer matches the order's wallet and token symbol
 		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) &&
-			listener.isMatchingTokenSymbol(transferEvent.From.Hex(), order.Symbol) {
+			strings.EqualFold(order.Symbol, tokenSymbol) {
 			if err := listener.processOrderPayment(&queueItems[index], transferEvent, vLog.BlockNumber); err != nil {
 				log.LG.Errorf("Failed to process payment for order ID: %d, error: %v", order.ID, err)
 			}
@@ -135,14 +140,6 @@ func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (even
 	}
 
 	return transferEvent, nil
-}
-
-func (listener *tokenTransferListener) isMatchingTokenSymbol(tokenAddress, orderSymbol string) bool {
-	// Get the token symbol for the provided address
-	if tokenSymbol, err := listener.config.GetTokenSymbol(tokenAddress); err == nil && tokenSymbol == orderSymbol {
-		return true
-	}
-	return false
 }
 
 func (listener *tokenTransferListener) isMatchingWalletAddress(eventToAddress, orderWalletAddress string) bool {

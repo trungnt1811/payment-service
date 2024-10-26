@@ -176,8 +176,12 @@ func (w *expiredOrderCatchupWorker) processLog(
 	orders []model.PaymentOrder,
 	blockHeight uint64,
 ) error {
-	// Parse the log and perform necessary actions (e.g., update orders)
 	log.LG.Infof("Processing log entry from address: %s", vLog.Address.Hex())
+
+	tokenSymbol, err := w.config.GetTokenSymbol(vLog.Address.Hex())
+	if err != nil {
+		return fmt.Errorf("failed to get token symbol from token contract address: %w", err)
+	}
 
 	// Unpack the transfer event from the log
 	transferEvent, err := w.unpackTransferEvent(vLog)
@@ -189,7 +193,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 	for index, order := range orders {
 		// Check if the event's "To" address matches the order's wallet address
 		if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) &&
-			w.isMatchingTokenSymbol(transferEvent.From.Hex(), order.Symbol) {
+			strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Found a matching order, now process the payment for that order
 			log.LG.Infof("Matched transfer to wallet %s for order ID: %d", transferEvent.To.Hex(), order.ID)
 
@@ -288,14 +292,6 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 
 func (w *expiredOrderCatchupWorker) isMatchingWalletAddress(eventToAddress, orderWallet string) bool {
 	return strings.EqualFold(eventToAddress, orderWallet)
-}
-
-func (w *expiredOrderCatchupWorker) isMatchingTokenSymbol(tokenAddress, orderSymbol string) bool {
-	// Get the token symbol for the provided address
-	if tokenSymbol, err := w.config.GetTokenSymbol(tokenAddress); err == nil && tokenSymbol == orderSymbol {
-		return true
-	}
-	return false
 }
 
 func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (event.TransferEvent, error) {

@@ -36,7 +36,7 @@ func NewLatestBlockWorker(
 
 // Start starts the periodic task of fetching the latest block and storing it in cache and DB
 func (w *latestBlockWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(constants.BlockFetchingInterval)
+	ticker := time.NewTicker(constants.LatestBlockFetchingInterval)
 	defer ticker.Stop()
 
 	for {
