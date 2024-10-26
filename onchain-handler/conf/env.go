@@ -174,3 +174,19 @@ func (config Configuration) GetPaymentCovering() float64 {
 	}
 	return float64(paymentCoveringFloat)
 }
+
+func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
+	// Map of contract addresses to token symbols
+	tokenSymbols := map[string]string{
+		config.Blockchain.SmartContract.USDTContractAddress:      constants.USDT,
+		config.Blockchain.SmartContract.LifePointContractAddress: constants.LP,
+	}
+
+	// Check if tokenAddress exists in the map
+	if symbol, exists := tokenSymbols[tokenAddress]; exists {
+		return symbol, nil
+	}
+
+	// Return an error if tokenAddress is unknown
+	return "", fmt.Errorf("unknown token address: %s", tokenAddress)
+}

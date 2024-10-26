@@ -93,7 +93,7 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 	// Process the event
 	transferEvent, err := listener.unpackTransferEvent(vLog)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unpack transfer event: %w", err)
 	}
 
 	log.LG.Infof("Detected Transfer event: From: %s, To: %s, Value: %s", transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
@@ -102,7 +102,9 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 
 	// Process payment orders based on the transfer event
 	for index, order := range queueItems {
-		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) {
+		// Check if transfer matches the order's wallet and token symbol
+		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) &&
+			listener.isMatchingTokenSymbol(transferEvent.From.Hex(), order.Symbol) {
 			if err := listener.processOrderPayment(&queueItems[index], transferEvent, vLog.BlockNumber); err != nil {
 				log.LG.Errorf("Failed to process payment for order ID: %d, error: %v", order.ID, err)
 			}
@@ -135,8 +137,16 @@ func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (even
 	return transferEvent, nil
 }
 
-func (listener *tokenTransferListener) isMatchingWalletAddress(eventWallet, orderWallet string) bool {
-	return strings.EqualFold(eventWallet, orderWallet)
+func (listener *tokenTransferListener) isMatchingTokenSymbol(tokenAddress, orderSymbol string) bool {
+	// Get the token symbol for the provided address
+	if tokenSymbol, err := listener.config.GetTokenSymbol(tokenAddress); err == nil && tokenSymbol == orderSymbol {
+		return true
+	}
+	return false
+}
+
+func (listener *tokenTransferListener) isMatchingWalletAddress(eventAddress, orderWalletAddress string) bool {
+	return strings.EqualFold(eventAddress, orderWalletAddress)
 }
 
 // processOrderPayment handles the payment for an order based on the transfer event details.
