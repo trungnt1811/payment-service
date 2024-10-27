@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -82,56 +81,66 @@ func Encrypt(data, encryptionKeyBase64 string) (string, error) {
 	return base64.StdEncoding.EncodeToString(cipherText), nil
 }
 
-// Decrypt encrypted text using AES-GCM
-func Decrypt(encryptedText string) (string, error) {
-	// Get the base64 encoded encryption key from the environment variable
-	encryptionKeyBase64 := os.Getenv("ENCRYPTION_KEY")
+// Decrypt decrypts an encrypted text using AES-GCM
+func Decrypt(encryptedText, encryptionKeyBase64 string) (string, error) {
 	if encryptionKeyBase64 == "" {
 		return "", errors.New("encryption key is not set")
 	}
 
-	// Decode the base64 encoded key
+	// Decode the base64-encoded encryption key
 	encryptionKey, err := base64.StdEncoding.DecodeString(encryptionKeyBase64)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to decode encryption key: %w", err)
 	}
 
-	// Ensure the key is 32 bytes (for AES-256)
+	// Ensure the key length is correct for AES-256 (32 bytes)
 	if len(encryptionKey) != 32 {
-		return "", errors.New("invalid key length: key must be 32 bytes (AES-256)")
+		return "", errors.New("invalid key length: must be 32 bytes for AES-256")
 	}
 
-	// Decode the base64-encoded ciphertext
+	// Decode the base64-encoded encrypted text
 	cipherText, err := base64.StdEncoding.DecodeString(encryptedText)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to decode encrypted text: %w", err)
 	}
 
-	// Create AES cipher block
+	// Create a new AES cipher block from the encryption key
 	block, err := aes.NewCipher(encryptionKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create AES cipher: %w", err)
 	}
 
 	// Use GCM mode for decryption
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create GCM: %w", err)
 	}
 
 	nonceSize := aesGCM.NonceSize()
 	if len(cipherText) < nonceSize {
-		return "", errors.New("ciphertext too short")
+		return "", errors.New("ciphertext too short: missing or incorrect nonce")
 	}
 
-	// Extract the nonce and actual ciphertext
+	// Separate nonce and actual ciphertext
 	nonce, cipherText := cipherText[:nonceSize], cipherText[nonceSize:]
 
-	// Decrypt the ciphertext
+	// Decrypt and return the plaintext
 	plainText, err := aesGCM.Open(nil, nonce, cipherText, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to decrypt: %w", err)
 	}
 
 	return string(plainText), nil
+}
+
+func SignMessage(privateKey *ecdsa.PrivateKey, message []byte) ([]byte, error) {
+	// Hash the message
+	hash := crypto.Keccak256Hash(message)
+
+	// Sign the hash with the private key
+	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+	if err != nil {
+		return nil, err
+	}
+	return signature, nil
 }

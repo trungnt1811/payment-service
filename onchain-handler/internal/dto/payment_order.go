@@ -13,3 +13,12 @@ type PaymentOrderDTO struct {
 	Status         string    `json:"status"`
 	ExpiredTime    time.Time `json:"expired_time"`
 }
+
+type CreatedPaymentOrderDTO struct {
+	ID             uint64 `json:"id"`
+	RequestID      string `json:"request_id"`
+	PaymentAddress string `json:"payment_address"`
+	Amount         string `json:"amount"`
+	Symbol         string `json:"symbol"`
+	Signature      []byte `json:"signature"`
+}

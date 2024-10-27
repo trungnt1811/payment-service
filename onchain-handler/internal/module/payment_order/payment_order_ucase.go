@@ -7,11 +7,14 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
+	internalutils "github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/utils"
 )
 
 type paymentOrderUCase struct {
@@ -20,6 +23,7 @@ type paymentOrderUCase struct {
 	paymentWalletRepository interfaces.PaymentWalletRepository // Repository to interact with payment wallets
 	blockStateRepo          interfaces.BlockStateRepository    // Repository to fetch the latest block state
 	cacheRepo               caching.CacheRepository            // Cache repository to retrieve and store block information
+	config                  *conf.Configuration
 }
 
 // NewPaymentOrderUCase constructs a new paymentOrderUCase with the provided dependencies.
@@ -29,6 +33,7 @@ func NewPaymentOrderUCase(
 	paymentWalletRepository interfaces.PaymentWalletRepository,
 	blockStateRepo interfaces.BlockStateRepository,
 	cacheRepo caching.CacheRepository,
+	config *conf.Configuration,
 ) interfaces.PaymentOrderUCase {
 	return &paymentOrderUCase{
 		db:                      db,
@@ -36,6 +41,7 @@ func NewPaymentOrderUCase(
 		paymentWalletRepository: paymentWalletRepository,
 		blockStateRepo:          blockStateRepo,
 		cacheRepo:               cacheRepo,
+		config:                  config,
 	}
 }
 
@@ -46,7 +52,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 	ctx context.Context,
 	payloads []dto.PaymentOrderPayloadDTO,
 	expiredOrderTime time.Duration,
-) ([]dto.PaymentOrderDTO, error) {
+) ([]dto.CreatedPaymentOrderDTO, error) {
 	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey} // Cache key for the latest block
 
 	// Try to retrieve the latest block from cache
@@ -60,7 +66,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 		}
 	}
 
-	var response []dto.PaymentOrderDTO
+	var response []dto.CreatedPaymentOrderDTO
 
 	// Begin a new transaction
 	err = u.db.Transaction(func(tx *gorm.DB) error {
@@ -78,7 +84,8 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			order := model.PaymentOrder{
 				Amount:      payload.Amount,
 				WalletID:    assignWallet.ID, // Associate the order with the claimed wallet
-				Transferred: "0",             // Default transferred status
+				Wallet:      *assignWallet,
+				Transferred: "0", // Default transferred status
 				RequestID:   payload.RequestID,
 				Symbol:      payload.Symbol,
 				BlockHeight: latestBlock,       // Use the latest block height
@@ -87,7 +94,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			}
 			orders = append(orders, order)
 
-			orderDTO := order.ToDto()
+			orderDTO := order.ToCreatedPaymentOrderDTO()
 			orderDTO.PaymentAddress = assignWallet.Address
 			response = append(response, orderDTO)
 		}
@@ -98,9 +105,10 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			return fmt.Errorf("failed to create payment orders: %w", err)
 		}
 
-		// Mappping order id
-		for index, order := range orders {
-			response[index].ID = order.ID
+		// Mappping order id and sign payload
+		response, err = u.mapOrderIDsAndSignPayloads(orders)
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -110,6 +118,39 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 		return nil, err
 	}
 
+	return response, nil
+}
+
+// mapOrderIDsAndSignPayloads maps order IDs and signs payloads.
+func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
+	orders []model.PaymentOrder,
+) ([]dto.CreatedPaymentOrderDTO, error) {
+	var response []dto.CreatedPaymentOrderDTO
+
+	for _, order := range orders {
+		orderDTO := order.ToCreatedPaymentOrderDTO()
+		orderDTO.PaymentAddress = order.Wallet.Address
+
+		// Decrypt the private key
+		privKeyHex, err := utils.Decrypt(order.Wallet.PrivateKey, u.config.GetEncryptionKey())
+		if err != nil {
+			return nil, fmt.Errorf("error decrypting private key: %w", err)
+		}
+
+		// Convert to *ecdsa.PrivateKey
+		privateKey, err := internalutils.PrivateKeyFromHex(privKeyHex)
+		if err != nil {
+			return nil, fmt.Errorf("error converting private key from hex: %w", err)
+		}
+
+		signature, err := utils.SignMessage(privateKey, []byte(orderDTO.RequestID+orderDTO.Amount+orderDTO.Symbol))
+		if err != nil {
+			return nil, fmt.Errorf("error signing message: %w", err)
+		}
+
+		orderDTO.Signature = signature
+		response = append(response, orderDTO)
+	}
 	return response, nil
 }
 

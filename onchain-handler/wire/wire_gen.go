@@ -32,7 +32,7 @@ func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository,
 	paymentOrderRepository := payment_order.NewPaymentOrderRepository(db)
 	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
 	blockStateRepository := block_state.NewBlockstateRepository(db)
-	paymentOrderUCase := payment_order.NewPaymentOrderUCase(db, paymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo)
+	paymentOrderUCase := payment_order.NewPaymentOrderUCase(db, paymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
 	return paymentOrderUCase, nil
 }
 

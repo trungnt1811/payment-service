@@ -38,3 +38,13 @@ func (m *PaymentOrder) ToDto() dto.PaymentOrderDTO {
 		ExpiredTime:    m.ExpiredTime,
 	}
 }
+
+func (m *PaymentOrder) ToCreatedPaymentOrderDTO() dto.CreatedPaymentOrderDTO {
+	return dto.CreatedPaymentOrderDTO{
+		ID:             m.ID,
+		RequestID:      m.RequestID,
+		PaymentAddress: m.Wallet.Address,
+		Amount:         m.Amount,
+		Symbol:         m.Symbol,
+	}
+}

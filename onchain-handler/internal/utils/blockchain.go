@@ -54,7 +54,7 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to instantiate ERC20 contract for %s: %w", symbol, err)
 	}
 
-	privateKeyECDSA, err := privateKeyFromHex(poolPrivateKey)
+	privateKeyECDSA, err := PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve pool private key: %w", err)
 	}
@@ -210,8 +210,8 @@ func getNonceWithRetry(ctx context.Context, client *ethclient.Client, poolAddres
 	return 0, fmt.Errorf("failed to retrieve nonce after %d retries: %w", constants.MaxRetries, err)
 }
 
-// privateKeyFromHex converts a private key string in hex format to an ECDSA private key
-func privateKeyFromHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
+// PrivateKeyFromHex converts a private key string in hex format to an ECDSA private key
+func PrivateKeyFromHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert private key from hex: %w", err)
