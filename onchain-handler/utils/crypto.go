@@ -133,8 +133,9 @@ func Decrypt(encryptedText, encryptionKeyBase64 string) (string, error) {
 	return string(plainText), nil
 }
 
+// SignMessage signs a message using a private key and returns the signature
 func SignMessage(privateKey *ecdsa.PrivateKey, message []byte) ([]byte, error) {
-	// Hash the message
+	// Hash the message using Keccak256
 	hash := crypto.Keccak256Hash(message)
 
 	// Sign the hash with the private key
@@ -142,5 +143,28 @@ func SignMessage(privateKey *ecdsa.PrivateKey, message []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return signature, nil
+}
+
+// VerifySignature verifies the signature against an Ethereum address and message
+func VerifySignature(address string, message, signature []byte) (bool, error) {
+	// Hash the message
+	hash := crypto.Keccak256Hash(message)
+
+	// Recover the public key from the signature
+	pubKey, err := crypto.Ecrecover(hash.Bytes(), signature)
+	if err != nil {
+		return false, err
+	}
+
+	// Convert public key to an Ethereum address
+	recoveredPubKey, err := crypto.UnmarshalPubkey(pubKey)
+	if err != nil {
+		return false, err
+	}
+	recoveredAddress := crypto.PubkeyToAddress(*recoveredPubKey).Hex()
+
+	// Compare recovered address to expected address
+	return recoveredAddress == address, nil
 }
