@@ -148,12 +148,18 @@ func SignMessage(privateKey *ecdsa.PrivateKey, message []byte) ([]byte, error) {
 }
 
 // VerifySignature verifies the signature against an Ethereum address and message
-func VerifySignature(address string, message, signature []byte) (bool, error) {
+func VerifySignature(address, signature string, message []byte) (bool, error) {
 	// Hash the message
 	hash := crypto.Keccak256Hash(message)
 
+	// Decode the base64-encoded signature string
+	signatureBytes, err := decodeSignature(signature)
+	if err != nil {
+		return false, err
+	}
+
 	// Recover the public key from the signature
-	pubKey, err := crypto.Ecrecover(hash.Bytes(), signature)
+	pubKey, err := crypto.Ecrecover(hash.Bytes(), signatureBytes)
 	if err != nil {
 		return false, err
 	}
@@ -167,4 +173,13 @@ func VerifySignature(address string, message, signature []byte) (bool, error) {
 
 	// Compare recovered address to expected address
 	return recoveredAddress == address, nil
+}
+
+func decodeSignature(signature string) ([]byte, error) {
+	// Decode the base64-encoded signature string
+	signatureBytes, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64 signature: %w", err)
+	}
+	return signatureBytes, nil
 }
