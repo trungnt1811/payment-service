@@ -12,7 +12,7 @@ type PaymentOrderDTO struct {
 	Symbol         string    `json:"symbol"`
 	Status         string    `json:"status"`
 	SucceededAt    time.Time `json:"succeeded_at,omitempty"`
-	ExpiredTime    time.Time `json:"expired_time,omitempty"`
+	ExpiredTime    time.Time `json:"expired_time"`
 }
 
 type CreatedPaymentOrderDTO struct {

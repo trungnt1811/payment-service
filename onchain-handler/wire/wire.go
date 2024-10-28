@@ -8,6 +8,7 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/module/block_state"
+	"github.com/genefriendway/onchain-handler/internal/module/payment_event_history"
 	"github.com/genefriendway/onchain-handler/internal/module/payment_order"
 	"github.com/genefriendway/onchain-handler/internal/module/payment_wallet"
 	"github.com/genefriendway/onchain-handler/internal/module/token_transfer"
@@ -33,6 +34,11 @@ var tokenTransferUCaseSet = wire.NewSet(
 	token_transfer.NewTokenTransferUCase,
 )
 
+var paymentEventHistoryUCaseSet = wire.NewSet(
+	payment_event_history.NewPaymentEventHistoryRepository,
+	payment_event_history.NewPaymentEventHistoryUCase,
+)
+
 // Repo set
 var paymentWalletRepoSet = wire.NewSet(
 	payment_wallet.NewPaymentWalletRepository,
@@ -51,6 +57,11 @@ func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository,
 
 func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) (interfaces.TokenTransferUCase, error) {
 	wire.Build(tokenTransferUCaseSet)
+	return nil, nil
+}
+
+func InitializePaymentEventHistoryUCase(db *gorm.DB) (interfaces.PaymentEventHistoryUCase, error) {
+	wire.Build(paymentEventHistoryUCaseSet)
 	return nil, nil
 }
 

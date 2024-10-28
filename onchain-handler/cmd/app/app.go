@@ -57,10 +57,11 @@ func RunApp(config *conf.Configuration) {
 
 	// Initialize use cases and queue
 	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
+	paymentEventHistoryUCase, _ := wire.InitializePaymentEventHistoryUCase(db)
 	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase)
 
 	// Start workers and listeners
-	startWorkersAndListeners(ctx, config, db, cacheRepository, ethClient, paymentOrderUCase, paymentOrderQueue)
+	startWorkersAndListeners(ctx, config, db, cacheRepository, ethClient, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
 
 	// Register routes and start server
 	registerRoutesAndStartServer(ctx, r, config, db, paymentOrderUCase, cacheRepository, ethClient)
@@ -124,6 +125,7 @@ func startWorkersAndListeners(
 	cacheRepository caching.CacheRepository,
 	ethClient *ethclient.Client,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) {
 	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
@@ -134,6 +136,7 @@ func startWorkersAndListeners(
 	expiredOrderCatchupWorker := worker.NewExpiredOrderCatchupWorker(
 		config,
 		paymentOrderUCase,
+		paymentEventHistoryUCase,
 		cacheRepository,
 		config.Blockchain.SmartContract.USDTContractAddress,
 		ethClient,
@@ -143,7 +146,7 @@ func startWorkersAndListeners(
 	releaseWalletWorker := worker.NewOrderCleanWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
 
-	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentOrderQueue)
+	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
 }
 
 func startEventListeners(
@@ -153,6 +156,7 @@ func startEventListeners(
 	cacheRepository caching.CacheRepository,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) {
 	baseEventListener := listener.NewBaseEventListener(
@@ -167,6 +171,7 @@ func startEventListeners(
 		config,
 		baseEventListener,
 		paymentOrderUCase,
+		paymentEventHistoryUCase,
 		config.Blockchain.SmartContract.USDTContractAddress,
 		paymentOrderQueue,
 	)

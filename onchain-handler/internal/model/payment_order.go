@@ -7,19 +7,20 @@ import (
 )
 
 type PaymentOrder struct {
-	ID          uint64        `json:"id" gorm:"primaryKey;autoIncrement"`
-	RequestID   string        `json:"request_id"`
-	WalletID    uint64        `json:"wallet_id"`
-	Wallet      PaymentWallet `gorm:"foreignKey:WalletID"`
-	BlockHeight uint64        `json:"block_height"`
-	Amount      string        `json:"amount"`
-	Transferred string        `json:"transferred"`
-	Symbol      string        `json:"symbol"`
-	Status      string        `json:"status"`
-	SucceededAt time.Time     `json:"succeeded_at"`
-	ExpiredTime time.Time     `json:"expired_time"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
+	ID                    uint64                `json:"id" gorm:"primaryKey;autoIncrement"`
+	RequestID             string                `json:"request_id"`
+	WalletID              uint64                `json:"wallet_id"`
+	Wallet                PaymentWallet         `gorm:"foreignKey:WalletID"`
+	BlockHeight           uint64                `json:"block_height"`
+	Amount                string                `json:"amount"`
+	Transferred           string                `json:"transferred"`
+	Symbol                string                `json:"symbol"`
+	Status                string                `json:"status"`
+	SucceededAt           time.Time             `json:"succeeded_at"`
+	ExpiredTime           time.Time             `json:"expired_time"`
+	CreatedAt             time.Time             `json:"created_at"`
+	UpdatedAt             time.Time             `json:"updated_at"`
+	PaymentEventHistories []PaymentEventHistory `json:"payment_event_histories" gorm:"foreignKey:PaymentOrderID"`
 }
 
 func (m *PaymentOrder) TableName() string {
@@ -36,6 +37,7 @@ func (m *PaymentOrder) ToDto() dto.PaymentOrderDTO {
 		Transferred:    m.Transferred,
 		Symbol:         m.Symbol,
 		Status:         m.Status,
+		ExpiredTime:    m.ExpiredTime,
 	}
 }
 

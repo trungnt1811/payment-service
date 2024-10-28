@@ -56,6 +56,71 @@
                 }
             }
         },
+        "/api/v1/payment-orders/histories": {
+            "get": {
+                "description": "This endpoint retrieves payment order histories based on request IDs and an optional status filter.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment order histories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "List of request IDs to filter",
+                        "name": "request_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of token transfer histories",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/utils.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/token-transfer": {
             "post": {
                 "description": "This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.",
@@ -108,11 +173,6 @@
         },
         "/api/v1/token-transfer/histories": {
             "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
                 "description": "This endpoint fetches a paginated list of token transfer histories filtered by request IDs and time range.",
                 "consumes": [
                     "application/json"

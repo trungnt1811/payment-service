@@ -133,7 +133,6 @@ func getValidPools() string {
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
 // @Failure 400 {object} utils.GeneralError "Invalid parameters"
 // @Failure 500 {object} utils.GeneralError "Internal server error"
-// @Security ApiKeyAuth
 // @Router /api/v1/token-transfer/histories [get]
 func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Set default values for page and size if they are not provided

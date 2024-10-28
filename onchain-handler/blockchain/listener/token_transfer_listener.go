@@ -25,14 +25,15 @@ import (
 
 // tokenTransferListener listens for token transfers and processes them using a queue of payment orders.
 type tokenTransferListener struct {
-	ctx               context.Context
-	config            *conf.Configuration
-	baseEventListener listenerinterfaces.BaseEventListener
-	paymentOrderUCase interfaces.PaymentOrderUCase
-	contractAddress   string
-	parsedABI         abi.ABI
-	queue             *queue.Queue[dto.PaymentOrderDTO]
-	mu                sync.Mutex // Mutex for ticker synchronization
+	ctx                      context.Context
+	config                   *conf.Configuration
+	baseEventListener        listenerinterfaces.BaseEventListener
+	paymentOrderUCase        interfaces.PaymentOrderUCase
+	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
+	contractAddress          string
+	parsedABI                abi.ABI
+	queue                    *queue.Queue[dto.PaymentOrderDTO]
+	mu                       sync.Mutex // Mutex for ticker synchronization
 }
 
 // NewTokenTransferListener creates a new tokenTransferListener with a payment order queue.
@@ -41,6 +42,7 @@ func NewTokenTransferListener(
 	config *conf.Configuration,
 	baseEventListener listenerinterfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	contractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) (listenerinterfaces.EventListener, error) {
@@ -50,13 +52,14 @@ func NewTokenTransferListener(
 	}
 
 	listener := &tokenTransferListener{
-		ctx:               ctx,
-		config:            config,
-		baseEventListener: baseEventListener,
-		paymentOrderUCase: paymentOrderUCase,
-		contractAddress:   contractAddress,
-		queue:             orderQueue,
-		parsedABI:         parsedABI,
+		ctx:                      ctx,
+		config:                   config,
+		baseEventListener:        baseEventListener,
+		paymentOrderUCase:        paymentOrderUCase,
+		paymentEventHistoryUCase: paymentEventHistoryUCase,
+		contractAddress:          contractAddress,
+		queue:                    orderQueue,
+		parsedABI:                parsedABI,
 	}
 
 	go listener.startDequeueTicker(constants.DequeueInterval)
@@ -87,31 +90,58 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 
 // parseAndProcessTransferEvent parses and processes a transfer event, checking if it matches any payment order in the queue.
 func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.Log) (interface{}, error) {
+	// Retrieve the token symbol for the event's contract address
 	tokenSymbol, err := listener.config.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get token symbol from token contract address: %w", err)
+		return nil, fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
 	}
 
-	// Handle expired orders and success orders before processing the event
+	// Handle expired and successful orders before processing the event
 	listener.dequeueOrders()
 
-	// Process the event
+	// Unpack the transfer event
 	transferEvent, err := listener.unpackTransferEvent(vLog)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack transfer event: %w", err)
+		return nil, fmt.Errorf("failed to unpack transfer event for address %s, block number %d: %w", vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
 	log.LG.Infof("Detected Transfer event: From: %s, To: %s, Value: %s", transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
 
 	queueItems := listener.queue.GetItems()
 
-	// Process payment orders based on the transfer event
+	// Process each payment order based on the transfer event
 	for index, order := range queueItems {
-		// Check if transfer matches the order's wallet and token symbol
-		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) &&
-			strings.EqualFold(order.Symbol, tokenSymbol) {
+		// Check if the transfer matches the order's wallet and token symbol
+		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
+			// Convert transfer event value from Wei to Eth
+			transferEventValueInEth, err := utils.ConvertWeiToEth(transferEvent.Value.String())
+			if err != nil {
+				log.LG.Errorf("Failed to convert transfer event value to ETH for order ID %d, error: %v", order.ID, err)
+				continue
+			}
+
+			// Prepare the payload for the payment event history
+			payloads := []dto.PaymentEventPayloadDTO{
+				{
+					PaymentOrderID:  order.ID,
+					TransactionHash: vLog.TxHash.Hex(),
+					FromAddress:     transferEvent.From.Hex(),
+					ToAddress:       transferEvent.To.Hex(),
+					ContractAddress: vLog.Address.Hex(),
+					TokenSymbol:     tokenSymbol,
+					Amount:          transferEventValueInEth,
+				},
+			}
+
+			// Create payment event history
+			if err := listener.paymentEventHistoryUCase.CreatePaymentEventHistory(listener.ctx, payloads); err != nil {
+				log.LG.Errorf("Failed to process payment event history for order ID %d, error: %v", order.ID, err)
+				continue
+			}
+
+			// Process the payment for the order
 			if err := listener.processOrderPayment(&queueItems[index], transferEvent, vLog.BlockNumber); err != nil {
-				log.LG.Errorf("Failed to process payment for order ID: %d, error: %v", order.ID, err)
+				log.LG.Errorf("Failed to process payment for order ID %d, error: %v", order.ID, err)
 			}
 		}
 	}

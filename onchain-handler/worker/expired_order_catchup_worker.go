@@ -17,6 +17,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
@@ -25,19 +26,21 @@ import (
 
 // expiredOrderCatchupWorker is a worker that processes expired orders.
 type expiredOrderCatchupWorker struct {
-	config            *conf.Configuration
-	paymentOrderUCase interfaces.PaymentOrderUCase
-	cacheRepo         caching.CacheRepository
-	contractAddress   string
-	parsedABI         abi.ABI
-	ethClient         *ethclient.Client
-	isRunning         bool       // Tracks if catchup is running
-	mu                sync.Mutex // Mutex to protect the isRunning flag
+	config                   *conf.Configuration
+	paymentOrderUCase        interfaces.PaymentOrderUCase
+	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
+	cacheRepo                caching.CacheRepository
+	contractAddress          string
+	parsedABI                abi.ABI
+	ethClient                *ethclient.Client
+	isRunning                bool       // Tracks if catchup is running
+	mu                       sync.Mutex // Mutex to protect the isRunning flag
 }
 
 func NewExpiredOrderCatchupWorker(
 	config *conf.Configuration,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	cacheRepo caching.CacheRepository,
 	contractAddress string,
 	ethClient *ethclient.Client,
@@ -48,12 +51,13 @@ func NewExpiredOrderCatchupWorker(
 		return nil
 	}
 	return &expiredOrderCatchupWorker{
-		config:            config,
-		paymentOrderUCase: paymentOrderUCase,
-		cacheRepo:         cacheRepo,
-		contractAddress:   contractAddress,
-		parsedABI:         parsedABI,
-		ethClient:         ethClient,
+		config:                   config,
+		paymentOrderUCase:        paymentOrderUCase,
+		paymentEventHistoryUCase: paymentEventHistoryUCase,
+		cacheRepo:                cacheRepo,
+		contractAddress:          contractAddress,
+		parsedABI:                parsedABI,
+		ethClient:                ethClient,
 	}
 }
 
@@ -192,15 +196,22 @@ func (w *expiredOrderCatchupWorker) processLog(
 	// Iterate over all expired orders to find a matching wallet address
 	for index, order := range orders {
 		// Check if the event's "To" address matches the order's wallet address
-		if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) &&
-			strings.EqualFold(order.Symbol, tokenSymbol) {
+		// TODO: if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol)` has complex nested blocks (complexity: 6) (nestif)
+		if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Found a matching order, now process the payment for that order
 			log.LG.Infof("Matched transfer to wallet %s for order ID: %d", transferEvent.To.Hex(), order.ID)
 
 			// Call processOrderPayment to handle the order update logic based on the transfer event
-			err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
+			isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
 			if err != nil {
 				return fmt.Errorf("failed to process order payment for order ID %d: %w", order.ID, err)
+			}
+
+			if isUpdated {
+				if err := w.createPaymentEventHistory(ctx, order, transferEvent, tokenSymbol, vLog.Address.Hex(), vLog.TxHash.Hex()); err != nil {
+					return fmt.Errorf("failed to create payment event history for order ID %d: %w", order.ID, err)
+				}
+				log.LG.Infof("Successfully processed order ID: %d with transferred amount: %s", order.ID, transferEvent.Value.String())
 			}
 
 			log.LG.Infof("Successfully processed order ID: %d with transferred amount: %s", order.ID, transferEvent.Value.String())
@@ -213,6 +224,34 @@ func (w *expiredOrderCatchupWorker) processLog(
 	return nil
 }
 
+// createPaymentEventHistory constructs and stores the payment event history
+func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
+	ctx context.Context,
+	order model.PaymentOrder,
+	transferEvent event.TransferEvent,
+	tokenSymbol, contractAddress, txHash string,
+) error {
+	transferEventValueInEth, err := utils.ConvertWeiToEth(transferEvent.Value.String())
+	if err != nil {
+		log.LG.Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
+		return err
+	}
+
+	payloads := []dto.PaymentEventPayloadDTO{
+		{
+			PaymentOrderID:  order.ID,
+			TransactionHash: txHash,
+			FromAddress:     transferEvent.From.Hex(),
+			ToAddress:       transferEvent.To.Hex(),
+			ContractAddress: contractAddress,
+			TokenSymbol:     tokenSymbol,
+			Amount:          transferEventValueInEth,
+		},
+	}
+
+	return w.paymentEventHistoryUCase.CreatePaymentEventHistory(ctx, payloads)
+}
+
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
 func (w *expiredOrderCatchupWorker) processOrderPayment(
@@ -220,21 +259,21 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	order *model.PaymentOrder,
 	transferEvent event.TransferEvent,
 	blockHeight uint64,
-) error {
+) (bool, error) {
 	if blockHeight <= order.BlockHeight {
 		log.LG.Infof("Processed order: %d. Ignore this turn.", order.ID)
-		return nil
+		return false, nil
 	}
 	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
 	orderAmount, err := utils.ConvertFloatEthToWei(order.Amount)
 	if err != nil {
-		return fmt.Errorf("failed to convert order amount: %v", err)
+		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := utils.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
 
 	transferredAmount, err := utils.ConvertFloatEthToWei(order.Transferred)
 	if err != nil {
-		return fmt.Errorf("failed to convert transferred amount to wei: %v", err)
+		return false, fmt.Errorf("failed to convert transferred amount to wei: %v", err)
 	}
 
 	// Calculate the total transferred amount by adding the new transfer event value.
@@ -251,16 +290,16 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		inUse = false
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), inUse, blockHeight)
+		return true, w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), inUse, blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		log.LG.Infof("Processed partial payment for order ID: %d", order.ID)
 
 		// Update the order tranferred and keep the wallet associated with the order.
-		return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), order.Wallet.InUse, blockHeight)
+		return true, w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), order.Wallet.InUse, blockHeight)
 	}
 
-	return nil
+	return false, nil
 }
 
 // updatePaymentOrderStatus updates the payment order with the new status and transferred amount.

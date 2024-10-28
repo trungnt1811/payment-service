@@ -196,3 +196,35 @@ func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 
 	return nil
 }
+
+// GetPaymentOrderHistories retrieves payment orders by request IDs and optionally filters by status.
+func (r *paymentOrderRepository) GetPaymentOrderHistories(
+	ctx context.Context,
+	limit, offset int,
+	requestIDs []string,
+	status *string,
+) ([]model.PaymentOrder, error) {
+	var orders []model.PaymentOrder
+
+	// Start with pagination setup
+	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
+
+	// Apply filter for request IDs if provided
+	if len(requestIDs) > 0 {
+		query = query.Preload("PaymentEventHistories").Where("request_id IN ?", requestIDs)
+	} else {
+		query = query.Preload("PaymentEventHistories")
+	}
+
+	// If a status filter is provided, apply it to the query
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	// Execute query
+	if err := query.Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("failed to retrieve payment order histories: %w", err)
+	}
+
+	return orders, nil
+}

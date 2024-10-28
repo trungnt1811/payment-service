@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -99,4 +100,67 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 	}
 
 	return nil
+}
+
+// GetPaymentOrderHistories retrieves payment orders by request IDs and optionally filters by status.
+// @Summary Retrieve payment order histories
+// @Description This endpoint retrieves payment order histories based on request IDs and an optional status filter.
+// @Tags payment-order
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number, default is 1"
+// @Param size query int false "Page size, default is 10"
+// @Param request_ids query []string false "List of request IDs to filter"
+// @Param status query string false "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
+// @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
+// @Failure 400 {object} utils.GeneralError "Invalid parameters"
+// @Failure 500 {object} utils.GeneralError "Internal server error"
+// @Router /api/v1/payment-orders/histories [get]
+func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
+	// Set default values for page and size if they are not provided
+	page := ctx.DefaultQuery("page", "1")
+	size := ctx.DefaultQuery("size", "10")
+
+	// Parse page and size into integers
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 1 {
+		log.LG.Errorf("Invalid page number: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+		return
+	}
+
+	sizeInt, err := strconv.Atoi(size)
+	if err != nil || sizeInt < 1 {
+		log.LG.Errorf("Invalid size: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
+		return
+	}
+
+	// Extract and parse request IDs from query string
+	requestIDsStr := ctx.Query("request_ids")
+	var requestIDs []string
+	if requestIDsStr != "" {
+		requestIDs = strings.Split(requestIDsStr, ",")
+	}
+
+	// Parse and validate `status` parameter if provided
+	statusParam := ctx.Query("status")
+	var status *string
+	if statusParam != "" {
+		status = &statusParam
+	}
+
+	// Call the use case to get payment order histories
+	response, err := h.ucase.GetPaymentOrderHistories(ctx, requestIDs, status, pageInt, sizeInt)
+	if err != nil {
+		log.LG.Errorf("Failed to retrieve payment order histories: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve payment order histories",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return the response as a JSON response
+	ctx.JSON(http.StatusOK, response)
 }

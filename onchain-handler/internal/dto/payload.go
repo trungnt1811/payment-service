@@ -13,3 +13,13 @@ type PaymentOrderPayloadDTO struct {
 	Amount    string `json:"amount"`
 	Symbol    string `json:"symbol"`
 }
+
+type PaymentEventPayloadDTO struct {
+	PaymentOrderID  uint64 `json:"payment_order_id"`
+	TransactionHash string `json:"transaction_hash"`
+	FromAddress     string `json:"from_address"`
+	ToAddress       string `json:"to_address"`
+	ContractAddress string `json:"contract_address"`
+	TokenSymbol     string `json:"token_symbol"`
+	Amount          string `json:"amount"`
+}

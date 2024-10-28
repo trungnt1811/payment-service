@@ -88,6 +88,50 @@ paths:
       summary: Create payment orders
       tags:
       - payment-order
+  /api/v1/payment-orders/histories:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves payment order histories based on request
+        IDs and an optional status filter.
+      parameters:
+      - description: Page number, default is 1
+        in: query
+        name: page
+        type: integer
+      - description: Page size, default is 10
+        in: query
+        name: size
+        type: integer
+      - collectionFormat: csv
+        description: List of request IDs to filter
+        in: query
+        items:
+          type: string
+        name: request_ids
+        type: array
+      - description: Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of token transfer histories
+          schema:
+            $ref: '#/definitions/dto.PaginationDTOResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/utils.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.GeneralError'
+      summary: Retrieve payment order histories
+      tags:
+      - payment-order
   /api/v1/token-transfer:
     post:
       consumes:
@@ -174,8 +218,6 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/utils.GeneralError'
-      security:
-      - ApiKeyAuth: []
       summary: Get list of token transfer histories
       tags:
       - token-transfer

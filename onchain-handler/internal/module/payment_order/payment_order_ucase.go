@@ -196,8 +196,72 @@ func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, o
 	var orderDtos []dto.PaymentOrderDTO
 	for _, order := range orders {
 		orderDto := order.ToDto()
-		orderDto.ExpiredTime = order.ExpiredTime
 		orderDtos = append(orderDtos, orderDto)
 	}
 	return orderDtos, nil
+}
+
+func (u *paymentOrderUCase) GetPaymentOrderHistories(
+	ctx context.Context,
+	requestIDs []string,
+	status *string,
+	page, size int,
+) (dto.PaginationDTOResponse, error) {
+	// Setup pagination variables
+	limit := size + 1 // Fetch one extra record to determine if there's a next page
+	offset := (page - 1) * size
+
+	// Fetch the orders with event histories from the repository
+	orders, err := u.paymentOrderRepository.GetPaymentOrderHistories(ctx, limit, offset, requestIDs, status)
+	if err != nil {
+		return dto.PaginationDTOResponse{}, err
+	}
+
+	var orderHistoriesDTO []interface{}
+
+	// Map orders to DTOs, limiting to requested page size
+	for i, order := range orders {
+		if i >= size { // Stop if we reach the requested page size
+			break
+		}
+		orderDTO := dto.PaymentOrderDTOResponse{
+			RequestID:      order.RequestID,
+			Amount:         order.Amount,
+			Transferred:    order.Transferred,
+			Status:         order.Status,
+			SucceededAt:    order.SucceededAt,
+			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+		}
+		orderHistoriesDTO = append(orderHistoriesDTO, orderDTO)
+	}
+
+	// Determine if there's a next page
+	nextPage := page
+	if len(orders) > size {
+		nextPage += 1
+	}
+
+	// Return the response DTO
+	return dto.PaginationDTOResponse{
+		NextPage: nextPage,
+		Page:     page,
+		Size:     size,
+		Data:     orderHistoriesDTO,
+	}, nil
+}
+
+// Helper function to map PaymentEventHistory to PaymentHistoryDTO
+func mapEventHistoriesToDTO(eventHistories []model.PaymentEventHistory) []dto.PaymentHistoryDTO {
+	eventHistoriesDTO := make([]dto.PaymentHistoryDTO, len(eventHistories))
+	for i, eventHistory := range eventHistories {
+		eventHistoriesDTO[i] = dto.PaymentHistoryDTO{
+			TransactionHash: eventHistory.TransactionHash,
+			FromAddress:     eventHistory.FromAddress,
+			ToAddress:       eventHistory.ToAddress,
+			Amount:          eventHistory.Amount,
+			TokenSymbol:     eventHistory.TokenSymbol,
+			CreatedAt:       eventHistory.CreatedAt,
+		}
+	}
+	return eventHistoriesDTO
 }

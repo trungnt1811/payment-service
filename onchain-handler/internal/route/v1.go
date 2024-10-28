@@ -37,4 +37,5 @@ func RegisterRoutes(
 	// SECTION: payment order
 	paymentOrderHandler := paymentorder.NewPaymentOrderHandler(paymentOrderUCase, config)
 	appRouter.POST("/payment-orders", paymentOrderHandler.CreateOrders)
+	appRouter.GET("payment-orders/histories", paymentOrderHandler.GetPaymentOrderHistories)
 }
