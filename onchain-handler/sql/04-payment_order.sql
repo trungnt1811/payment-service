@@ -2,7 +2,7 @@ CREATE TYPE order_status AS ENUM('PENDING', 'SUCCESS', 'PARTIAL', 'EXPIRED', 'FA
 
 CREATE TABLE IF NOT EXISTS payment_order (
     id SERIAL PRIMARY KEY,
-    request_id VARCHAR(255) NOT NULL,
+    request_id VARCHAR(255) NOT NULL UNIQUE,
     wallet_id INT NOT NULL REFERENCES payment_wallet(id) ON DELETE CASCADE, -- foreign key constraint
     block_height INT NOT NULL,
     amount NUMERIC(30, 18) NOT NULL,
