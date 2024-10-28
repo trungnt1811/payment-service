@@ -195,7 +195,9 @@ func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, o
 	}
 	var orderDtos []dto.PaymentOrderDTO
 	for _, order := range orders {
-		orderDtos = append(orderDtos, order.ToDto())
+		orderDto := order.ToDto()
+		orderDto.ExpiredTime = order.ExpiredTime
+		orderDtos = append(orderDtos, orderDto)
 	}
 	return orderDtos, nil
 }

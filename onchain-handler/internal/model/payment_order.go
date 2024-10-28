@@ -16,6 +16,7 @@ type PaymentOrder struct {
 	Transferred string        `json:"transferred"`
 	Symbol      string        `json:"symbol"`
 	Status      string        `json:"status"`
+	SucceededAt time.Time     `json:"succeeded_at"`
 	ExpiredTime time.Time     `json:"expired_time"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
@@ -35,7 +36,6 @@ func (m *PaymentOrder) ToDto() dto.PaymentOrderDTO {
 		Transferred:    m.Transferred,
 		Symbol:         m.Symbol,
 		Status:         m.Status,
-		ExpiredTime:    m.ExpiredTime,
 	}
 }
 

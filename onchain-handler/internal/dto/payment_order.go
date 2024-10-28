@@ -11,7 +11,8 @@ type PaymentOrderDTO struct {
 	Transferred    string    `json:"transferred"`
 	Symbol         string    `json:"symbol"`
 	Status         string    `json:"status"`
-	ExpiredTime    time.Time `json:"expired_time"`
+	SucceededAt    time.Time `json:"succeeded_at,omitempty"`
+	ExpiredTime    time.Time `json:"expired_time,omitempty"`
 }
 
 type CreatedPaymentOrderDTO struct {

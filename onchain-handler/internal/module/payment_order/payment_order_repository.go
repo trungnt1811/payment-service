@@ -67,6 +67,11 @@ func (r *paymentOrderRepository) UpdatePaymentOrder(
 			"block_height": blockHeight,
 		}
 
+		// If status is "Success", add the succeeded_at timestamp
+		if status == constants.Success {
+			updateFields["succeeded_at"] = time.Now().UTC()
+		}
+
 		// Update the payment order's status and transferred amount.
 		if err := tx.Model(&model.PaymentOrder{}).
 			Where("id = ?", orderID).

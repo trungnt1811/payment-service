@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS payment_order (
     transferred NUMERIC(30, 18) NOT NULL DEFAULT 0,
     symbol VARCHAR(10) NOT NULL,
     status order_status NOT NULL DEFAULT 'PENDING',
+    succeeded_at TIMESTAMP,
     expired_time TIMESTAMP NOT NULL, 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
