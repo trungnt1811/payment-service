@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerfiles "github.com/swaggo/files"
+	ginswagger "github.com/swaggo/gin-swagger"
 
 	"github.com/genefriendway/onchain-handler/blockchain/listener"
 	"github.com/genefriendway/onchain-handler/conf"
@@ -25,7 +25,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/middleware"
-	routeV1 "github.com/genefriendway/onchain-handler/internal/route"
+	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 	"github.com/genefriendway/onchain-handler/utils"
 	"github.com/genefriendway/onchain-handler/wire"
@@ -197,7 +197,7 @@ func registerRoutesAndStartServer(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	ethClient *ethclient.Client,
 ) {
-	routeV1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
+	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
 
 	r.GET("/healthcheck", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -205,7 +205,7 @@ func registerRoutesAndStartServer(
 		})
 	})
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/swagger/*any", ginswagger.WrapHandler(swaggerfiles.Handler))
 
 	go func() {
 		if err := r.Run(fmt.Sprintf("0.0.0.0:%v", config.AppPort)); err != nil {
