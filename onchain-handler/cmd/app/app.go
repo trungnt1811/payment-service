@@ -56,6 +56,7 @@ func RunApp(config *conf.Configuration) {
 	initializePaymentWallets(ctx, config, db)
 
 	// Initialize use cases and queue
+	transferUCase, _ := wire.InitializeTokenTransferUCase(db, ethClient, config)
 	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	paymentEventHistoryUCase, _ := wire.InitializePaymentEventHistoryUCase(db)
 	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase)
@@ -64,7 +65,7 @@ func RunApp(config *conf.Configuration) {
 	startWorkersAndListeners(ctx, config, db, cacheRepository, ethClient, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
 
 	// Register routes and start server
-	registerRoutesAndStartServer(ctx, r, config, db, paymentOrderUCase, cacheRepository, ethClient)
+	registerRoutesAndStartServer(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
 
 	// Handle shutdown signals
 	waitForShutdownSignal(cancel)
@@ -192,11 +193,11 @@ func registerRoutesAndStartServer(
 	r *gin.Engine,
 	config *conf.Configuration,
 	db *gorm.DB,
+	transferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
-	cacheRepository caching.CacheRepository,
 	ethClient *ethclient.Client,
 ) {
-	routeV1.RegisterRoutes(ctx, r, config, db, paymentOrderUCase, cacheRepository, ethClient)
+	routeV1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
 
 	r.GET("/healthcheck", func(c *gin.Context) {
 		c.JSON(200, gin.H{
