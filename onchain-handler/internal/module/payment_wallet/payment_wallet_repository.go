@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/utils"
@@ -49,42 +50,54 @@ func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) 
 	return true, nil
 }
 
-// ClaimFirstAvailableWallet fetches the first wallet where InUse is false, and updates it to be in use
+// ClaimFirstAvailableWallet fetches the first available wallet or creates a new one if none are available
 func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context) (*model.PaymentWallet, error) {
 	var wallet model.PaymentWallet
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Find the first available wallet and lock it
-		err := tx.Set("gorm:query_option", "FOR UPDATE").
+		// Attempt to find and lock the first available wallet
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").
 			Where("in_use = ?", false).
 			Order("id").
-			First(&wallet).Error
-
-		if err == nil {
-			// If wallet is found, mark it as in use
+			First(&wallet).Error; err == nil {
+			// Wallet found, mark as in use
 			return tx.Model(&wallet).Update("in_use", true).Error
-		}
-
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			// An error occurred other than 'record not found'
 			return fmt.Errorf("failed to find available wallet: %w", err)
 		}
 
-		// If no available wallet found, generate a new wallet
-		wallets, genErr := utils.GenerateWallets(r.config, 1)
+		// If no wallet found, count current records to derive next ID
+		var recordCount int64
+		if err := tx.Model(&model.PaymentWallet{}).Count(&recordCount).Error; err != nil {
+			return fmt.Errorf("failed to count wallets: %w", err)
+		}
+		nextID := uint64(recordCount + 1)
+
+		// Generate a new wallet account
+		account, _, genErr := utils.GenerateAccount(
+			r.config.Wallet.Mnemonic,
+			r.config.Wallet.Passphrase,
+			r.config.Wallet.Salt,
+			constants.PaymentWallet,
+			nextID,
+		)
 		if genErr != nil {
 			return fmt.Errorf("failed to generate new wallet: %w", genErr)
 		}
 
-		// Mark the first newly created wallet as in use
-		wallets[0].InUse = true
-
-		// Insert the new wallet into the database
-		createErr := tx.Create(&wallets[0]).Error
-		if createErr != nil {
-			return fmt.Errorf("failed to create new wallet: %w", createErr)
+		// Initialize the new wallet struct
+		wallet = model.PaymentWallet{
+			ID:      nextID,
+			Address: account.Address.Hex(),
+			InUse:   true,
 		}
 
-		wallet = wallets[0]
+		// Insert the new wallet into the database
+		if err := tx.Create(&wallet).Error; err != nil {
+			return fmt.Errorf("failed to create new wallet: %w", err)
+		}
+
 		return nil
 	})
 	if err != nil {

@@ -43,6 +43,12 @@ type BlockchainConfiguration struct {
 	LPStakingPool      LPStakingPoolConfiguration    `mapstructure:",squash"`
 }
 
+type WalletConfiguration struct {
+	Mnemonic   string `mapstructure:"MNEMONIC"`
+	Passphrase string `mapstructure:"PASSPHRASE"`
+	Salt       string `mapstructure:"SALT"`
+}
+
 type LPTreasuryPoolConfiguration struct {
 	LPTreasuryAddress    string `mapstructure:"LP_TREASURY_ADDRESS"`
 	PrivateKeyLPTreasury string `mapstructure:"PRIVATE_KEY_LP_TREASURY"`
@@ -79,9 +85,9 @@ type Configuration struct {
 	Redis          RedisConfiguration          `mapstructure:",squash"`
 	Blockchain     BlockchainConfiguration     `mapstructure:",squash"`
 	PaymentGateway PaymentGatewayConfiguration `mapstructure:",squash"`
+	Wallet         WalletConfiguration         `mapstructure:",squash"`
 	AppName        string                      `mapstructure:"APP_NAME"`
 	AppPort        uint32                      `mapstructure:"APP_PORT"`
-	EncryptionKey  string                      `mapstructure:"ENCRYPTION_KEY"`
 	Env            string                      `mapstructure:"ENV"`
 }
 
@@ -159,10 +165,6 @@ func (config Configuration) GetPoolAddress(poolName string) (string, error) {
 
 func (config Configuration) GetExpiredOrderTime() time.Duration {
 	return time.Duration(config.PaymentGateway.ExpiredOrderTime) * time.Minute
-}
-
-func (config Configuration) GetEncryptionKey() string {
-	return config.EncryptionKey
 }
 
 func (config Configuration) GetPaymentCovering() float64 {

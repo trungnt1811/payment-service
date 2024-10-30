@@ -13,7 +13,6 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
-	internalutils "github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/utils"
 )
 
@@ -131,16 +130,16 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 		orderDTO := order.ToCreatedPaymentOrderDTO()
 		orderDTO.PaymentAddress = order.Wallet.Address
 
-		// Decrypt the private key
-		privKeyHex, err := utils.Decrypt(order.Wallet.PrivateKey, u.config.GetEncryptionKey())
+		// Get private key from wallet id
+		_, privateKey, err := utils.GenerateAccount(
+			u.config.Wallet.Mnemonic,
+			u.config.Wallet.Passphrase,
+			u.config.Wallet.Salt,
+			constants.PaymentWallet,
+			order.Wallet.ID,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("error decrypting private key: %w", err)
-		}
-
-		// Convert to *ecdsa.PrivateKey
-		privateKey, err := internalutils.PrivateKeyFromHex(privKeyHex)
-		if err != nil {
-			return nil, fmt.Errorf("error converting private key from hex: %w", err)
+			return nil, fmt.Errorf("error get payment wallet private key: %w", err)
 		}
 
 		signature, err := utils.SignMessage(privateKey, []byte(orderDTO.RequestID+orderDTO.Amount+orderDTO.Symbol))

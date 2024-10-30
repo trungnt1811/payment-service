@@ -89,3 +89,9 @@ const (
 const (
 	ConfirmationDepth = 30
 )
+
+// Wallet type
+const (
+	PaymentWallet = "PaymentWallet"
+	UserWallet    = "UserWallet"
+)

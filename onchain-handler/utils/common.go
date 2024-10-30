@@ -2,10 +2,18 @@ package utils
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"fmt"
 	"log"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
 )
@@ -32,11 +40,6 @@ func InitPaymentWallets(
 	config *conf.Configuration,
 	walletRepo interfaces.PaymentWalletRepository,
 ) error {
-	wallets, err := GenerateWallets(config, config.PaymentGateway.InitWalletCount)
-	if err != nil {
-		return err
-	}
-
 	// Check if wallets already exist in the database
 	isExist, err := walletRepo.IsRowExist(ctx)
 	if err != nil {
@@ -45,6 +48,27 @@ func InitPaymentWallets(
 
 	// Insert wallets into the database if none exist
 	if !isExist {
+		var wallets []model.PaymentWallet
+		initWalletCount := config.PaymentGateway.InitWalletCount
+		for index := 1; index <= int(initWalletCount); index++ {
+			account, _, err := GenerateAccount(
+				config.Wallet.Mnemonic,
+				config.Wallet.Passphrase,
+				config.Wallet.Salt,
+				constants.PaymentWallet,
+				uint64(index),
+			)
+			if err != nil {
+				return err
+			}
+			wallet := model.PaymentWallet{
+				ID:      uint64(index),
+				Address: account.Address.Hex(),
+				InUse:   false, // New wallets are not in use by default
+			}
+			wallets = append(wallets, wallet)
+		}
+
 		err := walletRepo.CreatePaymentWallets(ctx, wallets)
 		if err != nil {
 			return err
@@ -55,31 +79,51 @@ func InitPaymentWallets(
 	return nil
 }
 
-// TODO: consider using an HDPath (Hierarchical Deterministic Path) to create multiple wallets from a single mnemonic.
-// GenerateWallets creates a specified number of payment wallets and encrypts the private keys
-func GenerateWallets(config *conf.Configuration, count uint) ([]model.PaymentWallet, error) {
-	encryptionKey := config.GetEncryptionKey()
-	var wallets []model.PaymentWallet
+func GenerateAccount(mnemonic, passphrase, salt, walletType string, id uint64) (*accounts.Account, *ecdsa.PrivateKey, error) {
+	// Generate the seed from the mnemonic and passphrase
+	seed := bip39.NewSeed(mnemonic, passphrase)
 
-	for i := 0; i < int(count); i++ {
-		privateKeyHex, address, err := GenerateKeyPair()
-		if err != nil {
-			return nil, err
-		}
-
-		// Encrypt the private key before storing it
-		encryptedPrivateKey, err := Encrypt(privateKeyHex, encryptionKey)
-		if err != nil {
-			return nil, err
-		}
-
-		wallet := model.PaymentWallet{
-			Address:    address,
-			PrivateKey: encryptedPrivateKey, // Store encrypted private key
-			InUse:      false,               // New wallets are not in use by default
-		}
-		wallets = append(wallets, wallet)
+	// Create the master key from the seed
+	masterKey, err := bip32.NewMasterKey(seed)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return wallets, nil
+	// Convert walletType to a unique integer for use in the HD Path
+	walletTypeHash := HashToUint32(walletType + fmt.Sprint(id))
+
+	// Define the HD Path for Ethereum address (e.g., m/44'/60'/id'/walletTypeHash/salt)
+	path := []uint32{
+		44 + bip32.FirstHardenedChild,         // BIP44 purpose field
+		60 + bip32.FirstHardenedChild,         // Ethereum coin type
+		uint32(id) + bip32.FirstHardenedChild, // User-specific field
+		walletTypeHash,                        // Unique integer based on wallet type and id
+		HashToUint32(salt),                    // Hash of salt for additional security
+	}
+
+	// Derive a private key along the specified HD Path
+	key := masterKey
+	for _, index := range path {
+		key, err = key.NewChildKey(index)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Generate an Ethereum account from the derived private key
+	privateKey, err := crypto.ToECDSA(key.Key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	account := accounts.Account{
+		Address: crypto.PubkeyToAddress(privateKey.PublicKey),
+	}
+
+	// privateKeyBytes := crypto.FromECDSA(privateKey)
+	// privateKeyStr := hex.EncodeToString(privateKeyBytes)
+	// println(privateKeyStr)
+	// println(account.Address.Hex())
+
+	return &account, privateKey, nil
 }
