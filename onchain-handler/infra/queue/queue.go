@@ -108,6 +108,14 @@ func (q *Queue[T]) Dequeue(condition func(T) bool) error {
 // FillQueue loads more items to fill up to the limit.
 func (q *Queue[T]) FillQueue() error {
 	q.mu.Lock()
+
+	// If current items exceed the MaxQueueLimit, log a message and return early
+	if len(q.items) >= constants.MaxQueueLimit {
+		log.Printf("Queue size has reached the maximum limit of %d items. No additional items will be loaded.", constants.MaxQueueLimit)
+		q.mu.Unlock()
+		return nil
+	}
+
 	offset := len(q.items)
 	remainingCapacity := q.limit - offset
 	q.mu.Unlock()
@@ -151,9 +159,6 @@ func (q *Queue[T]) scaleQueue() {
 
 // maybeShrink reduces the queue's size if it's consistently underutilized.
 func (q *Queue[T]) maybeShrink() {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
 	if len(q.items) >= int(float64(q.limit)*constants.ShrinkThreshold) {
 		return
 	}
