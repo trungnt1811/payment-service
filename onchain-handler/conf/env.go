@@ -98,21 +98,22 @@ func init() {
 	if envFile == "" {
 		envFile = ".env"
 	}
-	fmt.Println(envFile)
-	viper.SetConfigFile("./.env")
+
+	viper.SetConfigFile(envFile)
 	viper.AutomaticEnv()
+
+	// Set defaults for critical configurations
+	viper.SetDefault("APP_PORT", 8080)
+	viper.SetDefault("EXPIRED_ORDER_TIME", 15)
+
 	if err := viper.ReadInConfig(); err != nil {
-		viper.SetConfigFile(fmt.Sprintf("../%s", envFile))
-		if err := viper.ReadInConfig(); err != nil {
-			log.Logger.Printf("Error reading config file \"%s\", %v", envFile, err)
-		}
-	}
-	err := viper.Unmarshal(&configuration)
-	if err != nil {
-		log.Logger.Fatal().Msgf("Unable to decode config into map, %v", err)
+		log.Fatal().Err(err).Msgf("Error reading config file %s", envFile)
 	}
 
-	fmt.Println("DB url", configuration.Database.DbHost)
+	if err := viper.Unmarshal(&configuration); err != nil {
+		log.Fatal().Err(err).Msg("Unable to decode config into struct")
+	}
+	log.Info().Msg("Configuration loaded successfully")
 }
 
 func GetConfiguration() *Configuration {
@@ -171,24 +172,20 @@ func (config Configuration) GetPaymentCovering() float64 {
 	paymentCoveringStr := config.PaymentGateway.PaymentCovering
 	paymentCoveringFloat, err := strconv.ParseFloat(paymentCoveringStr, 64)
 	if err != nil {
-		log.Logger.Printf("Error converting PaymentCovering to float64: %v", err)
+		log.Error().Err(err).Msg("Error converting PaymentCovering to float64")
 		return 0.0
 	}
-	return float64(paymentCoveringFloat)
+	return paymentCoveringFloat
 }
 
 func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
-	// Map of contract addresses to token symbols
 	tokenSymbols := map[string]string{
 		config.Blockchain.SmartContract.USDTContractAddress:      constants.USDT,
 		config.Blockchain.SmartContract.LifePointContractAddress: constants.LP,
 	}
 
-	// Check if tokenAddress exists in the map
 	if symbol, exists := tokenSymbols[tokenAddress]; exists {
 		return symbol, nil
 	}
-
-	// Return an error if tokenAddress is unknown
 	return "", fmt.Errorf("unknown token address: %s", tokenAddress)
 }
