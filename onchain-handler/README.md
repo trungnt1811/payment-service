@@ -14,3 +14,7 @@ http://localhost:8080/swagger/index.html
 ## How to run
 1. make build
 2. make run
+
+## How to check unittest coverage
+1. move to target folder
+2. go test -coverprofile=coverage.out ./...
