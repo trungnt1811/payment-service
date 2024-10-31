@@ -19,15 +19,15 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/conf/database"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/event_listener/listener"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/listeners"
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
-	"github.com/genefriendway/onchain-handler/internal/worker"
+	"github.com/genefriendway/onchain-handler/internal/workers"
 	"github.com/genefriendway/onchain-handler/utils"
 	"github.com/genefriendway/onchain-handler/wire"
 )
@@ -135,10 +135,10 @@ func startWorkers(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 ) {
-	latestBlockWorker := worker.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient)
+	latestBlockWorker := workers.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient)
 	go latestBlockWorker.Start(ctx)
 
-	expiredOrderCatchupWorker := worker.NewExpiredOrderCatchupWorker(
+	expiredOrderCatchupWorker := workers.NewExpiredOrderCatchupWorker(
 		config,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
@@ -148,7 +148,7 @@ func startWorkers(
 	)
 	go expiredOrderCatchupWorker.Start(ctx)
 
-	releaseWalletWorker := worker.NewOrderCleanWorker(paymentOrderUCase)
+	releaseWalletWorker := workers.NewOrderCleanWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
 }
 
@@ -162,14 +162,14 @@ func startEventListeners(
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) {
-	baseEventListener := listener.NewBaseEventListener(
+	baseEventListener := listeners.NewBaseEventListener(
 		ethClient,
 		cacheRepository,
 		blockstateUcase,
 		&config.Blockchain.StartBlockListener,
 	)
 
-	tokenTransferListener, err := listener.NewTokenTransferListener(
+	tokenTransferListener, err := listeners.NewTokenTransferListener(
 		ctx,
 		config,
 		baseEventListener,

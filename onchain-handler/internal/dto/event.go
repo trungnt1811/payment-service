@@ -1,4 +1,4 @@
-package event
+package dto
 
 import (
 	"math/big"
@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type TransferEvent struct {
+type TransferEventDTO struct {
 	From  common.Address
 	To    common.Address
 	Value *big.Int

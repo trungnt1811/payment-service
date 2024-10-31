@@ -1,4 +1,4 @@
-package listener
+package listeners
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	listenerinterfaces "github.com/genefriendway/onchain-handler/event_listener/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
@@ -33,7 +32,7 @@ func NewBaseEventListener(
 	cacheRepo caching.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	startBlockListener *uint64,
-) listenerinterfaces.BaseEventListener {
+) interfaces.BaseEventListener {
 	eventChan := make(chan interface{}, constants.DefaultEventChannelBufferSize)
 
 	// Fetch the last processed block from the repository

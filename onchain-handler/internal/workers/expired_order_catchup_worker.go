@@ -1,4 +1,4 @@
-package worker
+package workers
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/event_listener/event"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -227,7 +226,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 	ctx context.Context,
 	order model.PaymentOrder,
-	transferEvent event.TransferEvent,
+	transferEvent dto.TransferEventDTO,
 	tokenSymbol, contractAddress, txHash string,
 ) error {
 	transferEventValueInEth, err := utils.ConvertWeiToEth(transferEvent.Value.String())
@@ -256,7 +255,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 func (w *expiredOrderCatchupWorker) processOrderPayment(
 	ctx context.Context,
 	order *model.PaymentOrder,
-	transferEvent event.TransferEvent,
+	transferEvent dto.TransferEventDTO,
 	blockHeight uint64,
 ) (bool, error) {
 	if blockHeight <= order.BlockHeight {
@@ -336,8 +335,8 @@ func (w *expiredOrderCatchupWorker) isMatchingWalletAddress(eventToAddress, orde
 	return strings.EqualFold(eventToAddress, orderWallet)
 }
 
-func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (event.TransferEvent, error) {
-	var transferEvent event.TransferEvent
+func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (dto.TransferEventDTO, error) {
+	var transferEvent dto.TransferEventDTO
 
 	// Ensure the number of topics matches the expected event (Transfer has 3 topics: event signature, from, to)
 	if len(vLog.Topics) != 3 {

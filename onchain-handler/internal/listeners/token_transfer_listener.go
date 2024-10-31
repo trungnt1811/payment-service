@@ -1,4 +1,4 @@
-package listener
+package listeners
 
 import (
 	"context"
@@ -14,8 +14,6 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/event_listener/event"
-	listenerinterfaces "github.com/genefriendway/onchain-handler/event_listener/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -27,7 +25,7 @@ import (
 type tokenTransferListener struct {
 	ctx                      context.Context
 	config                   *conf.Configuration
-	baseEventListener        listenerinterfaces.BaseEventListener
+	baseEventListener        interfaces.BaseEventListener
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
 	contractAddress          string
@@ -40,12 +38,12 @@ type tokenTransferListener struct {
 func NewTokenTransferListener(
 	ctx context.Context,
 	config *conf.Configuration,
-	baseEventListener listenerinterfaces.BaseEventListener,
+	baseEventListener interfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	contractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
-) (listenerinterfaces.EventListener, error) {
+) (interfaces.EventListener, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
@@ -149,8 +147,8 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 	return transferEvent, nil
 }
 
-func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (event.TransferEvent, error) {
-	var transferEvent event.TransferEvent
+func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (dto.TransferEventDTO, error) {
+	var transferEvent dto.TransferEventDTO
 
 	// Ensure the number of topics matches the expected event (Transfer has 3 topics: event signature, from, to)
 	if len(vLog.Topics) != 3 {
@@ -178,7 +176,7 @@ func (listener *tokenTransferListener) isMatchingWalletAddress(eventToAddress, o
 
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
-func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent event.TransferEvent, blockHeight uint64) error {
+func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent dto.TransferEventDTO, blockHeight uint64) error {
 	orderAmount, err := utils.ConvertFloatEthToWei(order.Amount)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
