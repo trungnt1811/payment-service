@@ -65,13 +65,21 @@ func (q *Queue[T]) Enqueue(item T) error {
 		return fmt.Errorf("queue is full")
 	}
 
-	if reflect.ValueOf(item).IsNil() {
+	// Check if the item is nil (only for types that can be nil)
+	if isNilable(item) && reflect.ValueOf(item).IsNil() {
 		return fmt.Errorf("cannot enqueue a nil item")
 	}
 
 	q.items = append(q.items, item)
 	q.itemSet[item] = struct{}{}
 	return nil
+}
+
+// isNilable checks if a value is of a nilable type.
+func isNilable(item interface{}) bool {
+	// Get the kind of the item
+	kind := reflect.TypeOf(item).Kind()
+	return kind == reflect.Ptr || kind == reflect.Slice || kind == reflect.Map || kind == reflect.Func || kind == reflect.Chan || kind == reflect.Interface
 }
 
 // Dequeue removes the first item that matches the condition.
