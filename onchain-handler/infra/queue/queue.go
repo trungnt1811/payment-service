@@ -173,7 +173,32 @@ func (q *Queue[T]) maybeShrink() {
 func (q *Queue[T]) GetItems() []T {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	return q.items
+
+	// Create a copy of the items
+	itemsCopy := make([]T, len(q.items))
+	copy(itemsCopy, q.items)
+	return itemsCopy
+}
+
+// ReplaceItemAtIndex replaces an item at a specific index with a new item.
+func (q *Queue[T]) ReplaceItemAtIndex(index int, newItem T) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	// Check for index bounds
+	if index < 0 || index >= len(q.items) {
+		return fmt.Errorf("index out of bounds")
+	}
+
+	// Replace the item
+	oldItem := q.items[index]
+	q.items[index] = newItem
+
+	// Update itemSet
+	delete(q.itemSet, oldItem)
+	q.itemSet[newItem] = struct{}{}
+
+	return nil
 }
 
 // GetSmallestValue finds the smallest value according to a comparator function.

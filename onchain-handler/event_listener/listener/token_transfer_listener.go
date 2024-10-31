@@ -140,7 +140,7 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 			}
 
 			// Process the payment for the order
-			if err := listener.processOrderPayment(&queueItems[index], transferEvent, vLog.BlockNumber); err != nil {
+			if err := listener.processOrderPayment(index, order, transferEvent, vLog.BlockNumber); err != nil {
 				log.LG.Errorf("Failed to process payment for order ID %d, error: %v", order.ID, err)
 			}
 		}
@@ -178,7 +178,7 @@ func (listener *tokenTransferListener) isMatchingWalletAddress(eventToAddress, o
 
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
-func (listener *tokenTransferListener) processOrderPayment(order *dto.PaymentOrderDTO, transferEvent event.TransferEvent, blockHeight uint64) error {
+func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent event.TransferEvent, blockHeight uint64) error {
 	orderAmount, err := utils.ConvertFloatEthToWei(order.Amount)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
@@ -204,7 +204,7 @@ func (listener *tokenTransferListener) processOrderPayment(order *dto.PaymentOrd
 		inUse = false
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return listener.updatePaymentOrderStatus(order, constants.Success, totalTransferred.String(), inUse, blockHeight)
+		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), inUse, blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		log.LG.Infof("Processed partial payment for order ID: %d", order.ID)
@@ -213,14 +213,15 @@ func (listener *tokenTransferListener) processOrderPayment(order *dto.PaymentOrd
 		inUse = true
 
 		// Update the order status to 'Partial' and keep the wallet associated with the order.
-		return listener.updatePaymentOrderStatus(order, constants.Partial, totalTransferred.String(), inUse, blockHeight)
+		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Partial, totalTransferred.String(), inUse, blockHeight)
 	}
 
 	return nil
 }
 
 func (listener *tokenTransferListener) updatePaymentOrderStatus(
-	order *dto.PaymentOrderDTO,
+	itemIndex int,
+	order dto.PaymentOrderDTO,
 	status, transferredAmount string,
 	walletStatus bool,
 	blockHeight uint64,
@@ -234,6 +235,9 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	// Also update item in queue
 	order.Transferred = transferredAmountInEth
 	order.Status = status
+	if err := listener.queue.ReplaceItemAtIndex(itemIndex, order); err != nil {
+		return fmt.Errorf("failed to update order in queue: %w", err)
+	}
 
 	// Call the method to update the payment order
 	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, status, transferredAmountInEth, walletStatus, blockHeight)

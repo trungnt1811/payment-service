@@ -196,8 +196,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 	// Iterate over all expired orders to find a matching wallet address
 	for index, order := range orders {
 		// Check if the event's "To" address matches the order's wallet address
-		// TODO: if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol)` has complex nested blocks (complexity: 6) (nestif)
-		if w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
+		if order.Status != constants.Success && w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Found a matching order, now process the payment for that order
 			log.LG.Infof("Matched transfer to wallet %s for order ID: %d", transferEvent.To.Hex(), order.ID)
 
@@ -295,8 +294,11 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		log.LG.Infof("Processed partial payment for order ID: %d", order.ID)
 
+		// Set to true as the wallet is still in use for further payments.
+		inUse = true
+
 		// Update the order tranferred and keep the wallet associated with the order.
-		return true, w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), order.Wallet.InUse, blockHeight)
+		return true, w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), inUse, blockHeight)
 	}
 
 	return false, nil
@@ -318,6 +320,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 
 	// Update item in list
 	order.Transferred = transferredAmountInAvax
+	order.Status = status
 
 	// Save the updated order to the repository
 	err = w.paymentOrderUCase.UpdatePaymentOrder(ctx, order.ID, status, transferredAmountInAvax, inUse, blockHeight)
