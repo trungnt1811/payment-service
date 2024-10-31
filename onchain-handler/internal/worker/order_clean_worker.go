@@ -16,7 +16,7 @@ type orderCleanWorker struct {
 	mu                sync.Mutex
 }
 
-func NewOrderCleanWorker(paymentOrderUCase interfaces.PaymentOrderUCase) Worker {
+func NewOrderCleanWorker(paymentOrderUCase interfaces.PaymentOrderUCase) interfaces.Worker {
 	return &orderCleanWorker{
 		paymentOrderUCase: paymentOrderUCase,
 	}

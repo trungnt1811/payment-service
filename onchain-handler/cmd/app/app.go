@@ -27,9 +27,9 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/internal/worker"
 	"github.com/genefriendway/onchain-handler/utils"
 	"github.com/genefriendway/onchain-handler/wire"
-	"github.com/genefriendway/onchain-handler/worker"
 )
 
 func RunApp(config *conf.Configuration) {
@@ -56,16 +56,23 @@ func RunApp(config *conf.Configuration) {
 	initializePaymentWallets(ctx, config, db)
 
 	// Initialize use cases and queue
+	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
 	transferUCase, _ := wire.InitializeTokenTransferUCase(db, ethClient, config)
 	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	paymentEventHistoryUCase, _ := wire.InitializePaymentEventHistoryUCase(db)
 	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase)
 
-	// Start workers and listeners
-	startWorkersAndListeners(ctx, config, db, cacheRepository, ethClient, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
+	// Start workers
+	startWorkers(ctx, config, cacheRepository, ethClient, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase)
 
-	// Register routes and start server
-	registerRoutesAndStartServer(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
+	// Start event listeners
+	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
+
+	// Register routes
+	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
+
+	// Start server
+	startServer(r, config)
 
 	// Handle shutdown signals
 	waitForShutdownSignal(cancel)
@@ -119,18 +126,15 @@ func initializePaymentOrderQueue(ctx context.Context, paymentOrderUCase interfac
 	return paymentOrderQueue
 }
 
-func startWorkersAndListeners(
+func startWorkers(
 	ctx context.Context,
 	config *conf.Configuration,
-	db *gorm.DB,
 	cacheRepository caching.CacheRepository,
 	ethClient *ethclient.Client,
+	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) {
-	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
-
 	latestBlockWorker := worker.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient)
 	go latestBlockWorker.Start(ctx)
 
@@ -146,8 +150,6 @@ func startWorkersAndListeners(
 
 	releaseWalletWorker := worker.NewOrderCleanWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
-
-	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
 }
 
 func startEventListeners(
@@ -188,17 +190,10 @@ func startEventListeners(
 	}()
 }
 
-func registerRoutesAndStartServer(
-	ctx context.Context,
+func startServer(
 	r *gin.Engine,
 	config *conf.Configuration,
-	db *gorm.DB,
-	transferUCase interfaces.TokenTransferUCase,
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	ethClient *ethclient.Client,
 ) {
-	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
-
 	r.GET("/healthcheck", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": fmt.Sprintf("%s is still alive", config.AppName),

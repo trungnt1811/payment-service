@@ -44,7 +44,7 @@ func NewExpiredOrderCatchupWorker(
 	cacheRepo caching.CacheRepository,
 	contractAddress string,
 	ethClient *ethclient.Client,
-) Worker {
+) interfaces.Worker {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
 		log.LG.Infof("failed to parse ERC20 ABI: %v", err)

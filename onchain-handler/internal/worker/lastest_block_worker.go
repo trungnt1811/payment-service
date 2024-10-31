@@ -26,7 +26,7 @@ func NewLatestBlockWorker(
 	cacheRepo caching.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	ethClient *ethclient.Client,
-) Worker {
+) interfaces.Worker {
 	return &latestBlockWorker{
 		cacheRepo:       cacheRepo,
 		blockStateUCase: blockStateUCase,
