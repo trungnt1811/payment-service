@@ -1,4 +1,4 @@
-package utils
+package blockchain
 
 import (
 	"context"
@@ -12,11 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
+	"github.com/genefriendway/onchain-handler/event_listener/interfaces"
+	"github.com/genefriendway/onchain-handler/utils"
 )
 
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
@@ -54,7 +55,7 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to instantiate ERC20 contract for %s: %w", symbol, err)
 	}
 
-	privateKeyECDSA, err := privateKeyFromHex(poolPrivateKey)
+	privateKeyECDSA, err := utils.PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve pool private key: %w", err)
 	}
@@ -128,7 +129,7 @@ func BulkTransfer(
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
-	tx, err = bulkSender.BulkTransfer(auth, convertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
+	tx, err = bulkSender.BulkTransfer(auth, utils.ConvertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}
@@ -187,15 +188,6 @@ func getAuth(
 	return auth, nil
 }
 
-// Helper function to convert string addresses to common.Address type
-func convertToCommonAddresses(recipients []string) []common.Address {
-	var addresses []common.Address
-	for _, recipient := range recipients {
-		addresses = append(addresses, common.HexToAddress(recipient))
-	}
-	return addresses
-}
-
 // Helper function to retry nonce retrieval
 func getNonceWithRetry(ctx context.Context, client *ethclient.Client, poolAddress string) (uint64, error) {
 	var nonce uint64
@@ -208,13 +200,4 @@ func getNonceWithRetry(ctx context.Context, client *ethclient.Client, poolAddres
 		time.Sleep(constants.RetryDelay) // Backoff before retrying
 	}
 	return 0, fmt.Errorf("failed to retrieve nonce after %d retries: %w", constants.MaxRetries, err)
-}
-
-// privateKeyFromHex converts a private key string in hex format to an ECDSA private key
-func privateKeyFromHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
-	privateKey, err := crypto.HexToECDSA(privateKeyHex)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert private key from hex: %w", err)
-	}
-	return privateKey, nil
 }

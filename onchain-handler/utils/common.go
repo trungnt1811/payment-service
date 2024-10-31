@@ -120,10 +120,5 @@ func GenerateAccount(mnemonic, passphrase, salt, walletType string, id uint64) (
 		Address: crypto.PubkeyToAddress(privateKey.PublicKey),
 	}
 
-	// privateKeyBytes := crypto.FromECDSA(privateKey)
-	// privateKeyStr := hex.EncodeToString(privateKeyBytes)
-	// println(privateKeyStr)
-	// println(account.Address.Hex())
-
 	return &account, privateKey, nil
 }

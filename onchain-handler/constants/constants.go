@@ -45,11 +45,15 @@ const (
 
 // Event listener config
 const (
-	DefaultEventChannelBufferSize = 100             // Buffer size for event channel
-	DefaultBlockOffset            = 10              // Default block offset if last processed block is missing
-	ApiMaxBlocksPerRequest        = 2048            // Maximum number of blocks to query at once
-	MaxRetries                    = 3               // Maximum number of retries when polling fails
-	RetryDelay                    = 3 * time.Second // Delay between retries
+	DefaultEventChannelBufferSize = 100  // Buffer size for event channel
+	DefaultBlockOffset            = 10   // Default block offset if last processed block is missing
+	ApiMaxBlocksPerRequest        = 2048 // Maximum number of blocks to query at once
+)
+
+// Retry config
+const (
+	MaxRetries = 3               // Maximum number of retries when polling fails
+	RetryDelay = 3 * time.Second // Delay between retries
 )
 
 // Queue config
@@ -94,4 +98,9 @@ const (
 const (
 	PaymentWallet = "PaymentWallet"
 	UserWallet    = "UserWallet"
+)
+
+// Method ID
+const (
+	ERC20BalanceOfMethodID = "70a08231" // ERC20BalanceOfMethodID is the first 4 bytes of the keccak256 hash of "balanceOf(address)"
 )

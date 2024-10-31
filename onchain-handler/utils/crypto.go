@@ -65,3 +65,12 @@ func HashToUint32(input string) uint32 {
 	hash := sha256.Sum256([]byte(input))
 	return binary.BigEndian.Uint32(hash[:4])
 }
+
+// PrivateKeyFromHex converts a private key string in hex format to an ECDSA private key
+func PrivateKeyFromHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
+	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert private key from hex: %w", err)
+	}
+	return privateKey, nil
+}

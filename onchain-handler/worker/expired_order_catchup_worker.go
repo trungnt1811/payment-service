@@ -13,9 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/genefriendway/onchain-handler/blockchain/event"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/event_listener/event"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"

@@ -12,10 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/genefriendway/onchain-handler/blockchain/event"
-	listenerinterfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/event_listener/event"
+	listenerinterfaces "github.com/genefriendway/onchain-handler/event_listener/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"

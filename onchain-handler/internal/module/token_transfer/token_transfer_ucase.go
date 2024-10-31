@@ -10,10 +10,10 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/external/blockchain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
-	"github.com/genefriendway/onchain-handler/internal/utils"
 )
 
 type tokenTransferUCase struct {
@@ -141,7 +141,7 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	amounts []*big.Int,
 ) ([]model.TokenTransferHistory, error) {
 	// Perform the bulk transfer.
-	txHash, tokenSymbol, txFee, err := utils.BulkTransfer(ctx, u.ethClient, u.config, fromAddress, symbol, recipients, amounts)
+	txHash, tokenSymbol, txFee, err := blockchain.BulkTransfer(ctx, u.ethClient, u.config, fromAddress, symbol, recipients, amounts)
 
 	// Process the transfer results.
 	for index := range tokenTransfers {

@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	listenerinterfaces "github.com/genefriendway/onchain-handler/blockchain/interfaces"
 	"github.com/genefriendway/onchain-handler/constants"
+	listenerinterfaces "github.com/genefriendway/onchain-handler/event_listener/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
