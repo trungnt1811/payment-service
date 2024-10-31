@@ -7,7 +7,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/log"
 )
 
 type orderCleanWorker struct {

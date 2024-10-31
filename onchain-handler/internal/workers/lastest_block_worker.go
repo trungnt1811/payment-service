@@ -11,7 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
-	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/log"
 )
 
 type latestBlockWorker struct {

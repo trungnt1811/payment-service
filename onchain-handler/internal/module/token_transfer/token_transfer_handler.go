@@ -15,7 +15,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	util "github.com/genefriendway/onchain-handler/internal/utils"
-	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/log"
 )
 
 type tokenTransferHandler struct {

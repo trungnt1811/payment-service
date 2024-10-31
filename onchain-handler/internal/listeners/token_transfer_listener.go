@@ -18,7 +18,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
-	"github.com/genefriendway/onchain-handler/internal/utils/log"
+	"github.com/genefriendway/onchain-handler/log"
 )
 
 // tokenTransferListener listens for token transfers and processes them using a queue of payment orders.
