@@ -26,9 +26,9 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/listeners"
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
+	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/internal/utils/log"
 	"github.com/genefriendway/onchain-handler/internal/workers"
-	"github.com/genefriendway/onchain-handler/utils"
 	"github.com/genefriendway/onchain-handler/wire"
 )
 

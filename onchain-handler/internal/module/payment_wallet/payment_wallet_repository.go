@@ -11,7 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
-	"github.com/genefriendway/onchain-handler/utils"
+	"github.com/genefriendway/onchain-handler/internal/utils"
 )
 
 type paymentWalletRepository struct {
