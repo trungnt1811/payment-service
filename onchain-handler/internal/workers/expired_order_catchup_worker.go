@@ -18,7 +18,6 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/log"
 )
@@ -119,7 +118,7 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 }
 
 // processExpiredOrders processes logs from the blockchain starting from the given block height
-func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, startBlock uint64, expiredOrders []model.PaymentOrder) {
+func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, startBlock uint64, expiredOrders []dto.PaymentOrderDTO) {
 	log.LG.Infof("Processing expired orders starting from block: %d", startBlock)
 
 	// Define the maximum block we should query up to
@@ -176,7 +175,7 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 func (w *expiredOrderCatchupWorker) processLog(
 	ctx context.Context,
 	vLog types.Log,
-	orders []model.PaymentOrder,
+	orders []dto.PaymentOrderDTO,
 	blockHeight uint64,
 ) error {
 	log.LG.Infof("Processing log entry from address: %s", vLog.Address.Hex())
@@ -225,7 +224,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 // createPaymentEventHistory constructs and stores the payment event history
 func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 	ctx context.Context,
-	order model.PaymentOrder,
+	order dto.PaymentOrderDTO,
 	transferEvent dto.TransferEventDTO,
 	tokenSymbol, contractAddress, txHash string,
 ) error {
@@ -254,7 +253,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 // It updates the order status and wallet usage based on the payment amount.
 func (w *expiredOrderCatchupWorker) processOrderPayment(
 	ctx context.Context,
-	order *model.PaymentOrder,
+	order *dto.PaymentOrderDTO,
 	transferEvent dto.TransferEventDTO,
 	blockHeight uint64,
 ) (bool, error) {
@@ -306,7 +305,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 // updatePaymentOrderStatus updates the payment order with the new status and transferred amount.
 func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	ctx context.Context,
-	order *model.PaymentOrder,
+	order *dto.PaymentOrderDTO,
 	status, transferredAmount string,
 	inUse bool,
 	blockHeight uint64,

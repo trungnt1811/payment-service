@@ -99,7 +99,7 @@ func init() {
 		envFile = ".env"
 	}
 
-	viper.SetConfigFile(envFile)
+	viper.SetConfigFile("./.env")
 	viper.AutomaticEnv()
 
 	// Set defaults for critical configurations
@@ -107,6 +107,14 @@ func init() {
 	viper.SetDefault("EXPIRED_ORDER_TIME", 15)
 
 	if err := viper.ReadInConfig(); err != nil {
+		viper.SetConfigFile(fmt.Sprintf("../%s", envFile))
+		if err := viper.ReadInConfig(); err != nil {
+			log.Logger.Printf("Error reading config file \"%s\", %v", envFile, err)
+		}
+	}
+
+	err := viper.Unmarshal(&configuration)
+	if err != nil {
 		log.Fatal().Err(err).Msgf("Error reading config file %s", envFile)
 	}
 

@@ -35,7 +35,7 @@ type PaymentOrderUCase interface {
 	) ([]dto.CreatedPaymentOrderDTO, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) error
 	UpdateActiveOrdersToExpired(ctx context.Context) error
-	GetExpiredPaymentOrders(ctx context.Context) ([]model.PaymentOrder, error)
+	GetExpiredPaymentOrders(ctx context.Context) ([]dto.PaymentOrderDTO, error)
 	UpdatePaymentOrder(
 		ctx context.Context,
 		orderID uint64,

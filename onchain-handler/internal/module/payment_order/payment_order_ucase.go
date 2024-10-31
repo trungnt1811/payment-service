@@ -161,8 +161,17 @@ func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) err
 	return u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
 }
 
-func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context) ([]model.PaymentOrder, error) {
-	return u.paymentOrderRepository.GetExpiredPaymentOrders(ctx)
+func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context) ([]dto.PaymentOrderDTO, error) {
+	var orderDtos []dto.PaymentOrderDTO
+	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, order := range expiredOrders {
+		orderDto := order.ToDto()
+		orderDtos = append(orderDtos, orderDto)
+	}
+	return orderDtos, nil
 }
 
 func (u *paymentOrderUCase) UpdatePaymentOrder(
