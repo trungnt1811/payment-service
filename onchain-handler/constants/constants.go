@@ -95,9 +95,11 @@ const (
 )
 
 // Wallet type
+type WalletType string
+
 const (
-	PaymentWallet = "PaymentWallet"
-	UserWallet    = "UserWallet"
+	PaymentWallet WalletType = "PaymentWallet"
+	UserWallet    WalletType = "UserWallet"
 )
 
 // Method ID

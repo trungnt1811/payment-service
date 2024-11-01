@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
+
+	"github.com/genefriendway/onchain-handler/constants"
 )
 
 // SignMessage signs a message using a private key and returns the signature
@@ -69,7 +71,7 @@ func HashToUint32(input string) uint32 {
 	return binary.BigEndian.Uint32(hash[:4])
 }
 
-func GenerateAccount(mnemonic, passphrase, salt, walletType string, id uint64) (*accounts.Account, *ecdsa.PrivateKey, error) {
+func GenerateAccount(mnemonic, passphrase, salt string, walletType constants.WalletType, id uint64) (*accounts.Account, *ecdsa.PrivateKey, error) {
 	// Generate the seed from the mnemonic and passphrase
 	seed := bip39.NewSeed(mnemonic, passphrase)
 
@@ -80,7 +82,7 @@ func GenerateAccount(mnemonic, passphrase, salt, walletType string, id uint64) (
 	}
 
 	// Convert walletType to a unique integer for use in the HD Path
-	walletTypeHash := HashToUint32(walletType + fmt.Sprint(id))
+	walletTypeHash := HashToUint32(string(walletType) + fmt.Sprint(id))
 
 	// Define the HD Path for Ethereum address (e.g., m/44'/60'/id'/walletTypeHash/salt)
 	path := []uint32{
