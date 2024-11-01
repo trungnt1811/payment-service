@@ -1,0 +1,187 @@
+package user_wallet
+
+import (
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/log"
+)
+
+type userWalletHandler struct {
+	ucase  interfaces.UserWalletUCase
+	config *conf.Configuration
+}
+
+func NewUserWalletHandler(
+	ucase interfaces.UserWalletUCase, config *conf.Configuration,
+) *userWalletHandler {
+	return &userWalletHandler{
+		ucase:  ucase,
+		config: config,
+	}
+}
+
+// CreateUserWallets creates wallets for a list of user IDs.
+// @Summary Create wallets for users
+// @Description This endpoint allows creating wallets for a list of user IDs.
+// @Tags user-wallet
+// @Accept json
+// @Produce json
+// @Param user_ids body []string true "List of user IDs"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []interface{}}"
+// @Failure 400 {object} map[string]interface{} "Invalid payload"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/user-wallets [post]
+func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
+	var userIDs []string
+
+	// Parse and validate the request payload (list of user IDs)
+	if err := ctx.ShouldBindJSON(&userIDs); err != nil {
+		log.LG.Errorf("Invalid payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid payload",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Ensure each user ID is a valid integer
+	for _, userID := range userIDs {
+		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
+			log.LG.Errorf("Validation failed: User ID '%s' is not a valid integer", userID)
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Validation error",
+				"details": "User IDs must be valid integers",
+			})
+			return
+		}
+	}
+
+	mnemonic := h.config.Wallet.Mnemonic
+	passphrase := h.config.Wallet.Passphrase
+	salt := h.config.Wallet.Salt
+
+	var payloads []dto.UserWalletPayloadDTO
+	for _, userIDString := range userIDs {
+		// Convert userID string to uint64
+		userID, err := strconv.ParseUint(userIDString, 10, 64)
+		if err != nil {
+			log.LG.Errorf("Failed to parse user ID '%s' as integer: %v", userIDString, err)
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid user ID",
+				"details": "User ID must be a valid integer",
+			})
+			return
+		}
+
+		// Generate the account based on mnemonic, passphrase, and salt
+		account, _, err := utils.GenerateAccount(mnemonic, passphrase, salt, constants.UserWallet, userID)
+		if err != nil {
+			log.LG.Errorf("Failed to generate account for user ID '%d': %v", userID, err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "Account generation failed",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		// Create the payload with user ID and wallet address
+		payload := dto.UserWalletPayloadDTO{
+			UserID:  userID,
+			Address: account.Address.Hex(),
+		}
+		payloads = append(payloads, payload)
+	}
+
+	// Call the use case to create wallets for the provided user IDs
+	if err := h.ucase.CreateUserWallets(ctx, payloads); err != nil {
+		log.LG.Errorf("Failed to create user wallets: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to create user wallets",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Respond with success and response data
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    payloads,
+	})
+}
+
+// GetUserWallets retrieves wallets for a list of user IDs.
+// @Summary Retrieve user wallets
+// @Description This endpoint retrieves wallets based on a list of user IDs.
+// @Tags user-wallet
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number, default is 1"
+// @Param size query int false "Page size, default is 10"
+// @Param user_ids query []string false "List of user IDs to filter"
+// @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of user wallets"
+// @Failure 400 {object} utils.GeneralError "Invalid parameters"
+// @Failure 500 {object} utils.GeneralError "Internal server error"
+// @Router /api/v1/user-wallets [get]
+func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
+	// Set default values for page and size if they are not provided
+	page := ctx.DefaultQuery("page", "1")
+	size := ctx.DefaultQuery("size", "10")
+
+	// Parse page and size into integers
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 1 {
+		log.LG.Errorf("Invalid page number: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+		return
+	}
+
+	sizeInt, err := strconv.Atoi(size)
+	if err != nil || sizeInt < 1 {
+		log.LG.Errorf("Invalid size: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
+		return
+	}
+
+	// Extract and parse user IDs from query string
+	userIDsStr := ctx.Query("user_ids")
+	var userIDs []string
+	if userIDsStr != "" {
+		userIDs = strings.Split(userIDsStr, ",")
+	}
+
+	// Validate each user ID to ensure it is a valid uint64
+	for _, userID := range userIDs {
+		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
+			log.LG.Errorf("Invalid user ID: %v", userID)
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid user ID",
+				"details": fmt.Sprintf("User ID '%s' is not a valid uint64", userID),
+			})
+			return
+		}
+	}
+
+	// Call the use case to get user wallets
+	response, err := h.ucase.GetUserWallets(ctx, pageInt, sizeInt, userIDs)
+	if err != nil {
+		log.LG.Errorf("Failed to retrieve user wallets: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve user wallets",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return the response as a JSON response
+	ctx.JSON(http.StatusOK, response)
+}

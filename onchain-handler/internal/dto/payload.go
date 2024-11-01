@@ -23,3 +23,14 @@ type PaymentEventPayloadDTO struct {
 	TokenSymbol     string `json:"token_symbol"`
 	Amount          string `json:"amount"`
 }
+
+type PaymentWalletPayloadDTO struct {
+	ID      uint64 `json:"id"`
+	Address string `json:"address"`
+	InUse   bool   `json:"in_use"`
+}
+
+type UserWalletPayloadDTO struct {
+	UserID  uint64 `json:"user_id"`
+	Address string `json:"address"`
+}

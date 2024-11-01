@@ -12,6 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	paymentorder "github.com/genefriendway/onchain-handler/internal/module/payment_order"
 	tokentransfer "github.com/genefriendway/onchain-handler/internal/module/token_transfer"
+	userwallet "github.com/genefriendway/onchain-handler/internal/module/user_wallet"
 )
 
 func RegisterRoutes(
@@ -21,6 +22,7 @@ func RegisterRoutes(
 	db *gorm.DB,
 	transferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	userWalletUCase interfaces.UserWalletUCase,
 	ethClient *ethclient.Client,
 ) {
 	v1 := r.Group("/api/v1")
@@ -34,5 +36,10 @@ func RegisterRoutes(
 	// SECTION: payment order
 	paymentOrderHandler := paymentorder.NewPaymentOrderHandler(paymentOrderUCase, config)
 	appRouter.POST("/payment-orders", paymentOrderHandler.CreateOrders)
-	appRouter.GET("payment-orders/histories", paymentOrderHandler.GetPaymentOrderHistories)
+	appRouter.GET("/payment-orders/histories", paymentOrderHandler.GetPaymentOrderHistories)
+
+	// SECTION: user wallet
+	userWalletHander := userwallet.NewUserWalletHandler(userWalletUCase, config)
+	appRouter.POST("/user-wallets", userWalletHander.CreateUserWallets)
+	appRouter.GET("/user-wallets", userWalletHander.GetUserWallets)
 }

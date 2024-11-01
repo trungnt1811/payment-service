@@ -221,4 +221,77 @@ paths:
       summary: Get list of token transfer histories
       tags:
       - token-transfer
+  /api/v1/user-wallets:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves wallets based on a list of user IDs.
+      parameters:
+      - description: Page number, default is 1
+        in: query
+        name: page
+        type: integer
+      - description: Page size, default is 10
+        in: query
+        name: size
+        type: integer
+      - collectionFormat: csv
+        description: List of user IDs to filter
+        in: query
+        items:
+          type: string
+        name: user_ids
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of user wallets
+          schema:
+            $ref: '#/definitions/dto.PaginationDTOResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/utils.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.GeneralError'
+      summary: Retrieve user wallets
+      tags:
+      - user-wallet
+    post:
+      consumes:
+      - application/json
+      description: This endpoint allows creating wallets for a list of user IDs.
+      parameters:
+      - description: List of user IDs
+        in: body
+        name: user_ids
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Success response: {\"success\": true, \"data\": []interface{}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create wallets for users
+      tags:
+      - user-wallet
 swagger: "2.0"

@@ -16,6 +16,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/module/payment_order"
 	"github.com/genefriendway/onchain-handler/internal/module/payment_wallet"
 	"github.com/genefriendway/onchain-handler/internal/module/token_transfer"
+	"github.com/genefriendway/onchain-handler/internal/module/user_wallet"
 	"github.com/google/wire"
 	"gorm.io/gorm"
 )
@@ -49,10 +50,16 @@ func InitializePaymentEventHistoryUCase(db *gorm.DB) (interfaces.PaymentEventHis
 	return paymentEventHistoryUCase, nil
 }
 
-// Init repo
-func InitializePaymentWalletRepository(db *gorm.DB, config *conf.Configuration) (interfaces.PaymentWalletRepository, error) {
+func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) (interfaces.PaymentWalletUCase, error) {
 	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
-	return paymentWalletRepository, nil
+	paymentWalletUCase := payment_wallet.NewPaymentWalletUCase(paymentWalletRepository)
+	return paymentWalletUCase, nil
+}
+
+func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) (interfaces.UserWalletUCase, error) {
+	userWalletRepository := user_wallet.NewUserWalletRepository(db)
+	userWalletUCase := user_wallet.NewUserWalletUCase(userWalletRepository)
+	return userWalletUCase, nil
 }
 
 // wire.go:
@@ -66,5 +73,6 @@ var tokenTransferUCaseSet = wire.NewSet(token_transfer.NewTokenTransferRepositor
 
 var paymentEventHistoryUCaseSet = wire.NewSet(payment_event_history.NewPaymentEventHistoryRepository, payment_event_history.NewPaymentEventHistoryUCase)
 
-// Repo set
-var paymentWalletRepoSet = wire.NewSet(payment_wallet.NewPaymentWalletRepository)
+var paymentWalletUCaseSet = wire.NewSet(payment_wallet.NewPaymentWalletRepository, payment_wallet.NewPaymentWalletUCase)
+
+var userWalletUCaseSet = wire.NewSet(user_wallet.NewUserWalletRepository, user_wallet.NewUserWalletUCase)

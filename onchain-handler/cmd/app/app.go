@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -52,15 +51,17 @@ func RunApp(config *conf.Configuration) {
 	// Initialize caching
 	cacheRepository := initializeCache(ctx)
 
-	// Initialize payment wallets
-	initializePaymentWallets(ctx, config, db)
-
 	// Initialize use cases and queue
 	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
-	transferUCase, _ := wire.InitializeTokenTransferUCase(db, ethClient, config)
-	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	paymentEventHistoryUCase, _ := wire.InitializePaymentEventHistoryUCase(db)
+	paymentWalletUCase, _ := wire.InitializePaymentWalletUCase(db, config)
+	userWalletUCase, _ := wire.InitializeUserWalletUCase(db, config)
+	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
+	transferUCase, _ := wire.InitializeTokenTransferUCase(db, ethClient, config)
 	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase)
+
+	// Initialize payment wallets
+	initializePaymentWallets(ctx, config, paymentWalletUCase)
 
 	// Start workers
 	startWorkers(ctx, config, cacheRepository, ethClient, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase)
@@ -69,7 +70,7 @@ func RunApp(config *conf.Configuration) {
 	startEventListeners(ctx, config, ethClient, cacheRepository, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueue)
 
 	// Register routes
-	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, ethClient)
+	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, ethClient)
 
 	// Start server
 	startServer(r, config)
@@ -110,9 +111,12 @@ func initializeCache(ctx context.Context) caching.CacheRepository {
 	return caching.NewCachingRepository(ctx, cacheClient)
 }
 
-func initializePaymentWallets(ctx context.Context, config *conf.Configuration, db *gorm.DB) {
-	paymentWalletRepository, _ := wire.InitializePaymentWalletRepository(db, config)
-	err := utils.InitPaymentWallets(ctx, config, paymentWalletRepository)
+func initializePaymentWallets(
+	ctx context.Context,
+	config *conf.Configuration,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
+) {
+	err := utils.InitPaymentWallets(ctx, config, paymentWalletUCase)
 	if err != nil {
 		log.LG.Fatalf("Init payment wallets error: %v", err)
 	}

@@ -7,8 +7,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 func CalculatePaymentCovering(amount *big.Int, paymentCoveringFactor float64) *big.Int {
@@ -31,7 +31,7 @@ func CalculatePaymentCovering(amount *big.Int, paymentCoveringFactor float64) *b
 func InitPaymentWallets(
 	ctx context.Context,
 	config *conf.Configuration,
-	walletRepo interfaces.PaymentWalletRepository,
+	walletRepo interfaces.PaymentWalletUCase,
 ) error {
 	// Check if wallets already exist in the database
 	isExist, err := walletRepo.IsRowExist(ctx)
@@ -41,7 +41,7 @@ func InitPaymentWallets(
 
 	// Insert wallets into the database if none exist
 	if !isExist {
-		var wallets []model.PaymentWallet
+		var wallets []dto.PaymentWalletPayloadDTO
 		initWalletCount := config.PaymentGateway.InitWalletCount
 		for index := 1; index <= int(initWalletCount); index++ {
 			account, _, err := GenerateAccount(
@@ -54,7 +54,7 @@ func InitPaymentWallets(
 			if err != nil {
 				return err
 			}
-			wallet := model.PaymentWallet{
+			wallet := dto.PaymentWalletPayloadDTO{
 				ID:      uint64(index),
 				Address: account.Address.Hex(),
 				InUse:   false, // New wallets are not in use by default
