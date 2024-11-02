@@ -32,15 +32,15 @@ func CalculatePaymentCovering(amount *big.Int, paymentCoveringFactor float64) *b
 func InitPaymentWallets(
 	ctx context.Context,
 	config *conf.Configuration,
-	walletRepo interfaces.PaymentWalletUCase,
+	walletUCase interfaces.PaymentWalletUCase,
 ) error {
-	// Check if wallets already exist in the database
-	isExist, err := walletRepo.IsRowExist(ctx)
+	// Check if wallets already exist
+	isExist, err := walletUCase.IsRowExist(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Insert wallets into the database if none exist
+	// Insert wallets if none exist
 	if !isExist {
 		var wallets []dto.PaymentWalletPayloadDTO
 		initWalletCount := config.PaymentGateway.InitWalletCount
@@ -63,7 +63,7 @@ func InitPaymentWallets(
 			wallets = append(wallets, wallet)
 		}
 
-		err := walletRepo.CreatePaymentWallets(ctx, wallets)
+		err := walletUCase.CreatePaymentWallets(ctx, wallets)
 		if err != nil {
 			return err
 		}
