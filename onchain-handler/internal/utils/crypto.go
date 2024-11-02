@@ -16,9 +16,23 @@ import (
 )
 
 // SignMessage signs a message using a private key and returns the signature
-func SignMessage(privateKey *ecdsa.PrivateKey, message []byte) ([]byte, error) {
+func SignMessage(privateKey *ecdsa.PrivateKey, message []byte) (singnature []byte, err error) {
+	if privateKey == nil {
+		return nil, fmt.Errorf("private key is nil")
+	}
+	if message == nil {
+		return nil, fmt.Errorf("message is nil")
+	}
+
 	// Hash the message using Keccak256
 	hash := crypto.Keccak256Hash(message)
+
+	// Recover from panics and return an error
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
 
 	// Sign the hash with the private key
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
