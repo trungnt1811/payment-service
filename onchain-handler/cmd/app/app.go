@@ -52,12 +52,12 @@ func RunApp(config *conf.Configuration) {
 	cacheRepository := initializeCache(ctx)
 
 	// Initialize use cases and queue
-	blockstateUcase, _ := wire.InitializeBlockStateUCase(db)
-	paymentEventHistoryUCase, _ := wire.InitializePaymentEventHistoryUCase(db)
-	paymentWalletUCase, _ := wire.InitializePaymentWalletUCase(db, config)
-	userWalletUCase, _ := wire.InitializeUserWalletUCase(db, config)
-	paymentOrderUCase, _ := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
-	transferUCase, _ := wire.InitializeTokenTransferUCase(db, ethClient, config)
+	blockstateUcase := wire.InitializeBlockStateUCase(db)
+	paymentEventHistoryUCase := wire.InitializePaymentEventHistoryUCase(db)
+	paymentWalletUCase := wire.InitializePaymentWalletUCase(db, config)
+	userWalletUCase := wire.InitializeUserWalletUCase(db, config)
+	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
+	transferUCase := wire.InitializeTokenTransferUCase(db, ethClient, config)
 	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase)
 
 	// Initialize payment wallets

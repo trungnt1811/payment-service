@@ -24,42 +24,42 @@ import (
 // Injectors from wire.go:
 
 // Init ucase
-func InitializeBlockStateUCase(db *gorm.DB) (interfaces.BlockStateUCase, error) {
+func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 	blockStateRepository := block_state.NewBlockstateRepository(db)
 	blockStateUCase := block_state.NewBlockStateUCase(blockStateRepository)
-	return blockStateUCase, nil
+	return blockStateUCase
 }
 
-func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository, config *conf.Configuration) (interfaces.PaymentOrderUCase, error) {
+func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
 	paymentOrderRepository := payment_order.NewPaymentOrderRepository(db)
 	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
 	blockStateRepository := block_state.NewBlockstateRepository(db)
 	paymentOrderUCase := payment_order.NewPaymentOrderUCase(db, paymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
-	return paymentOrderUCase, nil
+	return paymentOrderUCase
 }
 
-func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) (interfaces.TokenTransferUCase, error) {
+func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
 	tokenTransferRepository := token_transfer.NewTokenTransferRepository(db)
 	tokenTransferUCase := token_transfer.NewTokenTransferUCase(tokenTransferRepository, ethClient, config)
-	return tokenTransferUCase, nil
+	return tokenTransferUCase
 }
 
-func InitializePaymentEventHistoryUCase(db *gorm.DB) (interfaces.PaymentEventHistoryUCase, error) {
+func InitializePaymentEventHistoryUCase(db *gorm.DB) interfaces.PaymentEventHistoryUCase {
 	paymentEventHistoryRepository := payment_event_history.NewPaymentEventHistoryRepository(db)
 	paymentEventHistoryUCase := payment_event_history.NewPaymentEventHistoryUCase(paymentEventHistoryRepository)
-	return paymentEventHistoryUCase, nil
+	return paymentEventHistoryUCase
 }
 
-func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) (interfaces.PaymentWalletUCase, error) {
+func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.PaymentWalletUCase {
 	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
 	paymentWalletUCase := payment_wallet.NewPaymentWalletUCase(paymentWalletRepository)
-	return paymentWalletUCase, nil
+	return paymentWalletUCase
 }
 
-func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) (interfaces.UserWalletUCase, error) {
+func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.UserWalletUCase {
 	userWalletRepository := user_wallet.NewUserWalletRepository(db)
 	userWalletUCase := user_wallet.NewUserWalletUCase(userWalletRepository)
-	return userWalletUCase, nil
+	return userWalletUCase
 }
 
 // wire.go:

@@ -51,32 +51,32 @@ var userWalletUCaseSet = wire.NewSet(
 )
 
 // Init ucase
-func InitializeBlockStateUCase(db *gorm.DB) (interfaces.BlockStateUCase, error) {
+func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 	wire.Build(blockStateUCaseSet)
-	return nil, nil
+	return nil
 }
 
-func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository, config *conf.Configuration) (interfaces.PaymentOrderUCase, error) {
+func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
 	wire.Build(paymentOrderUCaseSet)
-	return nil, nil
+	return nil
 }
 
-func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) (interfaces.TokenTransferUCase, error) {
+func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
 	wire.Build(tokenTransferUCaseSet)
-	return nil, nil
+	return nil
 }
 
-func InitializePaymentEventHistoryUCase(db *gorm.DB) (interfaces.PaymentEventHistoryUCase, error) {
+func InitializePaymentEventHistoryUCase(db *gorm.DB) interfaces.PaymentEventHistoryUCase {
 	wire.Build(paymentEventHistoryUCaseSet)
-	return nil, nil
+	return nil
 }
 
-func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) (interfaces.PaymentWalletUCase, error) {
+func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.PaymentWalletUCase {
 	wire.Build(paymentWalletUCaseSet)
-	return nil, nil
+	return nil
 }
 
-func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) (interfaces.UserWalletUCase, error) {
+func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.UserWalletUCase {
 	wire.Build(userWalletUCaseSet)
-	return nil, nil
+	return nil
 }
