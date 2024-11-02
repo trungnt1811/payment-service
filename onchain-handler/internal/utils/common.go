@@ -2,8 +2,9 @@ package utils
 
 import (
 	"context"
-	"log"
 	"math/big"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
@@ -66,7 +67,7 @@ func InitPaymentWallets(
 		if err != nil {
 			return err
 		}
-		log.Println("Successfully created payment wallets")
+		log.Logger.Printf("Successfully created payment wallets")
 	}
 
 	return nil
