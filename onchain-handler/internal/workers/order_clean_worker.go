@@ -31,7 +31,7 @@ func (w *orderCleanWorker) Start(ctx context.Context) {
 		case <-ticker.C:
 			go w.run(ctx)
 		case <-ctx.Done():
-			log.LG.Info("Shutting down orderClearWorker")
+			log.LG.Info("Shutting down orderCleanWorker")
 			return
 		}
 	}
@@ -40,7 +40,7 @@ func (w *orderCleanWorker) Start(ctx context.Context) {
 func (w *orderCleanWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		log.LG.Warn("Previous orderClearWorker run still in progress, skipping this cycle")
+		log.LG.Warn("Previous orderCleanWorker run still in progress, skipping this cycle")
 		w.mu.Unlock()
 		return
 	}
