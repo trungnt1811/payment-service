@@ -311,17 +311,17 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth (Ether)
-	transferredAmountInAvax, err := utils.ConvertWeiToEth(transferredAmount)
+	transferredAmountInEth, err := utils.ConvertWeiToEth(transferredAmount)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}
 
 	// Update item in list
-	order.Transferred = transferredAmountInAvax
+	order.Transferred = transferredAmountInEth
 	order.Status = status
 
 	// Save the updated order to the repository
-	err = w.paymentOrderUCase.UpdatePaymentOrder(ctx, order.ID, status, transferredAmountInAvax, inUse, blockHeight)
+	err = w.paymentOrderUCase.UpdatePaymentOrder(ctx, order.ID, status, transferredAmountInEth, inUse, blockHeight)
 	if err != nil {
 		return fmt.Errorf("failed to update payment order status for order ID %d: %w", order.ID, err)
 	}

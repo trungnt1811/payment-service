@@ -52,7 +52,7 @@ func ConvertFloatEthToWei(amount string) (*big.Int, error) {
 	// Split the amount into integer and fractional parts.
 	parts := strings.Split(amount, ".")
 	if len(parts) > 2 {
-		return nil, fmt.Errorf("invalid float avax amount format")
+		return nil, fmt.Errorf("invalid float Eth amount format")
 	}
 
 	// Convert the integer part to big.Int.
@@ -102,13 +102,13 @@ func ConvertWeiToEth(amount string) (string, error) {
 		return "", fmt.Errorf("invalid wei amount format")
 	}
 
-	// Use big.Float to handle the conversion from Wei to AVAX (1 AVAX = 10^18 Wei)
-	avaxAmount := new(big.Float).SetInt(weiAmount)
-	avaxValue := new(big.Float).Quo(avaxAmount, big.NewFloat(constants.TokenDecimalsMultiplier)) // Divide by 10^18
+	// Use big.Float to handle the conversion from Wei to Eth (1 Eth = 10^18 Wei)
+	ethAmount := new(big.Float).SetInt(weiAmount)
+	ethValue := new(big.Float).Quo(ethAmount, big.NewFloat(constants.TokenDecimalsMultiplier)) // Divide by 10^18
 
 	// Convert the result to a string for saving (to avoid loss of precision)
-	amountInAvax := avaxValue.Text('f', 18) // 18 decimal places for precision in AVAX
-	return amountInAvax, nil
+	amountInEth := ethValue.Text('f', 18) // 18 decimal places for precision in Eth
+	return amountInEth, nil
 }
 
 func InitEthClient(rpcUrl string) (*ethclient.Client, error) {
