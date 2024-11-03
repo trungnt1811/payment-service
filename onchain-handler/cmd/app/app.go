@@ -83,10 +83,10 @@ func RunApp(config *conf.Configuration) {
 
 func initializeLoggerAndMode(config *conf.Configuration) {
 	if config.Env == "PROD" {
-		log.LG = log.InitZerologLogger(os.Stdout, zerolog.InfoLevel)
+		log.InitZerologLogger(os.Stdout, zerolog.InfoLevel)
 		gin.SetMode(gin.ReleaseMode)
 	} else {
-		log.LG = log.InitZerologLogger(os.Stdout, zerolog.DebugLevel)
+		log.InitZerologLogger(os.Stdout, zerolog.DebugLevel)
 	}
 }
 

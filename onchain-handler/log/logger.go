@@ -19,18 +19,16 @@ type ZerologLogger struct {
 	Instance *zerolog.Logger
 }
 
-func InitZerologLogger(output io.Writer, level zerolog.Level) *ZerologLogger {
+func InitZerologLogger(output io.Writer, level zerolog.Level) {
 	initOnce.Do(func() {
 		LG = newZerologLogger(output, level, false)
 	})
-	return LG
 }
 
-func InitZerologLoggerWithColor(output io.Writer, level zerolog.Level) *ZerologLogger {
+func InitZerologLoggerWithColor(output io.Writer, level zerolog.Level) {
 	initOnce.Do(func() {
 		LG = newZerologLogger(output, level, true)
 	})
-	return LG
 }
 
 func newZerologLogger(output io.Writer, level zerolog.Level, withColor bool) *ZerologLogger {
