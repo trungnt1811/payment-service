@@ -16,7 +16,7 @@ import (
 
 // Initialize the logger once for all tests
 func TestMain(m *testing.M) {
-	log.LG = log.NewZerologLogger(os.Stdout, zerolog.DebugLevel)
+	log.LG = log.InitZerologLogger(os.Stdout, zerolog.DebugLevel)
 	code := m.Run()
 	os.Exit(code)
 }

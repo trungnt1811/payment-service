@@ -2,12 +2,16 @@ package log
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
-var LG *ZerologLogger
+var (
+	LG       *ZerologLogger
+	initOnce sync.Once
+)
 
 // ZerologLogger implements applogger.Logger interface and provide logging service
 // using zerolog.
@@ -15,12 +19,18 @@ type ZerologLogger struct {
 	Instance *zerolog.Logger
 }
 
-func NewZerologLogger(output io.Writer, level zerolog.Level) *ZerologLogger {
-	return newZerologLogger(output, level, false)
+func InitZerologLogger(output io.Writer, level zerolog.Level) *ZerologLogger {
+	initOnce.Do(func() {
+		LG = newZerologLogger(output, level, false)
+	})
+	return LG
 }
 
-func NewZerologLoggerWithColor(output io.Writer, level zerolog.Level) *ZerologLogger {
-	return newZerologLogger(output, level, true)
+func InitZerologLoggerWithColor(output io.Writer, level zerolog.Level) *ZerologLogger {
+	initOnce.Do(func() {
+		LG = newZerologLogger(output, level, true)
+	})
+	return LG
 }
 
 func newZerologLogger(output io.Writer, level zerolog.Level, withColor bool) *ZerologLogger {
