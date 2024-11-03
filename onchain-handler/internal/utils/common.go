@@ -4,12 +4,11 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/log"
 )
 
 func CalculatePaymentCovering(amount *big.Int, paymentCoveringFactor float64) *big.Int {
@@ -67,7 +66,7 @@ func InitPaymentWallets(
 		if err != nil {
 			return err
 		}
-		log.Logger.Printf("Successfully created payment wallets")
+		log.LG.Info("Successfully created payment wallets")
 	}
 
 	return nil

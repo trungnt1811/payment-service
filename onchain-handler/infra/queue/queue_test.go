@@ -3,13 +3,23 @@ package queue
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/log"
 )
+
+// Initialize the logger once for all tests
+func TestMain(m *testing.M) {
+	log.LG = log.NewZerologLogger(os.Stdout, zerolog.DebugLevel)
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestNewQueue(t *testing.T) {
 	t.Run("Initialize Queue with Loader", func(t *testing.T) {

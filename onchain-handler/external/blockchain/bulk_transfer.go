@@ -33,7 +33,7 @@ func BulkTransfer(
 	bulkSenderContractAddress := config.Blockchain.SmartContract.BulkSenderContractAddress
 
 	var txHash, tokenSymbol string
-	var txFeeInAVAX *big.Float
+	var txFeeInEth *big.Float
 
 	// Get token address, pool private key, and symbol based on the symbol
 	var erc20Token interface{}
@@ -42,7 +42,7 @@ func BulkTransfer(
 	// Get pool private key
 	poolPrivateKey, err = config.GetPoolPrivateKey(poolAddress)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
 	}
 	// Get erc20 token
 	if symbol == constants.USDT {
@@ -52,43 +52,43 @@ func BulkTransfer(
 	}
 	erc20Token, err = erc20token.NewErc20token(common.HexToAddress(tokenAddress), client)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to instantiate ERC20 contract for %s: %w", symbol, err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate ERC20 contract for %s: %w", symbol, err)
 	}
 
 	privateKeyECDSA, err := utils.PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve pool private key: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve pool private key: %w", err)
 	}
 
 	// Function to handle nonce retrieval and retry logic
 	var nonce uint64
 	nonce, err = getNonceWithRetry(ctx, client, poolAddress)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve nonce after retry: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve nonce after retry: %w", err)
 	}
 
 	auth, err := getAuth(ctx, client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to create auth object for pool %s: %w", poolAddress, err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to create auth object for pool %s: %w", poolAddress, err)
 	}
 	auth.Nonce = new(big.Int).SetUint64(nonce) // Set the correct nonce
 
 	// Set up the bulk transfer contract instance
 	bulkSender, err := bulksender.NewBulksender(common.HexToAddress(bulkSenderContractAddress), client)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
 	}
 
 	// Type assertion to ERC20Token interface
 	token, ok := erc20Token.(interfaces.ERC20Token)
 	if !ok {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("erc20Token does not implement ERC20Token interface for %s", symbol)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("erc20Token does not implement ERC20Token interface for %s", symbol)
 	}
 
 	// Get the token symbol from the contract
 	tokenSymbol, err = token.Symbol(nil)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to retrieve token symbol for %s: %w", symbol, err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve token symbol for %s: %w", symbol, err)
 	}
 
 	// Calculate total amount to transfer for approval
@@ -100,28 +100,28 @@ func BulkTransfer(
 	// Check pool address balance
 	poolBalance, err := token.BalanceOf(nil, common.HexToAddress(poolAddress))
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to get pool balance: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to get pool balance: %w", err)
 	}
 
 	// Ensure the pool has enough balance
 	if poolBalance.Cmp(totalAmount) < 0 {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("insufficient pool balance: required %s %s, available %s %s", totalAmount.String(), tokenSymbol, poolBalance.String(), tokenSymbol)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("insufficient pool balance: required %s %s, available %s %s", totalAmount.String(), tokenSymbol, poolBalance.String(), tokenSymbol)
 	}
 
 	// Approve the bulk transfer contract to spend tokens on behalf of the pool wallet
 	tx, err := token.Approve(auth, common.HexToAddress(bulkSenderContractAddress), totalAmount)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to approve bulk sender contract: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to approve bulk sender contract: %w", err)
 	}
 	txHash = tx.Hash().Hex() // Get the transaction hash
 
 	// Wait for approval to be mined
 	receipt, err := bind.WaitMined(ctx, client, tx)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to wait for approval transaction to be mined: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to wait for approval transaction to be mined: %w", err)
 	}
 	if receipt.Status != 1 {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("approval transaction failed for %s", txHash)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("approval transaction failed for %s", txHash)
 	}
 
 	// Increment nonce for the next transaction
@@ -131,30 +131,30 @@ func BulkTransfer(
 	// Call the bulk transfer function on the bulk sender contract
 	tx, err = bulkSender.BulkTransfer(auth, utils.ConvertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to execute bulk transfer: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}
 	txHash = tx.Hash().Hex() // Update transaction hash for bulk transfer
 
 	// Wait for the bulk transfer transaction to be mined
 	receipt, err = bind.WaitMined(ctx, client, tx)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to wait for bulk transfer transaction to be mined: %w", err)
 	}
 
 	// Calculate transaction fee (gasUsed * gasPrice)
 	gasUsed := receipt.GasUsed
 	gasPrice := auth.GasPrice
 	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
-	// Convert txFee from wei to AVAX (1 AVAX = 10^18 wei)
-	weiInAVAX := big.NewFloat(constants.TokenDecimalsMultiplier)
-	txFeeInAVAX = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInAVAX)
+	// Convert txFee from wei to Eth (1 Eth = 10^18 wei)
+	weiInEth := big.NewFloat(constants.TokenDecimalsMultiplier)
+	txFeeInEth = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInEth)
 
 	// Check the transaction status
 	if receipt.Status != 1 {
-		return &txHash, &tokenSymbol, txFeeInAVAX, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
 	}
 
-	return &txHash, &tokenSymbol, txFeeInAVAX, nil
+	return &txHash, &tokenSymbol, txFeeInEth, nil
 }
 
 // getAuth creates a new keyed transactor for signing transactions with the given private key and network chain ID
