@@ -15,6 +15,14 @@ http://localhost:8080/swagger/index.html
 1. make build
 2. make run
 
+
 ## How to check unittest coverage
-1. move to target folder
-2. go test -coverprofile=coverage.out ./...
+Move to target folder and run command
+
+``go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out``
+
+How to generate mock for uniitest
+1. Install: 
+```go install go.uber.org/mock/mockgen@latest```
+2. Generate:
+```mockgen -source=[path_inteface_file] -destination=[path_mock_file]```
