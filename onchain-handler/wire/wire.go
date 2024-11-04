@@ -5,7 +5,7 @@ package wire
 import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/module/block_state"
 	"github.com/genefriendway/onchain-handler/internal/module/payment_event_history"
@@ -56,7 +56,7 @@ func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 	return nil
 }
 
-func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
+func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo infrainterfaces.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
 	wire.Build(paymentOrderUCaseSet)
 	return nil
 }

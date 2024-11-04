@@ -19,6 +19,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf/database"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -106,7 +107,7 @@ func initializeEthClient(config *conf.Configuration) *ethclient.Client {
 	return ethClient
 }
 
-func initializeCache(ctx context.Context) caching.CacheRepository {
+func initializeCache(ctx context.Context) infrainterfaces.CacheRepository {
 	cacheClient := caching.NewGoCacheClient()
 	return caching.NewCachingRepository(ctx, cacheClient)
 }
@@ -133,7 +134,7 @@ func initializePaymentOrderQueue(ctx context.Context, paymentOrderUCase interfac
 func startWorkers(
 	ctx context.Context,
 	config *conf.Configuration,
-	cacheRepository caching.CacheRepository,
+	cacheRepository infrainterfaces.CacheRepository,
 	ethClient *ethclient.Client,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
@@ -160,7 +161,7 @@ func startEventListeners(
 	ctx context.Context,
 	config *conf.Configuration,
 	ethClient *ethclient.Client,
-	cacheRepository caching.CacheRepository,
+	cacheRepository infrainterfaces.CacheRepository,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,

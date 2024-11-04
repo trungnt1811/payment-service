@@ -10,6 +10,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
@@ -21,7 +22,7 @@ type paymentOrderUCase struct {
 	paymentOrderRepository  interfaces.PaymentOrderRepository  // Repository to interact with payment orders
 	paymentWalletRepository interfaces.PaymentWalletRepository // Repository to interact with payment wallets
 	blockStateRepo          interfaces.BlockStateRepository    // Repository to fetch the latest block state
-	cacheRepo               caching.CacheRepository            // Cache repository to retrieve and store block information
+	cacheRepo               infrainterfaces.CacheRepository    // Cache repository to retrieve and store block information
 	config                  *conf.Configuration
 }
 
@@ -31,7 +32,7 @@ func NewPaymentOrderUCase(
 	paymentOrderRepository interfaces.PaymentOrderRepository,
 	paymentWalletRepository interfaces.PaymentWalletRepository,
 	blockStateRepo interfaces.BlockStateRepository,
-	cacheRepo caching.CacheRepository,
+	cacheRepo infrainterfaces.CacheRepository,
 	config *conf.Configuration,
 ) interfaces.PaymentOrderUCase {
 	return &paymentOrderUCase{

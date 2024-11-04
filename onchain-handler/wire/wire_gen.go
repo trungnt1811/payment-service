@@ -9,7 +9,7 @@ package wire
 import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/caching"
+	interfaces2 "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/module/block_state"
 	"github.com/genefriendway/onchain-handler/internal/module/payment_event_history"
@@ -30,7 +30,7 @@ func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 	return blockStateUCase
 }
 
-func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo caching.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
+func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
 	paymentOrderRepository := payment_order.NewPaymentOrderRepository(db)
 	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
 	blockStateRepository := block_state.NewBlockstateRepository(db)

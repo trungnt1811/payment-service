@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/genefriendway/onchain-handler/infra/interfaces"
 )
 
 type cachingRepository struct {
 	ctx    context.Context
-	client CacheClient
+	client interfaces.CacheClient
 }
 
 // NewCachingRepository initializes a new caching repository
-func NewCachingRepository(ctx context.Context, client CacheClient) CacheRepository {
+func NewCachingRepository(ctx context.Context, client interfaces.CacheClient) interfaces.CacheRepository {
 	return &cachingRepository{
 		ctx:    ctx,
 		client: client,

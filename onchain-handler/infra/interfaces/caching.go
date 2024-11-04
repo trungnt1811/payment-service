@@ -1,4 +1,4 @@
-package caching
+package interfaces
 
 import (
 	"context"

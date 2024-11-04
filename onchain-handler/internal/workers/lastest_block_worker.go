@@ -9,13 +9,14 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/log"
 )
 
 type latestBlockWorker struct {
-	cacheRepo       caching.CacheRepository
+	cacheRepo       infrainterfaces.CacheRepository
 	blockStateUCase interfaces.BlockStateUCase
 	ethClient       *ethclient.Client
 	isRunning       bool       // Tracks if catchup is running
@@ -23,7 +24,7 @@ type latestBlockWorker struct {
 }
 
 func NewLatestBlockWorker(
-	cacheRepo caching.CacheRepository,
+	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	ethClient *ethclient.Client,
 ) interfaces.Worker {

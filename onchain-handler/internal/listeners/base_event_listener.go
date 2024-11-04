@@ -11,6 +11,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/log"
@@ -22,14 +23,14 @@ type baseEventListener struct {
 	eventChan       chan interface{}
 	blockStateUCase interfaces.BlockStateUCase
 	currentBlock    uint64
-	cacheRepo       caching.CacheRepository
+	cacheRepo       infrainterfaces.CacheRepository
 	eventHandlers   map[common.Address]func(log types.Log) (interface{}, error) // Map to handle events per contract
 }
 
 // NewBaseEventListener initializes a base listener.
 func NewBaseEventListener(
 	client *ethclient.Client,
-	cacheRepo caching.CacheRepository,
+	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	startBlockListener *uint64,
 ) interfaces.BaseEventListener {

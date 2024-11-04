@@ -16,6 +16,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
@@ -27,7 +28,7 @@ type expiredOrderCatchupWorker struct {
 	config                   *conf.Configuration
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
-	cacheRepo                caching.CacheRepository
+	cacheRepo                infrainterfaces.CacheRepository
 	contractAddress          string
 	parsedABI                abi.ABI
 	ethClient                *ethclient.Client
@@ -39,7 +40,7 @@ func NewExpiredOrderCatchupWorker(
 	config *conf.Configuration,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	cacheRepo caching.CacheRepository,
+	cacheRepo infrainterfaces.CacheRepository,
 	contractAddress string,
 	ethClient *ethclient.Client,
 ) interfaces.Worker {
