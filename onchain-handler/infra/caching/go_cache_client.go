@@ -9,6 +9,7 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/infra/interfaces"
 )
 
 type goCacheClient struct {
@@ -16,7 +17,7 @@ type goCacheClient struct {
 }
 
 // NewGoCacheClient initializes a new cache client with default expiration and cleanup interval
-func NewGoCacheClient() *goCacheClient {
+func NewGoCacheClient() interfaces.CacheClient {
 	return &goCacheClient{
 		cache: cache.New(constants.DefaultExpiration, constants.CleanupInterval),
 	}
