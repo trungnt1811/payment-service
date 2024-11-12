@@ -8,15 +8,14 @@ CREATE TABLE IF NOT EXISTS payment_order (
     amount NUMERIC(30, 18) NOT NULL,
     transferred NUMERIC(30, 18) NOT NULL DEFAULT 0,
     symbol VARCHAR(10) NOT NULL,
+    network VARCHAR(20) NOT NULL,
     status order_status NOT NULL DEFAULT 'PENDING',
-    succeeded_at TIMESTAMP,
-    expired_time TIMESTAMP NOT NULL, 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    succeeded_at TIMESTAMP WITH TIME ZONE,
+    expired_time TIMESTAMP WITH TIME ZONE NOT NULL, 
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX payment_order_status_idx ON payment_order (status);
 CREATE UNIQUE INDEX payment_order_request_id_idx ON payment_order (request_id);
 CREATE INDEX payment_order_expired_time_idx ON payment_order (expired_time);
-CREATE INDEX payment_order_block_height_idx ON payment_order (block_height);
 CREATE INDEX payment_order_status_expired_time_idx ON payment_order (status, expired_time);

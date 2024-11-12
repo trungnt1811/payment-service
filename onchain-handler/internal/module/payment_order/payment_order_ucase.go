@@ -53,69 +53,78 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 	payloads []dto.PaymentOrderPayloadDTO,
 	expiredOrderTime time.Duration,
 ) ([]dto.CreatedPaymentOrderDTO, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey} // Cache key for the latest block
-
-	// Try to retrieve the latest block from cache
-	var latestBlock uint64
-	err := u.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
-	if err != nil {
-		// If cache is empty, load from the database
-		latestBlock, err = u.blockStateRepo.GetLatestBlock(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve latest block from database: %w", err)
-		}
+	// Group payloads by network
+	networkPayloads := make(map[string][]dto.PaymentOrderPayloadDTO)
+	for _, payload := range payloads {
+		networkPayloads[payload.Network] = append(networkPayloads[payload.Network], payload)
 	}
 
 	var response []dto.CreatedPaymentOrderDTO
 
-	// Begin a new transaction
-	err = u.db.Transaction(func(tx *gorm.DB) error {
-		var orders []model.PaymentOrder
+	// Process each network's payloads
+	for network, groupedPayloads := range networkPayloads {
+		cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network} // Cache key for the latest block
 
-		// Convert each payload to a PaymentOrder model, associating it with the latest block
-		for _, payload := range payloads {
-			// Try to claim an available wallet
-			assignWallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(ctx)
+		// Try to retrieve the latest block from cache
+		var latestBlock uint64
+		err := u.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
+		if err != nil {
+			// If cache is empty, load from the database
+			latestBlock, err = u.blockStateRepo.GetLatestBlock(ctx, network)
 			if err != nil {
-				return fmt.Errorf("failed to claim available wallet: %w", err)
+				return nil, fmt.Errorf("failed to retrieve latest block from database: %w", err)
+			}
+		}
+
+		// Begin a new transaction
+		err = u.db.Transaction(func(tx *gorm.DB) error {
+			var orders []model.PaymentOrder
+
+			// Convert each payload to a PaymentOrder model, associating it with the latest block
+			for _, payload := range groupedPayloads {
+				// Try to claim an available wallet
+				assignWallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to claim available wallet: %w", err)
+				}
+
+				// Create the PaymentOrder model for the current payload
+				order := model.PaymentOrder{
+					Amount:      payload.Amount,
+					WalletID:    assignWallet.ID, // Associate the order with the claimed wallet
+					Wallet:      *assignWallet,
+					Transferred: "0", // Default transferred status
+					RequestID:   payload.RequestID,
+					Symbol:      payload.Symbol,
+					Network:     payload.Network,
+					BlockHeight: latestBlock,       // Use the latest block height
+					Status:      constants.Pending, // Set order status to pending
+					ExpiredTime: time.Now().UTC().Add(expiredOrderTime),
+				}
+				orders = append(orders, order)
+
+				orderDTO := order.ToCreatedPaymentOrderDTO()
+				orderDTO.PaymentAddress = assignWallet.Address
+				response = append(response, orderDTO)
 			}
 
-			// Create the PaymentOrder model for the current payload
-			order := model.PaymentOrder{
-				Amount:      payload.Amount,
-				WalletID:    assignWallet.ID, // Associate the order with the claimed wallet
-				Wallet:      *assignWallet,
-				Transferred: "0", // Default transferred status
-				RequestID:   payload.RequestID,
-				Symbol:      payload.Symbol,
-				BlockHeight: latestBlock,       // Use the latest block height
-				Status:      constants.Pending, // Set order status to pending
-				ExpiredTime: time.Now().UTC().Add(expiredOrderTime),
+			// Save the created payment orders to the database within the transaction
+			orders, err = u.paymentOrderRepository.CreatePaymentOrders(ctx, orders)
+			if err != nil {
+				return fmt.Errorf("failed to create payment orders: %w", err)
 			}
-			orders = append(orders, order)
 
-			orderDTO := order.ToCreatedPaymentOrderDTO()
-			orderDTO.PaymentAddress = assignWallet.Address
-			response = append(response, orderDTO)
-		}
-
-		// Save the created payment orders to the database within the transaction
-		orders, err = u.paymentOrderRepository.CreatePaymentOrders(ctx, orders)
+			// Mappping order id and sign payload
+			response, err = u.mapOrderIDsAndSignPayloads(orders)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		// Check if there was an error within the transaction
 		if err != nil {
-			return fmt.Errorf("failed to create payment orders: %w", err)
+			return nil, err
 		}
-
-		// Mappping order id and sign payload
-		response, err = u.mapOrderIDsAndSignPayloads(orders)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	// Check if there was any error within the transaction
-	if err != nil {
-		return nil, err
 	}
 
 	return response, nil
@@ -162,9 +171,9 @@ func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) err
 	return u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
 }
 
-func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context) ([]dto.PaymentOrderDTO, error) {
+func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network string) ([]dto.PaymentOrderDTO, error) {
 	var orderDtos []dto.PaymentOrderDTO
-	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx)
+	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network)
 	if err != nil {
 		return nil, err
 	}
@@ -197,8 +206,8 @@ func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders
 	return u.paymentOrderRepository.BatchUpdateOrderStatuses(ctx, orderIDs, newStatuses)
 }
 
-func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
-	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset)
+func (u *paymentOrderUCase) GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
+	orders, err := u.paymentOrderRepository.GetActivePaymentOrdersOnAvax(ctx, limit, offset)
 	if err != nil {
 		return nil, err
 	}

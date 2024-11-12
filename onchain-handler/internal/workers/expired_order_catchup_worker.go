@@ -32,6 +32,7 @@ type expiredOrderCatchupWorker struct {
 	contractAddress          string
 	parsedABI                abi.ABI
 	ethClient                *ethclient.Client
+	network                  string
 	isRunning                bool       // Tracks if catchup is running
 	mu                       sync.Mutex // Mutex to protect the isRunning flag
 }
@@ -43,6 +44,7 @@ func NewExpiredOrderCatchupWorker(
 	cacheRepo infrainterfaces.CacheRepository,
 	contractAddress string,
 	ethClient *ethclient.Client,
+	network string,
 ) interfaces.Worker {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
@@ -57,6 +59,7 @@ func NewExpiredOrderCatchupWorker(
 		contractAddress:          contractAddress,
 		parsedABI:                parsedABI,
 		ethClient:                ethClient,
+		network:                  network,
 	}
 }
 
@@ -99,7 +102,7 @@ func (w *expiredOrderCatchupWorker) run(ctx context.Context) {
 
 func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	// Fetch expired orders from the repository
-	expiredOrders, err := w.paymentOrderUCase.GetExpiredPaymentOrders(ctx)
+	expiredOrders, err := w.paymentOrderUCase.GetExpiredPaymentOrders(ctx, w.network)
 	if err != nil {
 		log.LG.Errorf("Failed to retrieve expired payment orders: %v", err)
 		return
@@ -244,6 +247,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 			ContractAddress: contractAddress,
 			TokenSymbol:     tokenSymbol,
 			Amount:          transferEventValueInEth,
+			Network:         w.network,
 		},
 	}
 
@@ -359,7 +363,7 @@ func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (dto.Tra
 }
 
 func (w *expiredOrderCatchupWorker) getLatestBlockFromCacheOrBlockchain(ctx context.Context) (uint64, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey}
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + w.network}
 
 	var latestBlock uint64
 	err := w.cacheRepo.RetrieveItem(cacheKey, &latestBlock)

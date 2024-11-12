@@ -1,6 +1,9 @@
+SET TIMEZONE TO 'UTC';
+
 CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     id SERIAL PRIMARY KEY,  -- SERIAL takes care of auto-increment
     request_id VARCHAR(255) NOT NULL,
+    network VARCHAR(20) NOT NULL,
     transaction_hash VARCHAR(66) NOT NULL,
     from_address VARCHAR(42) NOT NULL,
     to_address VARCHAR(42) NOT NULL,
@@ -9,8 +12,8 @@ CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     symbol VARCHAR(10) NOT NULL,
     status BOOLEAN NOT NULL DEFAULT FALSE,
     error_message TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes

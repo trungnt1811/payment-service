@@ -3,6 +3,7 @@ package dto
 type TokenTransferHistoryDTO struct {
 	ID              uint64 `json:"id"`
 	RequestID       string `json:"request_id"`
+	Network         string `json:"network"`
 	TransactionHash string `json:"transaction_hash"`
 	FromAddress     string `json:"from_address"`
 	ToAddress       string `json:"to_address"`

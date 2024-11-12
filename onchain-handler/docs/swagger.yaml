@@ -17,6 +17,8 @@ definitions:
     properties:
       amount:
         type: string
+      network:
+        type: string
       request_id:
         type: string
       symbol:
@@ -25,6 +27,8 @@ definitions:
   dto.TokenTransferPayloadDTO:
     properties:
       from_address:
+        type: string
+      network:
         type: string
       request_id:
         type: string
@@ -58,8 +62,8 @@ paths:
       - application/json
       description: This endpoint allows creating payment orders for users.
       parameters:
-      - description: List of payment orders. Each order must include request id, amount
-          and symbol.
+      - description: List of payment orders. Each order must include request id, amount,
+          symbol (USDT) and network (AVAX C-Chain).
         in: body
         name: payload
         required: true
@@ -140,8 +144,8 @@ paths:
         It accepts a list of transfer requests, validates the payload, and processes
         the token transfers based on the transaction type.
       parameters:
-      - description: List of transfer requests. Each request must include recipient
-          address and transaction type.
+      - description: List of transfer requests. Each request must include request
+          id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain).
         in: body
         name: payload
         required: true

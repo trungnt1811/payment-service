@@ -16,18 +16,18 @@ func NewBlockStateUCase(blockStateRepo interfaces.BlockStateRepository) interfac
 	}
 }
 
-func (u *blockStateUCase) GetLatestBlock(ctx context.Context) (uint64, error) {
-	return u.blockStateRepo.GetLatestBlock(ctx)
+func (u *blockStateUCase) GetLatestBlock(ctx context.Context, network string) (uint64, error) {
+	return u.blockStateRepo.GetLatestBlock(ctx, network)
 }
 
-func (u *blockStateUCase) UpdateLatestBlock(ctx context.Context, blockNumber uint64) error {
-	return u.blockStateRepo.UpdateLatestBlock(ctx, blockNumber)
+func (u *blockStateUCase) UpdateLatestBlock(ctx context.Context, blockNumber uint64, network string) error {
+	return u.blockStateRepo.UpdateLatestBlock(ctx, blockNumber, network)
 }
 
-func (u *blockStateUCase) GetLastProcessedBlock(ctx context.Context) (uint64, error) {
-	return u.blockStateRepo.GetLastProcessedBlock(ctx)
+func (u *blockStateUCase) GetLastProcessedBlock(ctx context.Context, network string) (uint64, error) {
+	return u.blockStateRepo.GetLastProcessedBlock(ctx, network)
 }
 
-func (u *blockStateUCase) UpdateLastProcessedBlock(ctx context.Context, blockNumber uint64) error {
-	return u.blockStateRepo.UpdateLastProcessedBlock(ctx, blockNumber)
+func (u *blockStateUCase) UpdateLastProcessedBlock(ctx context.Context, blockNumber uint64, network string) error {
+	return u.blockStateRepo.UpdateLastProcessedBlock(ctx, blockNumber, network)
 }

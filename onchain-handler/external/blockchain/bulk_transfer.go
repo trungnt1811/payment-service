@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
@@ -24,35 +23,20 @@ import (
 func BulkTransfer(
 	ctx context.Context,
 	client *ethclient.Client,
-	config *conf.Configuration,
-	poolAddress, symbol string,
+	chainID uint64,
+	bulkSenderContractAddress, poolAddress, poolPrivateKey, tokenContractAddress string,
 	recipients []string,
 	amounts []*big.Int,
 ) (*string, *string, *big.Float, error) {
-	chainID := config.Blockchain.ChainID
-	bulkSenderContractAddress := config.Blockchain.SmartContract.BulkSenderContractAddress
-
 	var txHash, tokenSymbol string
 	var txFeeInEth *big.Float
 
-	// Get token address, pool private key, and symbol based on the symbol
+	// Get token address and symbol based on the symbol
 	var erc20Token interface{}
 	var err error
-	var tokenAddress, poolPrivateKey string
-	// Get pool private key
-	poolPrivateKey, err = config.GetPoolPrivateKey(poolAddress)
+	erc20Token, err = erc20token.NewErc20token(common.HexToAddress(tokenContractAddress), client)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
-	}
-	// Get erc20 token
-	if symbol == constants.USDT {
-		tokenAddress = config.Blockchain.SmartContract.USDTContractAddress
-	} else {
-		tokenAddress = config.Blockchain.SmartContract.LifePointContractAddress
-	}
-	erc20Token, err = erc20token.NewErc20token(common.HexToAddress(tokenAddress), client)
-	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate ERC20 contract for %s: %w", symbol, err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate ERC20 contract for token contract address %s: %w", tokenContractAddress, err)
 	}
 
 	privateKeyECDSA, err := utils.PrivateKeyFromHex(poolPrivateKey)
@@ -67,7 +51,7 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve nonce after retry: %w", err)
 	}
 
-	auth, err := getAuth(ctx, client, privateKeyECDSA, new(big.Int).SetUint64(uint64(chainID)))
+	auth, err := getAuth(ctx, client, privateKeyECDSA, new(big.Int).SetUint64(chainID))
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to create auth object for pool %s: %w", poolAddress, err)
 	}
@@ -82,13 +66,13 @@ func BulkTransfer(
 	// Type assertion to ERC20Token interface
 	token, ok := erc20Token.(interfaces.ERC20Token)
 	if !ok {
-		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("erc20Token does not implement ERC20Token interface for %s", symbol)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("erc20Token does not implement ERC20Token interface for token contract address %s", tokenContractAddress)
 	}
 
 	// Get the token symbol from the contract
 	tokenSymbol, err = token.Symbol(nil)
 	if err != nil {
-		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve token symbol for %s: %w", symbol, err)
+		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve token symbol for token contract address %s: %w", tokenContractAddress, err)
 	}
 
 	// Calculate total amount to transfer for approval
@@ -129,7 +113,7 @@ func BulkTransfer(
 	auth.Nonce = new(big.Int).SetUint64(nonce)
 
 	// Call the bulk transfer function on the bulk sender contract
-	tx, err = bulkSender.BulkTransfer(auth, utils.ConvertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenAddress))
+	tx, err = bulkSender.BulkTransfer(auth, utils.ConvertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenContractAddress))
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to execute bulk transfer: %w", err)
 	}

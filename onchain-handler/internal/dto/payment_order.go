@@ -11,6 +11,7 @@ type PaymentOrderDTO struct {
 	Amount         string           `json:"amount"`
 	Transferred    string           `json:"transferred"`
 	Symbol         string           `json:"symbol"`
+	Network        string           `json:"network"`
 	Status         string           `json:"status"`
 	SucceededAt    time.Time        `json:"succeeded_at,omitempty"`
 	ExpiredTime    time.Time        `json:"expired_time"`
@@ -22,5 +23,6 @@ type CreatedPaymentOrderDTO struct {
 	PaymentAddress string `json:"payment_address"`
 	Amount         string `json:"amount"`
 	Symbol         string `json:"symbol"`
+	Network        string `json:"network"`
 	Signature      []byte `json:"signature"`
 }

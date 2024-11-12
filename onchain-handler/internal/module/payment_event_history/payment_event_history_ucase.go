@@ -34,6 +34,7 @@ func (u *paymentEventHistoryUCase) CreatePaymentEventHistory(
 			ContractAddress: payload.ContractAddress,
 			TokenSymbol:     payload.TokenSymbol,
 			Amount:          payload.Amount,
+			Network:         payload.Network,
 		}
 		eventHistories = append(eventHistories, eventHistory)
 	}

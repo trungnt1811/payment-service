@@ -37,7 +37,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 		var requests []dto.JSONRPCRequest
 		for i, address := range addressBatch {
 			// Prepare data for the `balanceOf` call
-			data := "0x" + constants.ERC20BalanceOfMethodID + "000000000000000000000000" + common.HexToAddress(address).Hex()[2:]
+			data := "0x" + constants.Erc20BalanceOfMethodID + "000000000000000000000000" + common.HexToAddress(address).Hex()[2:]
 			request := dto.JSONRPCRequest{
 				Jsonrpc: "2.0",
 				Method:  "eth_call",

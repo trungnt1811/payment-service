@@ -30,8 +30,8 @@ func (r *paymentOrderRepository) CreatePaymentOrders(ctx context.Context, orders
 	return orders, nil
 }
 
-// GetActivePaymentOrders retrieves active orders that have not expired.
-func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error) {
+// GetActivePaymentOrdersOnAvax retrieves active orders that have not expired on AVAX C-Chain.
+func (r *paymentOrderRepository) GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error) {
 	var orders []model.PaymentOrder
 	currentTime := time.Now().UTC() // Calculate current time in Go
 
@@ -40,8 +40,12 @@ func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 		Preload("Wallet").                                                           // Preload the associated Wallet
 		Limit(limit).
 		Offset(offset).
-		Where("payment_order.status IN (?) AND payment_order.expired_time > ?", []string{constants.Pending, constants.Partial}, currentTime). // Use Go-calculated currentTime
-		Order("payment_order.expired_time ASC").                                                                                              // Order results by expiration time.
+		Where("payment_order.network = ? AND payment_order.status IN (?) AND payment_order.expired_time > ?",
+			string(constants.AvaxCChain),
+			[]string{constants.Pending, constants.Partial},
+			currentTime,
+		).
+		Order("payment_order.expired_time ASC"). // Order results by expiration time.
 		Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve pending orders: %w", err)
 	}
@@ -128,20 +132,20 @@ func (r *paymentOrderRepository) BatchUpdateOrderStatuses(ctx context.Context, o
 	return nil
 }
 
-// GetExpiredPaymentOrders retrieves orders that are expired within a day.
-func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context) ([]model.PaymentOrder, error) {
+// GetExpiredPaymentOrders retrieves orders for a specific network that are expired within a day.
+func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]model.PaymentOrder, error) {
 	var orders []model.PaymentOrder
 
 	// Calculate the time range for the past day
 	now := time.Now().UTC()
-	cutoffTime := time.Now().Add(-constants.OrderCutoffTime)
+	cutoffTime := now.Add(-constants.OrderCutoffTime)
 
 	// Execute the query
 	if err := r.db.WithContext(ctx).
 		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id"). // Join PaymentWallet with PaymentOrder.
 		Preload("Wallet").                                                           // Preload the associated Wallet.
-		Where("payment_order.status NOT IN (?) AND payment_order.expired_time <= ? AND payment_order.expired_time > ?",
-			[]string{constants.Success, constants.Failed}, now, cutoffTime).
+		Where("payment_order.network = ? AND payment_order.status NOT IN (?) AND payment_order.expired_time <= ? AND payment_order.expired_time > ?",
+			network, []string{constants.Success, constants.Failed}, now, cutoffTime).
 		Order("payment_order.block_height ASC").
 		Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve expired orders: %w", err)

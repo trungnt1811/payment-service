@@ -30,7 +30,7 @@ const docTemplate = `{
                 "summary": "Create payment orders",
                 "parameters": [
                     {
-                        "description": "List of payment orders. Each order must include request id, amount and symbol.",
+                        "description": "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain).",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -147,7 +147,7 @@ const docTemplate = `{
                 "summary": "Distribute tokens to recipients",
                 "parameters": [
                     {
-                        "description": "List of transfer requests. Each request must include recipient address and transaction type.",
+                        "description": "List of transfer requests. Each request must include request id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain).",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -393,6 +393,9 @@ const docTemplate = `{
                 "amount": {
                     "type": "string"
                 },
+                "network": {
+                    "type": "string"
+                },
                 "request_id": {
                     "type": "string"
                 },
@@ -405,6 +408,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "from_address": {
+                    "type": "string"
+                },
+                "network": {
                     "type": "string"
                 },
                 "request_id": {

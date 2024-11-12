@@ -37,7 +37,7 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase, config *conf.C
 // @Tags token-transfer
 // @Accept json
 // @Produce json
-// @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include recipient address and transaction type."
+// @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include request id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain)."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"results\": [{\"request_id\": \"requestID1\", \"status\": true, \"error_message\": \"\"}, {\"request_id\": \"requestID2\", \"status\": false, \"error_message\": \"Failed: some error message\"}]}"
 // @Failure 400 {object} utils.GeneralError "Invalid payload or invalid recipient address/transaction type"
 // @Failure 500 {object} utils.GeneralError "Internal server error, failed to distribute tokens"
@@ -83,11 +83,21 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 			}
 			req[index].ToAddress = toAddress
 		}
-		// Check if payload.Symbol is USDT or LP
-		if payload.Symbol != constants.USDT && payload.Symbol != constants.LP {
+
+		// Check if payload.Symbol is USDT
+		if payload.Symbol != constants.USDT {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid token symbol",
-				"details": "Token symbol must be USDT or LP",
+				"details": "Token symbol must be USDT",
+			})
+			return
+		}
+
+		// Check if payload.Network is Avax C-Chain
+		if payload.Network != string(constants.AvaxCChain) {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid network",
+				"details": "Network must be Avax C-Chain",
 			})
 			return
 		}

@@ -19,6 +19,7 @@ type latestBlockWorker struct {
 	cacheRepo       infrainterfaces.CacheRepository
 	blockStateUCase interfaces.BlockStateUCase
 	ethClient       *ethclient.Client
+	network         string
 	isRunning       bool       // Tracks if catchup is running
 	mu              sync.Mutex // Mutex to protect the isRunning flag
 }
@@ -27,11 +28,13 @@ func NewLatestBlockWorker(
 	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	ethClient *ethclient.Client,
+	network string,
 ) interfaces.Worker {
 	return &latestBlockWorker{
 		cacheRepo:       cacheRepo,
 		blockStateUCase: blockStateUCase,
 		ethClient:       ethClient,
+		network:         network,
 	}
 }
 
@@ -74,14 +77,14 @@ func (w *latestBlockWorker) run(ctx context.Context) {
 
 // fetchAndStoreLatestBlock fetches the latest block and stores it in cache and DB
 func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey}
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + w.network}
 
 	// Try to retrieve the latest block from cache
 	var latestBlock uint64
 	err := w.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
 	if err != nil {
 		// If cache is empty, load from the database
-		latestBlock, err = w.blockStateUCase.GetLatestBlock(ctx)
+		latestBlock, err = w.blockStateUCase.GetLatestBlock(ctx, w.network)
 		if err != nil {
 			log.LG.Infof("Failed to retrieve latest block from DB: %v\n", err)
 			return
@@ -112,7 +115,7 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 		}
 
 		// Save to DB
-		err = w.blockStateUCase.UpdateLatestBlock(ctx, latestBlock)
+		err = w.blockStateUCase.UpdateLatestBlock(ctx, latestBlock, w.network)
 		if err != nil {
 			log.LG.Infof("Failed to update latest block in DB: %v\n", err)
 		}

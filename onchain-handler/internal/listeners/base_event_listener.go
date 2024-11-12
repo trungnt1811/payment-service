@@ -20,6 +20,7 @@ import (
 // baseEventListener represents the shared behavior of any blockchain event listener.
 type baseEventListener struct {
 	ethClient       *ethclient.Client
+	network         string
 	eventChan       chan interface{}
 	blockStateUCase interfaces.BlockStateUCase
 	currentBlock    uint64
@@ -30,6 +31,7 @@ type baseEventListener struct {
 // NewBaseEventListener initializes a base listener.
 func NewBaseEventListener(
 	client *ethclient.Client,
+	network string,
 	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	startBlockListener *uint64,
@@ -37,7 +39,7 @@ func NewBaseEventListener(
 	eventChan := make(chan interface{}, constants.DefaultEventChannelBufferSize)
 
 	// Fetch the last processed block from the repository
-	lastBlock, err := blockStateUCase.GetLastProcessedBlock(context.Background())
+	lastBlock, err := blockStateUCase.GetLastProcessedBlock(context.Background(), network)
 	if err != nil || lastBlock == 0 {
 		log.LG.Warnf("Failed to get last processed block or it was zero: %v", err)
 	}
@@ -53,6 +55,7 @@ func NewBaseEventListener(
 
 	return &baseEventListener{
 		ethClient:       client,
+		network:         network,
 		cacheRepo:       cacheRepo,
 		eventChan:       eventChan,
 		blockStateUCase: blockStateUCase,
@@ -94,7 +97,7 @@ func (listener *baseEventListener) RunListener(ctx context.Context) error {
 }
 
 func (listener *baseEventListener) getLatestBlockFromCacheOrBlockchain(ctx context.Context) (uint64, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey}
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + listener.network}
 
 	var latestBlock uint64
 	err := listener.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
@@ -119,7 +122,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 	log.LG.Info("Starting event listener...")
 
 	// Get the last processed block from the repository, defaulting to an offset if not found.
-	lastBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx)
+	lastBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx, listener.network)
 	if err != nil || lastBlock == 0 {
 		log.LG.Warnf("Failed to get last processed block or it was zero: %v", err)
 
@@ -223,7 +226,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 		}
 
 		// Update the last processed block in the repository.
-		if err := listener.blockStateUCase.UpdateLastProcessedBlock(ctx, currentBlock); err != nil {
+		if err := listener.blockStateUCase.UpdateLastProcessedBlock(ctx, currentBlock, listener.network); err != nil {
 			log.LG.Errorf("Failed to update last processed block in repository: %v", err)
 		}
 	}

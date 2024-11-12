@@ -32,15 +32,21 @@ type PaymentGatewayConfiguration struct {
 }
 
 type BlockchainConfiguration struct {
-	RpcUrl             string                        `mapstructure:"RPC_URL"`
-	ChainID            uint32                        `mapstructure:"CHAIN_ID"`
-	StartBlockListener uint64                        `mapstructure:"START_BLOCK_LISTENER"`
-	SmartContract      SmartContractConfiguration    `mapstructure:",squash"`
-	LPTreasuryPool     LPTreasuryPoolConfiguration   `mapstructure:",squash"`
-	USDTTreasuryPool   USDTTreasuryPoolConfiguration `mapstructure:",squash"`
-	LPCommunityPool    LPCommunityPoolConfiguration  `mapstructure:",squash"`
-	LPRevenuePool      LPRevenuePoolConfiguration    `mapstructure:",squash"`
-	LPStakingPool      LPStakingPoolConfiguration    `mapstructure:",squash"`
+	AvaxNetwork      AvaxNetworkConfiguration      `mapstructure:",squash"`
+	LPTreasuryPool   LPTreasuryPoolConfiguration   `mapstructure:",squash"`
+	USDTTreasuryPool USDTTreasuryPoolConfiguration `mapstructure:",squash"`
+	LPCommunityPool  LPCommunityPoolConfiguration  `mapstructure:",squash"`
+	LPRevenuePool    LPRevenuePoolConfiguration    `mapstructure:",squash"`
+	LPStakingPool    LPStakingPoolConfiguration    `mapstructure:",squash"`
+}
+
+type AvaxNetworkConfiguration struct {
+	AvaxRpcUrl                    string `mapstructure:"AVAX_RPC_URL"`
+	AvaxChainID                   uint32 `mapstructure:"AVAX_CHAIN_ID"`
+	AvaxStartBlockListener        uint64 `mapstructure:"AVAX_START_BLOCK_LISTENER"`
+	AvaxUSDTContractAddress       string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
+	AvaxLifePointContractAddress  string `mapstructure:"AVAX_LIFE_POINT_CONTRACT_ADDRESS"`
+	AvaxBulkSenderContractAddress string `mapstructure:"AVAX_BULK_SENDER_CONTRACT_ADDRESS"`
 }
 
 type WalletConfiguration struct {
@@ -72,12 +78,6 @@ type LPRevenuePoolConfiguration struct {
 type LPStakingPoolConfiguration struct {
 	LPStakingAddress    string `mapstructure:"LP_STAKING_ADDRESS"`
 	PrivateKeyLPStaking string `mapstructure:"PRIVATE_KEY_LP_STAKING"`
-}
-
-type SmartContractConfiguration struct {
-	LifePointContractAddress  string `mapstructure:"LIFE_POINT_CONTRACT_ADDRESS"`
-	USDTContractAddress       string `mapstructure:"USDT_CONTRACT_ADDRESS"`
-	BulkSenderContractAddress string `mapstructure:"BULK_SENDER_CONTRACT_ADDRESS"`
 }
 
 type Configuration struct {
@@ -188,8 +188,8 @@ func (config Configuration) GetPaymentCovering() float64 {
 
 func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
 	tokenSymbols := map[string]string{
-		config.Blockchain.SmartContract.USDTContractAddress:      constants.USDT,
-		config.Blockchain.SmartContract.LifePointContractAddress: constants.LP,
+		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress:      constants.USDT,
+		config.Blockchain.AvaxNetwork.AvaxLifePointContractAddress: constants.LP,
 	}
 
 	if symbol, exists := tokenSymbols[tokenAddress]; exists {

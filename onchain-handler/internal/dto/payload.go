@@ -1,6 +1,7 @@
 package dto
 
 type TokenTransferPayloadDTO struct {
+	Network     string `json:"network"`
 	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
 	TokenAmount string `json:"token_amount"`
@@ -12,10 +13,12 @@ type PaymentOrderPayloadDTO struct {
 	RequestID string `json:"request_id"`
 	Amount    string `json:"amount"`
 	Symbol    string `json:"symbol"`
+	Network   string `json:"network"`
 }
 
 type PaymentEventPayloadDTO struct {
 	PaymentOrderID  uint64 `json:"payment_order_id"`
+	Network         string `json:"network"`
 	TransactionHash string `json:"transaction_hash"`
 	FromAddress     string `json:"from_address"`
 	ToAddress       string `json:"to_address"`

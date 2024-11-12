@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS payment_event_history (
     from_address VARCHAR(42) NOT NULL,                 
     to_address VARCHAR(42) NOT NULL,                    
     contract_address VARCHAR(42) NOT NULL,             
-    token_symbol VARCHAR(10) NOT NULL,                 
+    token_symbol VARCHAR(10) NOT NULL,     
+    network VARCHAR(20) NOT NULL,            
     amount NUMERIC(30, 18) NOT NULL,                   
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP

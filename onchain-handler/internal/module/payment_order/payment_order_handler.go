@@ -35,7 +35,7 @@ func NewPaymentOrderHandler(
 // @Tags payment-order
 // @Accept json
 // @Produce json
-// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount and symbol."
+// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain)."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []interface{}}"
 // @Failure 400 {object} map[string]interface{} "Invalid payload"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
@@ -90,13 +90,23 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 		return fmt.Errorf("invalid amount: %v", err)
 	}
 
-	// Validate symbol is either USDT or LP
+	// Validate symbol is USDT
 	validSymbols := map[string]bool{
 		constants.USDT: true,
-		constants.LP:   true,
+		// constants.LP:   true,
 	}
 	if !validSymbols[order.Symbol] {
-		return fmt.Errorf("invalid symbol: %s, must be USDT or LP", order.Symbol)
+		return fmt.Errorf("invalid symbol: %s, must be USDT", order.Symbol)
+	}
+
+	// Validate network type is either BSC or AVAX C-Chain
+	validNetworks := map[constants.NetworkType]bool{
+		constants.Bsc:        true,
+		constants.AvaxCChain: true,
+	}
+	networkType := constants.NetworkType(order.Network)
+	if !validNetworks[networkType] {
+		return fmt.Errorf("invalid network type: %s, must be BSC or AVAX C-Chain", order.Network)
 	}
 
 	return nil

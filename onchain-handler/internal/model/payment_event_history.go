@@ -11,6 +11,7 @@ type PaymentEventHistory struct {
 	ToAddress       string       `json:"to_address"`
 	ContractAddress string       `json:"contract_address"`
 	TokenSymbol     string       `json:"token_symbol"`
+	Network         string       `json:"network"`
 	Amount          string       `json:"amount"`
 	CreatedAt       time.Time    `json:"created_at"`
 	UpdatedAt       time.Time    `json:"updated_at"`

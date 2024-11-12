@@ -122,6 +122,7 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(payloads []dto.TokenT
 		// Prepare reward entry
 		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
 			RequestID:   payload.RequestID,
+			Network:     payload.Network,
 			FromAddress: payload.FromAddress,
 			ToAddress:   payload.ToAddress,
 			TokenAmount: payload.TokenAmount,
@@ -140,15 +141,45 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	recipients []string,
 	amounts []*big.Int,
 ) ([]model.TokenTransferHistory, error) {
+	// TODO: currently this supports only AVAX C-Chain, need support other networks like BSC
+	chainID := u.config.Blockchain.AvaxNetwork.AvaxChainID
+	bulkSenderContractAddress := u.config.Blockchain.AvaxNetwork.AvaxBulkSenderContractAddress
+	poolPrivateKey, err := u.config.GetPoolPrivateKey(fromAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get private key for pool address: %s, %w", fromAddress, err)
+	}
+	var tokenContractAddress string
+	if symbol == constants.USDT {
+		tokenContractAddress = u.config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress
+	} else {
+		tokenContractAddress = u.config.Blockchain.AvaxNetwork.AvaxLifePointContractAddress
+	}
+
 	// Perform the bulk transfer.
-	txHash, tokenSymbol, txFee, err := blockchain.BulkTransfer(ctx, u.ethClient, u.config, fromAddress, symbol, recipients, amounts)
+	txHash, tokenSymbol, txFee, err := blockchain.BulkTransfer(
+		ctx,
+		u.ethClient,
+		uint64(chainID),
+		bulkSenderContractAddress,
+		fromAddress,
+		poolPrivateKey,
+		tokenContractAddress,
+		recipients,
+		amounts,
+	)
 
 	// Process the transfer results.
 	for index := range tokenTransfers {
 		if err != nil {
 			u.handleTransferError(&tokenTransfers[index], err, txHash, tokenSymbol, txFee)
 		} else {
-			u.handleTransferSuccess(&tokenTransfers[index], txHash, tokenSymbol, txFee)
+			// Handle success for the first token transfer, using actual txFee
+			if index == 0 {
+				u.handleTransferSuccess(&tokenTransfers[index], txHash, tokenSymbol, txFee)
+			} else {
+				zeroFee := big.NewFloat(0) // Set fee as zero for subsequent token transfers in transaction
+				u.handleTransferSuccess(&tokenTransfers[index], txHash, tokenSymbol, zeroFee)
+			}
 		}
 	}
 

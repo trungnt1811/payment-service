@@ -25,7 +25,7 @@ const (
 
 // Global cache key
 const (
-	LatestBlockCacheKey  = "latest_block"
+	LatestBlockCacheKey  = "latest_block_"
 	LatestBlockCacheTime = 5 * time.Minute
 )
 
@@ -104,5 +104,13 @@ const (
 
 // Method ID
 const (
-	ERC20BalanceOfMethodID = "70a08231" // ERC20BalanceOfMethodID is the first 4 bytes of the keccak256 hash of "balanceOf(address)"
+	Erc20BalanceOfMethodID = "70a08231" // ERC20BalanceOfMethodID is the first 4 bytes of the keccak256 hash of "balanceOf(address)"
+)
+
+// Network type
+type NetworkType string
+
+const (
+	Bsc        NetworkType = "BSC"
+	AvaxCChain NetworkType = "AVAX C-Chain"
 )

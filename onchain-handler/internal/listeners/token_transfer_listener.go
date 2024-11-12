@@ -28,6 +28,7 @@ type tokenTransferListener struct {
 	baseEventListener        interfaces.BaseEventListener
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
+	network                  string
 	contractAddress          string
 	parsedABI                abi.ABI
 	queue                    *queue.Queue[dto.PaymentOrderDTO]
@@ -41,6 +42,7 @@ func NewTokenTransferListener(
 	baseEventListener interfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
+	network string,
 	contractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) (interfaces.EventListener, error) {
@@ -55,6 +57,7 @@ func NewTokenTransferListener(
 		baseEventListener:        baseEventListener,
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
+		network:                  network,
 		contractAddress:          contractAddress,
 		queue:                    orderQueue,
 		parsedABI:                parsedABI,
@@ -128,6 +131,7 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 					ContractAddress: vLog.Address.Hex(),
 					TokenSymbol:     tokenSymbol,
 					Amount:          transferEventValueInEth,
+					Network:         listener.network,
 				},
 			}
 
