@@ -171,9 +171,9 @@ func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) err
 	return u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
 }
 
-func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network string) ([]dto.PaymentOrderDTO, error) {
+func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTO, error) {
 	var orderDtos []dto.PaymentOrderDTO
-	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network)
+	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx, string(network))
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,20 @@ func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders
 }
 
 func (u *paymentOrderUCase) GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
-	orders, err := u.paymentOrderRepository.GetActivePaymentOrdersOnAvax(ctx, limit, offset)
+	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, string(constants.AvaxCChain))
+	if err != nil {
+		return nil, err
+	}
+	var orderDtos []dto.PaymentOrderDTO
+	for _, order := range orders {
+		orderDto := order.ToDto()
+		orderDtos = append(orderDtos, orderDto)
+	}
+	return orderDtos, nil
+}
+
+func (u *paymentOrderUCase) GetActivePaymentOrdersOnBsc(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
+	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, string(constants.Bsc))
 	if err != nil {
 		return nil, err
 	}

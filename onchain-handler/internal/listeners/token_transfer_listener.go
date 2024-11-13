@@ -28,7 +28,7 @@ type tokenTransferListener struct {
 	baseEventListener        interfaces.BaseEventListener
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
-	network                  string
+	network                  constants.NetworkType
 	contractAddress          string
 	parsedABI                abi.ABI
 	queue                    *queue.Queue[dto.PaymentOrderDTO]
@@ -42,7 +42,7 @@ func NewTokenTransferListener(
 	baseEventListener interfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	network string,
+	network constants.NetworkType,
 	contractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) (interfaces.EventListener, error) {
@@ -78,12 +78,12 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 		case <-ticker.C:
 			// Try to lock before dequeueing, ensuring no overlap
 			listener.mu.Lock()
-			log.LG.Info("Starting dequeue operation...")
+			log.LG.Debug("Starting dequeue operation...")
 			listener.dequeueOrders()
-			log.LG.Info("Dequeue operation finished.")
+			log.LG.Debug("Dequeue operation finished.")
 			listener.mu.Unlock()
 		case <-listener.ctx.Done():
-			log.LG.Infof("Stopping dequeue ticker: %v", listener.ctx.Err())
+			log.LG.Debugf("Stopping dequeue ticker: %v", listener.ctx.Err())
 			return
 		}
 	}
@@ -103,10 +103,10 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 	// Unpack the transfer event
 	transferEvent, err := listener.unpackTransferEvent(vLog)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack transfer event for address %s, block number %d: %w", vLog.Address.Hex(), vLog.BlockNumber, err)
+		return nil, fmt.Errorf("failed to unpack transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
-	log.LG.Infof("Detected Transfer event: From: %s, To: %s, Value: %s", transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
+	log.LG.Infof("Detected Transfer event on network %s : From: %s, To: %s, Value: %s", string(listener.network), transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
 
 	queueItems := listener.queue.GetItems()
 
@@ -117,7 +117,7 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 			// Convert transfer event value from Wei to Eth
 			transferEventValueInEth, err := utils.ConvertWeiToEth(transferEvent.Value.String())
 			if err != nil {
-				log.LG.Errorf("Failed to convert transfer event value to ETH for order ID %d, error: %v", order.ID, err)
+				log.LG.Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
 			}
 
@@ -131,19 +131,19 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 					ContractAddress: vLog.Address.Hex(),
 					TokenSymbol:     tokenSymbol,
 					Amount:          transferEventValueInEth,
-					Network:         listener.network,
+					Network:         string(listener.network),
 				},
 			}
 
 			// Create payment event history
 			if err := listener.paymentEventHistoryUCase.CreatePaymentEventHistory(listener.ctx, payloads); err != nil {
-				log.LG.Errorf("Failed to process payment event history for order ID %d, error: %v", order.ID, err)
+				log.LG.Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
 			}
 
 			// Process the payment for the order
 			if err := listener.processOrderPayment(index, order, transferEvent, vLog.BlockNumber); err != nil {
-				log.LG.Errorf("Failed to process payment for order ID %d, error: %v", order.ID, err)
+				log.LG.Errorf("Failed to process payment on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 			}
 		}
 	}
@@ -200,7 +200,7 @@ func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order 
 
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
-		log.LG.Infof("Processed full payment for order ID: %d", order.ID)
+		log.LG.Infof("Processed full payment on network %s for order ID: %d", string(listener.network), order.ID)
 
 		// Set to false as the wallet is no longer in use after full payment.
 		inUse = false
@@ -209,7 +209,7 @@ func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order 
 		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), inUse, blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
-		log.LG.Infof("Processed partial payment for order ID: %d", order.ID)
+		log.LG.Infof("Processed partial payment on network %s for order ID: %d", string(listener.network), order.ID)
 
 		// Set to true as the wallet is still in use for further payments.
 		inUse = true
@@ -291,7 +291,7 @@ func (listener *tokenTransferListener) dequeueOrders() {
 
 	// Refill the queue to ensure it has the required number of items
 	if err := listener.queue.FillQueue(); err != nil {
-		log.LG.Errorf("Failed to refill the queue: %v", err)
+		log.LG.Errorf("Failed to refill the %s queue: %v", string(listener.network), err)
 	}
 }
 

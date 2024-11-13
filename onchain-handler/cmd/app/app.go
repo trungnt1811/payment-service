@@ -32,7 +32,6 @@ import (
 	"github.com/genefriendway/onchain-handler/wire"
 )
 
-// TODO: need implement client and workers for other network like BSC
 func RunApp(config *conf.Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -46,9 +45,13 @@ func RunApp(config *conf.Configuration) {
 	// Initialize database connection
 	db := database.DBConnWithLoglevel(logger.Info)
 
-	// Initialize ETH client on AVAX C-Chain
+	// Initialize AVAX C-Chain client
 	ethClientAvax := initializeEthClient(config.Blockchain.AvaxNetwork.AvaxRpcUrl)
 	defer ethClientAvax.Close()
+
+	// Initialize BSC client
+	ethClientBsc := initializeEthClient(config.Blockchain.BscNetwork.BscRpcUrl)
+	defer ethClientBsc.Close()
 
 	// Initialize caching
 	cacheRepository := initializeCache(ctx)
@@ -61,8 +64,11 @@ func RunApp(config *conf.Configuration) {
 	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	transferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
 
-	// Initialize order queue on AVAX C-Chain
+	// Initialize AVAX C-Chain payment order queue
 	paymentOrderQueueOnAvax := initializePaymentOrderQueueOnAvax(ctx, paymentOrderUCase)
+
+	// Initialize BSC payment order queue
+	paymentOrderQueueOnBsc := initializePaymentOrderQueueOnBsc(ctx, paymentOrderUCase)
 
 	// Initialize payment wallets
 	initializePaymentWallets(ctx, config, paymentWalletUCase)
@@ -72,10 +78,60 @@ func RunApp(config *conf.Configuration) {
 	go releaseWalletWorker.Start(ctx)
 
 	// Start AVAX workers
-	startWorkers(ctx, config, cacheRepository, ethClientAvax, string(constants.AvaxCChain), blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase)
+	startWorkers(
+		ctx,
+		config,
+		cacheRepository,
+		ethClientAvax,
+		constants.AvaxCChain,
+		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		blockstateUcase,
+		paymentOrderUCase,
+		paymentEventHistoryUCase,
+	)
+
+	// Start BSC workers
+	startWorkers(
+		ctx,
+		config,
+		cacheRepository,
+		ethClientBsc,
+		constants.Bsc,
+		config.Blockchain.BscNetwork.BscUSDTContractAddress,
+		blockstateUcase,
+		paymentOrderUCase,
+		paymentEventHistoryUCase,
+	)
 
 	// Start AVAX event listeners
-	startEventListeners(ctx, config, ethClientAvax, string(constants.AvaxCChain), cacheRepository, blockstateUcase, paymentOrderUCase, paymentEventHistoryUCase, paymentOrderQueueOnAvax)
+	startEventListeners(
+		ctx,
+		config,
+		ethClientAvax,
+		constants.AvaxCChain,
+		config.Blockchain.AvaxNetwork.AvaxStartBlockListener,
+		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		cacheRepository,
+		blockstateUcase,
+		paymentOrderUCase,
+		paymentEventHistoryUCase,
+		paymentOrderQueueOnAvax,
+	)
+
+	// Start BSC event listeners
+	startEventListeners(
+		ctx,
+		config,
+		ethClientBsc,
+		constants.Bsc,
+		config.Blockchain.BscNetwork.BscStartBlockListener,
+		config.Blockchain.BscNetwork.BscUSDTContractAddress,
+		cacheRepository,
+		blockstateUcase,
+		paymentOrderUCase,
+		paymentEventHistoryUCase,
+		paymentOrderQueueOnBsc,
+	)
 
 	// Register routes
 	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, ethClientAvax)
@@ -138,12 +194,21 @@ func initializePaymentOrderQueueOnAvax(ctx context.Context, paymentOrderUCase in
 	return paymentOrderQueue
 }
 
+func initializePaymentOrderQueueOnBsc(ctx context.Context, paymentOrderUCase interfaces.PaymentOrderUCase) *queue.Queue[dto.PaymentOrderDTO] {
+	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, paymentOrderUCase.GetActivePaymentOrdersOnBsc)
+	if err != nil {
+		log.LG.Fatalf("Create payment order queue error: %v", err)
+	}
+	return paymentOrderQueue
+}
+
 func startWorkers(
 	ctx context.Context,
 	config *conf.Configuration,
 	cacheRepository infrainterfaces.CacheRepository,
 	ethClient *ethclient.Client,
-	network string,
+	network constants.NetworkType,
+	usdtContractAddress string,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
@@ -156,7 +221,7 @@ func startWorkers(
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
 		cacheRepository,
-		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		usdtContractAddress,
 		ethClient,
 		network,
 	)
@@ -167,7 +232,9 @@ func startEventListeners(
 	ctx context.Context,
 	config *conf.Configuration,
 	ethClient *ethclient.Client,
-	network string,
+	network constants.NetworkType,
+	startBlockListener uint64,
+	usdtContractAddress string,
 	cacheRepository infrainterfaces.CacheRepository,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
@@ -179,7 +246,7 @@ func startEventListeners(
 		network,
 		cacheRepository,
 		blockstateUcase,
-		&config.Blockchain.AvaxNetwork.AvaxStartBlockListener,
+		&startBlockListener,
 	)
 
 	tokenTransferListener, err := listeners.NewTokenTransferListener(
@@ -189,7 +256,7 @@ func startEventListeners(
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
 		network,
-		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		usdtContractAddress,
 		paymentOrderQueue,
 	)
 	if err != nil {

@@ -19,7 +19,7 @@ type latestBlockWorker struct {
 	cacheRepo       infrainterfaces.CacheRepository
 	blockStateUCase interfaces.BlockStateUCase
 	ethClient       *ethclient.Client
-	network         string
+	network         constants.NetworkType
 	isRunning       bool       // Tracks if catchup is running
 	mu              sync.Mutex // Mutex to protect the isRunning flag
 }
@@ -28,7 +28,7 @@ func NewLatestBlockWorker(
 	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
 	ethClient *ethclient.Client,
-	network string,
+	network constants.NetworkType,
 ) interfaces.Worker {
 	return &latestBlockWorker{
 		cacheRepo:       cacheRepo,
@@ -48,7 +48,7 @@ func (w *latestBlockWorker) Start(ctx context.Context) {
 		case <-ticker.C:
 			go w.run(ctx)
 		case <-ctx.Done():
-			log.LG.Info("Shutting down latestBlockWorker")
+			log.LG.Infof("Shutting down latestBlockWorker on network %s", string(w.network))
 			return
 		}
 	}
@@ -77,7 +77,7 @@ func (w *latestBlockWorker) run(ctx context.Context) {
 
 // fetchAndStoreLatestBlock fetches the latest block and stores it in cache and DB
 func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + w.network}
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + string(w.network)}
 
 	// Try to retrieve the latest block from cache
 	var latestBlock uint64
@@ -100,7 +100,7 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 	// Fetch the latest block from the Ethereum blockchain
 	blockNumber, err := utils.GetLatestBlockNumber(ctx, w.ethClient)
 	if err != nil {
-		log.LG.Infof("Failed to fetch latest block from blockchain: %v\n", err)
+		log.LG.Infof("Failed to fetch latest block from %s: %v\n", string(w.network), err)
 		return
 	}
 
@@ -121,5 +121,5 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 		}
 	}
 
-	log.LG.Infof("Latest block updated to: %d\n", latestBlock)
+	log.LG.Infof("Latest block on network %s updated to: %d\n", string(w.network), latestBlock)
 }

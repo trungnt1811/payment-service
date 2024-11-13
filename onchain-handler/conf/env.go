@@ -33,6 +33,7 @@ type PaymentGatewayConfiguration struct {
 
 type BlockchainConfiguration struct {
 	AvaxNetwork      AvaxNetworkConfiguration      `mapstructure:",squash"`
+	BscNetwork       BscNetworkConfiguration       `mapstructure:",squash"`
 	LPTreasuryPool   LPTreasuryPoolConfiguration   `mapstructure:",squash"`
 	USDTTreasuryPool USDTTreasuryPoolConfiguration `mapstructure:",squash"`
 	LPCommunityPool  LPCommunityPoolConfiguration  `mapstructure:",squash"`
@@ -47,6 +48,13 @@ type AvaxNetworkConfiguration struct {
 	AvaxUSDTContractAddress       string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
 	AvaxLifePointContractAddress  string `mapstructure:"AVAX_LIFE_POINT_CONTRACT_ADDRESS"`
 	AvaxBulkSenderContractAddress string `mapstructure:"AVAX_BULK_SENDER_CONTRACT_ADDRESS"`
+}
+
+type BscNetworkConfiguration struct {
+	BscRpcUrl              string `mapstructure:"BSC_RPC_URL"`
+	BscChainID             uint32 `mapstructure:"BSC_CHAIN_ID"`
+	BscStartBlockListener  uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
+	BscUSDTContractAddress string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
 }
 
 type WalletConfiguration struct {

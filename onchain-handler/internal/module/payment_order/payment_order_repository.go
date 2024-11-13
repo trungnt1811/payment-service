@@ -30,8 +30,8 @@ func (r *paymentOrderRepository) CreatePaymentOrders(ctx context.Context, orders
 	return orders, nil
 }
 
-// GetActivePaymentOrdersOnAvax retrieves active orders that have not expired on AVAX C-Chain.
-func (r *paymentOrderRepository) GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]model.PaymentOrder, error) {
+// GetActivePaymentOrders retrieves active orders that have not expired on a specific network.
+func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]model.PaymentOrder, error) {
 	var orders []model.PaymentOrder
 	currentTime := time.Now().UTC() // Calculate current time in Go
 
@@ -41,7 +41,7 @@ func (r *paymentOrderRepository) GetActivePaymentOrdersOnAvax(ctx context.Contex
 		Limit(limit).
 		Offset(offset).
 		Where("payment_order.network = ? AND payment_order.status IN (?) AND payment_order.expired_time > ?",
-			string(constants.AvaxCChain),
+			network,
 			[]string{constants.Pending, constants.Partial},
 			currentTime,
 		).
