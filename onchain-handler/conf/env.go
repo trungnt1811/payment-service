@@ -197,6 +197,7 @@ func (config Configuration) GetPaymentCovering() float64 {
 func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
 	tokenSymbols := map[string]string{
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress:      constants.USDT,
+		config.Blockchain.BscNetwork.BscUSDTContractAddress:        constants.USDT,
 		config.Blockchain.AvaxNetwork.AvaxLifePointContractAddress: constants.LP,
 	}
 
