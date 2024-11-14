@@ -18,6 +18,7 @@ type TokenTransferResultDTOResponse struct {
 
 type PaymentOrderDTOResponse struct {
 	RequestID      string              `json:"request_id"`
+	Network        string              `json:"network"`
 	Amount         string              `json:"amount"`
 	Transferred    string              `json:"transferred"`
 	Status         string              `json:"status"`

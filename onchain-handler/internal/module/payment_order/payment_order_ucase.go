@@ -254,6 +254,7 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 		}
 		orderDTO := dto.PaymentOrderDTOResponse{
 			RequestID:      order.RequestID,
+			Network:        order.Network,
 			Amount:         order.Amount,
 			Transferred:    order.Transferred,
 			Status:         order.Status,
@@ -287,6 +288,7 @@ func mapEventHistoriesToDTO(eventHistories []model.PaymentEventHistory) []dto.Pa
 			FromAddress:     eventHistory.FromAddress,
 			ToAddress:       eventHistory.ToAddress,
 			Amount:          eventHistory.Amount,
+			Network:         eventHistory.Network,
 			TokenSymbol:     eventHistory.TokenSymbol,
 			CreatedAt:       eventHistory.CreatedAt,
 		}

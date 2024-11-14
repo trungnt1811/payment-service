@@ -8,5 +8,6 @@ type PaymentHistoryDTO struct {
 	ToAddress       string    `json:"to_address"`
 	Amount          string    `json:"amount"`
 	TokenSymbol     string    `json:"token_symbol"`
+	Network         string    `json:"network"`
 	CreatedAt       time.Time `json:"created_at"`
 }
