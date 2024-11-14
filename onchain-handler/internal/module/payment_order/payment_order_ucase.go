@@ -102,10 +102,6 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 					ExpiredTime: time.Now().UTC().Add(expiredOrderTime),
 				}
 				orders = append(orders, order)
-
-				orderDTO := order.ToCreatedPaymentOrderDTO()
-				orderDTO.PaymentAddress = assignWallet.Address
-				response = append(response, orderDTO)
 			}
 
 			// Save the created payment orders to the database within the transaction
@@ -115,10 +111,11 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			}
 
 			// Mappping order id and sign payload
-			response, err = u.mapOrderIDsAndSignPayloads(orders)
+			responseWithSignature, err := u.mapOrderIDsAndSignPayloads(orders)
 			if err != nil {
 				return err
 			}
+			response = append(response, responseWithSignature...)
 			return nil
 		})
 		// Check if there was an error within the transaction
