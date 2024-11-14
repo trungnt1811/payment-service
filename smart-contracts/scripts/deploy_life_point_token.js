@@ -1,46 +1,30 @@
+// scripts/deploy_life_point_token.js
+require("dotenv").config();
 const { ethers } = require("hardhat");
 
 async function main() {
     const [deployer] = await ethers.getSigners();
     
-    console.log("Interacting with LifePointTokenFactory using account:", deployer.address);
+    console.log("Deploying LifePointToken contract with account:", deployer.address);
     const balance = await deployer.getBalance();
     console.log("Account balance:", ethers.utils.formatEther(balance));
 
-    // Address of the deployed LifePointTokenFactory (from previous script)
-    const lifePointTokenFactoryAddress = "0xYourFactoryAddress"; // Replace with the actual factory address
-    const LifePointTokenFactory = await ethers.getContractFactory("LifePointTokenFactory");
-    const lifePointTokenFactory = LifePointTokenFactory.attach(lifePointTokenFactoryAddress);
+    // Get parameters from environment variables
+    const initialRecipient = process.env.INITIAL_RECIPIENT_LP;
+    const tokenName = process.env.TOKEN_NAME_LP;
+    const tokenSymbol = process.env.TOKEN_SYMBOL_LP;
+    if (!initialRecipient || !tokenName || !tokenSymbol) {
+        throw new Error("Please set INITIAL_RECIPIENT_LP, TOKEN_NAME_LP and TOKEN_SYMBOL_LP in your .env file");
+    }
 
-    // Set parameters for LifePointToken version
-    const tokenName = "LifePoint V1";
-    const tokenSymbol = "LPV1";
-    const ownerAddress = "0xOwnerAddress"; // Replace with the actual owner address
-    const totalMinted = 100000000; // Mint 100,000,000 tokens (18 decimals)
-
-    // Deploy a new version of LifePointToken using the factory
-    const tx = await lifePointTokenFactory.createLifePointToken(tokenName, tokenSymbol, ownerAddress, totalMinted);
-    await tx.wait();
-
-    // Get the deployed token address
-    const tokenVersion = 1; // Assuming this is the first token created
-    const lifePointTokenAddress = await lifePointTokenFactory.getLifePointToken(tokenVersion);
-    console.log(`LifePointToken version ${tokenVersion} deployed to:`, lifePointTokenAddress);
-
-    /*
-    // Attach to the existing LifePointToken contract for a specific version
+    // Deploy the contract
     const LifePointToken = await ethers.getContractFactory("LifePointToken");
-    const token = await LifePointToken.attach(lifePointTokenAddress);
+    const lifePointToken = await LifePointToken.deploy(tokenName, tokenSymbol, initialRecipient);
 
-    // Mint 1000 tokens for the recipient
-    const mintAmount = 1000;  // 1000 tokens with 18 decimals
+    await lifePointToken.deployed();
 
-    // Call the mint function directly
-    const mintTx = await token.mint(recipient.address, mintAmount);
-    await mintTx.wait();
-
-    console.log(`Minted ${ethers.utils.formatEther(mintAmount)} tokens for address: ${recipient.address}`);
-    */
+    console.log("LifePointToken deployed to:", lifePointToken.address);
+    console.log("Initial tokens minted to:", initialRecipient);
 }
 
 main()

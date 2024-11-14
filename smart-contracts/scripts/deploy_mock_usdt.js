@@ -1,4 +1,6 @@
-// scripts/deploy.js
+// scripts/deploy_mock_usdt.js
+require("dotenv").config();
+
 const { ethers } = require("hardhat");
 
 async function main() {
@@ -8,13 +10,19 @@ async function main() {
     const balance = await deployer.getBalance();
     console.log("Account balance:", ethers.utils.formatEther(balance));
 
-    // Get the ContractFactory and deploy the contract
+    // Get initialRecipient from environment variable
+    const initialRecipient = process.env.INITIAL_RECIPIENT_MOCK_USDT;
+    if (!initialRecipient) {
+        throw new Error("Please set INITIAL_RECIPIENT_MOCK_USDT in your .env file");
+    }
+
     const MockUSDT = await ethers.getContractFactory("MockUSDT");
-    const mockUSDT = await MockUSDT.deploy();
+    const mockUSDT = await MockUSDT.deploy(initialRecipient);
 
     await mockUSDT.deployed();
 
     console.log("MockUSDT deployed to:", mockUSDT.address);
+    console.log("Initial tokens minted to:", initialRecipient);
 }
 
 main()
