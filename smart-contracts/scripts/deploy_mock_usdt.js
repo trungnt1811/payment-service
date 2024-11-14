@@ -17,7 +17,7 @@ async function main() {
     }
 
     const MockUSDT = await ethers.getContractFactory("MockUSDT");
-    const mockUSDT = await MockUSDT.deploy(initialRecipient);
+    const mockUSDT = await MockUSDT.deploy(initialRecipient, initialSupply);
 
     await mockUSDT.deployed();
 

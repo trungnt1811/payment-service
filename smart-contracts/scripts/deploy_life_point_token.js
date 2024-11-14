@@ -20,7 +20,7 @@ async function main() {
 
     // Deploy the contract
     const LifePointToken = await ethers.getContractFactory("LifePointToken");
-    const lifePointToken = await LifePointToken.deploy(tokenName, tokenSymbol, initialRecipient);
+    const lifePointToken = await LifePointToken.deploy(tokenName, tokenSymbol, initialRecipient, initialSupply);
 
     await lifePointToken.deployed();
 
