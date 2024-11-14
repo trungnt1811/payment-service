@@ -10,10 +10,10 @@ async function main() {
     const balance = await deployer.getBalance();
     console.log("Account balance:", ethers.utils.formatEther(balance));
 
-    // Get initialRecipient from environment variable
     const initialRecipient = process.env.INITIAL_RECIPIENT_MOCK_USDT;
-    if (!initialRecipient) {
-        throw new Error("Please set INITIAL_RECIPIENT_MOCK_USDT in your .env file");
+    const initialSupply = process.env.INITIAL_SUPPLY_MOCK_USDT;
+    if (!initialRecipient || !initialSupply) {
+        throw new Error("Please set INITIAL_RECIPIENT_MOCK_USDT and INITIAL_SUPPLY_MOCK_USDT in your .env file");
     }
 
     const MockUSDT = await ethers.getContractFactory("MockUSDT");

@@ -13,8 +13,9 @@ async function main() {
     const initialRecipient = process.env.INITIAL_RECIPIENT_LP;
     const tokenName = process.env.TOKEN_NAME_LP;
     const tokenSymbol = process.env.TOKEN_SYMBOL_LP;
-    if (!initialRecipient || !tokenName || !tokenSymbol) {
-        throw new Error("Please set INITIAL_RECIPIENT_LP, TOKEN_NAME_LP and TOKEN_SYMBOL_LP in your .env file");
+    const initialSupply = process.env.INITIAL_SUPPLY_LP;
+    if (!initialRecipient || !tokenName || !tokenSymbol || !initialSupply) {
+        throw new Error("Please set INITIAL_RECIPIENT_LP, TOKEN_NAME_LP, TOKEN_SYMBOL_LP and INITIAL_SUPPLY_LP in your .env file");
     }
 
     // Deploy the contract
