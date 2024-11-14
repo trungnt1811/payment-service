@@ -65,10 +65,10 @@ func RunApp(config *conf.Configuration) {
 	transferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
 
 	// Initialize AVAX C-Chain payment order queue
-	paymentOrderQueueOnAvax := initializePaymentOrderQueueOnAvax(ctx, paymentOrderUCase)
+	paymentOrderQueueOnAvax := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrdersOnAvax)
 
 	// Initialize BSC payment order queue
-	paymentOrderQueueOnBsc := initializePaymentOrderQueueOnBsc(ctx, paymentOrderUCase)
+	paymentOrderQueueOnBsc := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrdersOnBsc)
 
 	// Initialize payment wallets
 	initializePaymentWallets(ctx, config, paymentWalletUCase)
@@ -186,16 +186,11 @@ func initializePaymentWallets(
 	}
 }
 
-func initializePaymentOrderQueueOnAvax(ctx context.Context, paymentOrderUCase interfaces.PaymentOrderUCase) *queue.Queue[dto.PaymentOrderDTO] {
-	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, paymentOrderUCase.GetActivePaymentOrdersOnAvax)
-	if err != nil {
-		log.LG.Fatalf("Create payment order queue error: %v", err)
-	}
-	return paymentOrderQueue
-}
-
-func initializePaymentOrderQueueOnBsc(ctx context.Context, paymentOrderUCase interfaces.PaymentOrderUCase) *queue.Queue[dto.PaymentOrderDTO] {
-	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, paymentOrderUCase.GetActivePaymentOrdersOnBsc)
+func initializePaymentOrderQueue(
+	ctx context.Context,
+	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
+) *queue.Queue[dto.PaymentOrderDTO] {
+	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, loader)
 	if err != nil {
 		log.LG.Fatalf("Create payment order queue error: %v", err)
 	}
