@@ -33,6 +33,7 @@ type expiredOrderCatchupWorker struct {
 	parsedABI                abi.ABI
 	ethClient                *ethclient.Client
 	network                  constants.NetworkType
+	processedOrderIDs        map[uint64]struct{}
 	isRunning                bool       // Tracks if catchup is running
 	mu                       sync.Mutex // Mutex to protect the isRunning flag
 }
@@ -60,6 +61,7 @@ func NewExpiredOrderCatchupWorker(
 		parsedABI:                parsedABI,
 		ethClient:                ethClient,
 		network:                  network,
+		processedOrderIDs:        make(map[uint64]struct{}),
 	}
 }
 
@@ -117,14 +119,6 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	// Find the smallest block height from the expired orders
 	minBlockHeight := expiredOrders[0].BlockHeight
 
-	// Start processing logs from the smallest block height
-	w.processExpiredOrders(ctx, minBlockHeight, expiredOrders)
-}
-
-// processExpiredOrders processes logs from the blockchain starting from the given block height
-func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, startBlock uint64, expiredOrders []dto.PaymentOrderDTO) {
-	log.LG.Infof("Processing expired orders on network %s starting from block: %d", string(w.network), startBlock)
-
 	// Define the maximum block we should query up to
 	latestBlock, err := w.getLatestBlockFromCacheOrBlockchain(ctx)
 	if err != nil {
@@ -135,24 +129,61 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 	// Calculate the effective latest block considering the confirmation depth.
 	effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
 
-	// Check for invalid effective block height
-	if effectiveLatestBlock <= 0 {
-		log.LG.Warnf("Effective latest block (%d) is non-positive. Skipping processing for expired orders on network %s", effectiveLatestBlock, string(w.network))
+	// Start processing logs from the smallest block height to the effective latest block
+	w.processExpiredOrders(ctx, minBlockHeight, effectiveLatestBlock, expiredOrders)
+
+	// Update processed block height for non processed orders
+	var nonProcessedOrders []dto.PaymentOrderDTO
+	for index, expiredOrder := range expiredOrders {
+		if _, exists := w.processedOrderIDs[expiredOrder.ID]; !exists {
+			expiredOrders[index].BlockHeight = effectiveLatestBlock
+			nonProcessedOrders = append(nonProcessedOrders, expiredOrders[index])
+		}
+	}
+
+	if len(nonProcessedOrders) > 0 {
+		// Attempt to batch update the block heights
+		err = w.paymentOrderUCase.BatchUpdateOrderBlockHeights(ctx, nonProcessedOrders)
+		if err != nil {
+			// Log all failed order IDs
+			var failedOrderIDs []uint64
+			for _, order := range nonProcessedOrders {
+				failedOrderIDs = append(failedOrderIDs, order.ID)
+			}
+			log.LG.Errorf("Failed to update block heights for orders with IDs: %v, error: %v", failedOrderIDs, err)
+		} else {
+			// Log all successful order IDs
+			var successfulOrderIDs []uint64
+			for _, order := range nonProcessedOrders {
+				successfulOrderIDs = append(successfulOrderIDs, order.ID)
+			}
+			log.LG.Infof("Successfully updated block heights for orders with IDs: %v", successfulOrderIDs)
+		}
+	}
+}
+
+// processExpiredOrders processes logs from the blockchain starting from the given block height
+func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, startBlock, endBlock uint64, expiredOrders []dto.PaymentOrderDTO) {
+	log.LG.Infof("Processing expired orders on network %s starting from block %d to block %d", string(w.network), startBlock, endBlock)
+
+	// Check for invalid end block height
+	if endBlock <= 0 {
+		log.LG.Warnf("End block (%d) is non-positive. Skipping processing for expired orders on network %s", endBlock, string(w.network))
 		return
 	}
 
-	// Safeguard if startBlock is beyond the effective latest block
-	if startBlock > effectiveLatestBlock {
-		log.LG.Warnf("Start block %d is beyond the effective latest block %d. No logs to process on network %s", startBlock, effectiveLatestBlock, string(w.network))
+	// Safeguard if start block is beyond the end block
+	if startBlock > endBlock {
+		log.LG.Warnf("Start block %d is beyond the end block %d. No logs to process on network %s", startBlock, endBlock, string(w.network))
 		return
 	}
 
 	// Process logs in chunks of DefaultBlockOffset
 	address := common.HexToAddress(w.contractAddress)
-	for chunkStart := startBlock; chunkStart <= effectiveLatestBlock; chunkStart += constants.DefaultBlockOffset {
+	for chunkStart := startBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
 		chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
-		if chunkEnd > effectiveLatestBlock {
-			chunkEnd = effectiveLatestBlock
+		if chunkEnd > endBlock {
+			chunkEnd = endBlock
 		}
 
 		log.LG.Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, string(w.network))
@@ -332,6 +363,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	}
 
 	log.LG.Infof("Order ID %d on network %s updated to status %s with transferred amount: %s", order.ID, string(w.network), status, transferredAmount)
+	w.processedOrderIDs[order.ID] = struct{}{}
 	return nil
 }
 

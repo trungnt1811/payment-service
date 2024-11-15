@@ -225,6 +225,12 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 			currentBlock = chunkEnd + 1
 		}
 
+		// Save the last processed block to cache
+		cacheKey := &caching.Keyer{Raw: constants.LastProcessedBlockCacheKey + string(listener.network)}
+		if err := listener.cacheRepo.SaveItem(cacheKey, latestBlock, constants.LastProcessedBlockCacheTime); err != nil {
+			log.LG.Errorf("Failed to update last processed block on network %s to cache: %v", string(listener.network), err)
+		}
+
 		// Update the last processed block in the repository.
 		if err := listener.blockStateUCase.UpdateLastProcessedBlock(ctx, currentBlock, listener.network); err != nil {
 			log.LG.Errorf("Failed to update last processed block on network %s in repository: %v", string(listener.network), err)

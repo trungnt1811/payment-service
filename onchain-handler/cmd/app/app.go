@@ -247,6 +247,7 @@ func startEventListeners(
 	tokenTransferListener, err := listeners.NewTokenTransferListener(
 		ctx,
 		config,
+		cacheRepository,
 		baseEventListener,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,

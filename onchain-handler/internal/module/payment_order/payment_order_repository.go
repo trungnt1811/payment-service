@@ -132,6 +132,37 @@ func (r *paymentOrderRepository) BatchUpdateOrderStatuses(ctx context.Context, o
 	return nil
 }
 
+// BatchUpdateOrderBlockHeights updates the block heights of multiple payment orders by their OrderIDs.
+func (r *paymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error {
+	// Check if the lengths of orderIDs and blockHeights match
+	if len(orderIDs) != len(blockHeights) {
+		return fmt.Errorf("the number of order IDs and block heights must be the same")
+	}
+
+	// Build the SQL CASE statement for updating different block heights based on order IDs
+	caseSQL := "CASE"
+	for i, orderID := range orderIDs {
+		caseSQL += fmt.Sprintf(" WHEN id = %d THEN %d", orderID, blockHeights[i])
+	}
+	caseSQL += " END"
+
+	// Perform the batch update using a single query with CASE and IN
+	result := r.db.WithContext(ctx).
+		Model(&model.PaymentOrder{}).
+		Where("id IN ?", orderIDs).
+		Update("block_height", gorm.Expr(caseSQL))
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update block heights: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no orders found with the provided IDs")
+	}
+
+	return nil
+}
+
 // GetExpiredPaymentOrders retrieves orders for a specific network that are expired within a day.
 func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]model.PaymentOrder, error) {
 	var orders []model.PaymentOrder

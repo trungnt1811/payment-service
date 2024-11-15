@@ -14,6 +14,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/infra/caching"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -25,6 +27,7 @@ import (
 type tokenTransferListener struct {
 	ctx                      context.Context
 	config                   *conf.Configuration
+	cacheRepo                infrainterfaces.CacheRepository
 	baseEventListener        interfaces.BaseEventListener
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
@@ -39,6 +42,7 @@ type tokenTransferListener struct {
 func NewTokenTransferListener(
 	ctx context.Context,
 	config *conf.Configuration,
+	cacheRepo infrainterfaces.CacheRepository,
 	baseEventListener interfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
@@ -54,6 +58,7 @@ func NewTokenTransferListener(
 	listener := &tokenTransferListener{
 		ctx:                      ctx,
 		config:                   config,
+		cacheRepo:                cacheRepo,
 		baseEventListener:        baseEventListener,
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
@@ -247,6 +252,16 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 
 // dequeueOrders removes expired or successful orders from the queue and refills it to maintain the limit.
 func (listener *tokenTransferListener) dequeueOrders() {
+	// Retrieve last processed block from cache
+	cacheKey := &caching.Keyer{Raw: constants.LastProcessedBlockCacheKey + string(listener.network)}
+
+	var latestProcessedBlock uint64
+	err := listener.cacheRepo.RetrieveItem(cacheKey, &latestProcessedBlock)
+	if err == nil {
+		log.LG.Debugf("Retrieved %s last processed block from cache: %d", string(listener.network), latestProcessedBlock)
+		latestProcessedBlock = 0
+	}
+
 	// Retrieve all current orders in the queue
 	orders := listener.queue.GetItems()
 
@@ -257,6 +272,9 @@ func (listener *tokenTransferListener) dequeueOrders() {
 		if listener.shouldDequeueOrder(order) {
 			if order.Status != constants.Success {
 				orders[index].Status = constants.Expired
+				if latestProcessedBlock > 0 {
+					orders[index].BlockHeight = latestProcessedBlock
+				}
 				dequeueOrders = append(dequeueOrders, orders[index])
 			}
 			if err := listener.queue.Dequeue(func(o dto.PaymentOrderDTO) bool {
