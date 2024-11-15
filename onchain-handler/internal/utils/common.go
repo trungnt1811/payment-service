@@ -66,7 +66,7 @@ func InitPaymentWallets(
 		if err != nil {
 			return err
 		}
-		log.LG.Info("Successfully created payment wallets")
+		log.GetLogger().Info("Successfully created payment wallets")
 	}
 
 	return nil

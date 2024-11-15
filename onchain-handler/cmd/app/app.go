@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	swaggerfiles "github.com/swaggo/files"
 	ginswagger "github.com/swaggo/gin-swagger"
 
@@ -28,7 +27,7 @@ import (
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/internal/workers"
-	"github.com/genefriendway/onchain-handler/log"
+	logger_interface "github.com/genefriendway/onchain-handler/log"
 	"github.com/genefriendway/onchain-handler/wire"
 )
 
@@ -146,18 +145,38 @@ func RunApp(config *conf.Configuration) {
 // Helper Functions
 
 func initializeLoggerAndMode(config *conf.Configuration) {
+	// config logger config. Can be replaced with any logger config
+	// Create a logger with default configuration
+	factory := &logger_interface.ZapLoggerFactory{}
+	logger, err := factory.CreateLogger(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// Set service name and environment
+	logger.SetServiceName("OnchainHandler")
 	if config.Env == "PROD" {
-		log.InitZerologLogger(os.Stdout, zerolog.InfoLevel)
+		logger.SetConfigModeByCode(logger_interface.PRODUCTION_ENVIRONMENT_CODE_MODE)
+		logger.SetLogLevel(logger_interface.InfoLevel)
 		gin.SetMode(gin.ReleaseMode)
 	} else {
-		log.InitZerologLogger(os.Stdout, zerolog.DebugLevel)
+		logger.SetConfigModeByCode(logger_interface.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+		logger.SetLogLevel(logger_interface.DebugLevel)
 	}
+
+	// Use the logger
+	logger_interface.InitLogger(logger)
+	logger.Info("Application started")
+	logger.WithFields(map[string]interface{}{
+		"appName": config.AppName,
+		"env":     config.Env,
+	}).Info("Starting application")
 }
 
 func initializeRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.DefaultPagination())
-	r.Use(middleware.RequestLogger(log.LG.Instance))
+	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(gin.Recovery())
 	return r
 }
@@ -165,7 +184,7 @@ func initializeRouter() *gin.Engine {
 func initializeEthClient(rpcUrl string) *ethclient.Client {
 	ethClient, err := utils.InitEthClient(rpcUrl)
 	if err != nil {
-		log.LG.Fatalf("Failed to connect to ETH client: %v", err)
+		logger_interface.GetLogger().Fatalf("Failed to connect to ETH client: %v", err)
 	}
 	return ethClient
 }
@@ -182,7 +201,7 @@ func initializePaymentWallets(
 ) {
 	err := utils.InitPaymentWallets(ctx, config, paymentWalletUCase)
 	if err != nil {
-		log.LG.Fatalf("Init payment wallets error: %v", err)
+		logger_interface.GetLogger().Fatalf("Init payment wallets error: %v", err)
 	}
 }
 
@@ -192,7 +211,7 @@ func initializePaymentOrderQueue(
 ) *queue.Queue[dto.PaymentOrderDTO] {
 	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, loader)
 	if err != nil {
-		log.LG.Fatalf("Create payment order queue error: %v", err)
+		logger_interface.GetLogger().Fatalf("Create payment order queue error: %v", err)
 	}
 	return paymentOrderQueue
 }
@@ -256,13 +275,13 @@ func startEventListeners(
 		paymentOrderQueue,
 	)
 	if err != nil {
-		log.LG.Fatalf("Failed to initialize tokenTransferListener: %v", err)
+		logger_interface.GetLogger().Fatalf("Failed to initialize tokenTransferListener: %v", err)
 	}
 
 	tokenTransferListener.Register(ctx)
 	go func() {
 		if err := baseEventListener.RunListener(ctx); err != nil {
-			log.LG.Errorf("Error running event listeners: %v", err)
+			logger_interface.GetLogger().Errorf("Error running event listeners: %v", err)
 		}
 	}()
 }
@@ -281,7 +300,7 @@ func startServer(
 
 	go func() {
 		if err := r.Run(fmt.Sprintf("0.0.0.0:%v", config.AppPort)); err != nil {
-			log.LG.Fatalf("Failed to run gin router: %v", err)
+			logger_interface.GetLogger().Fatalf("Failed to run gin router: %v", err)
 		}
 	}()
 }
@@ -290,6 +309,6 @@ func waitForShutdownSignal(cancel context.CancelFunc) {
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, syscall.SIGTERM, syscall.SIGINT)
 	<-sigC
-	log.LG.Info("Shutting down gracefully...")
+	logger_interface.GetLogger().Debug("Shutting down gracefully...")
 	cancel()
 }

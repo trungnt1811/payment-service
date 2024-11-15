@@ -47,7 +47,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.LG.Errorf("Invalid payload: %v", err)
+		log.GetLogger().Errorf("Invalid payload: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid payload",
 			"details": err.Error(),
@@ -106,7 +106,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 	// Proceed to distribute tokens if all checks pass
 	transferResults, err := h.ucase.TransferTokens(ctx, req)
 	if err != nil {
-		log.LG.Errorf("Failed to distribute tokens: %v", err)
+		log.GetLogger().Errorf("Failed to distribute tokens: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
 		return
 	}
@@ -152,14 +152,14 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Parse page and size into integers
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
-		log.LG.Errorf("Invalid page number: %v", err)
+		log.GetLogger().Errorf("Invalid page number: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
 		return
 	}
 
 	sizeInt, err := strconv.Atoi(size)
 	if err != nil || sizeInt < 1 {
-		log.LG.Errorf("Invalid size: %v", err)
+		log.GetLogger().Errorf("Invalid size: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
 		return
 	}
@@ -175,7 +175,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	startTimeStr := ctx.Query("start_time")
 	startTime, err := time.Parse(time.RFC3339, startTimeStr)
 	if startTimeStr != "" && err != nil {
-		log.LG.Errorf("Invalid start time: %v", err)
+		log.GetLogger().Errorf("Invalid start time: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start time. Must be in RFC3339 format."})
 		return
 	}
@@ -184,7 +184,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	endTimeStr := ctx.Query("end_time")
 	endTime, err := time.Parse(time.RFC3339, endTimeStr)
 	if endTimeStr != "" && err != nil {
-		log.LG.Errorf("Invalid end time: %v", err)
+		log.GetLogger().Errorf("Invalid end time: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end time. Must be in RFC3339 format."})
 		return
 	}
@@ -198,7 +198,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
 	response, err := h.ucase.GetTokenTransferHistories(ctx, requestIDs, startTime, endTime, pageInt, sizeInt)
 	if err != nil {
-		log.LG.Errorf("Failed to retrieve token transfer histories: %v", err)
+		log.GetLogger().Errorf("Failed to retrieve token transfer histories: %v", err)
 		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)
 		return
 	}

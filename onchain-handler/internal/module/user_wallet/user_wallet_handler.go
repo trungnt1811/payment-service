@@ -46,7 +46,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 
 	// Parse and validate the request payload (list of user IDs)
 	if err := ctx.ShouldBindJSON(&userIDs); err != nil {
-		log.LG.Errorf("Invalid payload: %v", err)
+		log.GetLogger().Errorf("Invalid payload: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid payload",
 			"details": err.Error(),
@@ -57,7 +57,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 	// Ensure each user ID is a valid integer
 	for _, userID := range userIDs {
 		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
-			log.LG.Errorf("Validation failed: User ID '%s' is not a valid integer", userID)
+			log.GetLogger().Errorf("Validation failed: User ID '%s' is not a valid integer", userID)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"details": "User IDs must be valid integers",
@@ -75,7 +75,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		// Convert userID string to uint64
 		userID, err := strconv.ParseUint(userIDString, 10, 64)
 		if err != nil {
-			log.LG.Errorf("Failed to parse user ID '%s' as integer: %v", userIDString, err)
+			log.GetLogger().Errorf("Failed to parse user ID '%s' as integer: %v", userIDString, err)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid user ID",
 				"details": "User ID must be a valid integer",
@@ -86,7 +86,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		// Generate the account based on mnemonic, passphrase, and salt
 		account, _, err := utils.GenerateAccount(mnemonic, passphrase, salt, constants.UserWallet, userID)
 		if err != nil {
-			log.LG.Errorf("Failed to generate account for user ID '%d': %v", userID, err)
+			log.GetLogger().Errorf("Failed to generate account for user ID '%d': %v", userID, err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "Account generation failed",
 				"details": err.Error(),
@@ -104,7 +104,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 
 	// Call the use case to create wallets for the provided user IDs
 	if err := h.ucase.CreateUserWallets(ctx, payloads); err != nil {
-		log.LG.Errorf("Failed to create user wallets: %v", err)
+		log.GetLogger().Errorf("Failed to create user wallets: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create user wallets",
 			"details": err.Error(),
@@ -140,14 +140,14 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Parse page and size into integers
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
-		log.LG.Errorf("Invalid page number: %v", err)
+		log.GetLogger().Errorf("Invalid page number: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
 		return
 	}
 
 	sizeInt, err := strconv.Atoi(size)
 	if err != nil || sizeInt < 1 {
-		log.LG.Errorf("Invalid size: %v", err)
+		log.GetLogger().Errorf("Invalid size: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
 		return
 	}
@@ -162,7 +162,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Validate each user ID to ensure it is a valid uint64
 	for _, userID := range userIDs {
 		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
-			log.LG.Errorf("Invalid user ID: %v", userID)
+			log.GetLogger().Errorf("Invalid user ID: %v", userID)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid user ID",
 				"details": fmt.Sprintf("User ID '%s' is not a valid uint64", userID),
@@ -174,7 +174,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Call the use case to get user wallets
 	response, err := h.ucase.GetUserWallets(ctx, pageInt, sizeInt, userIDs)
 	if err != nil {
-		log.LG.Errorf("Failed to retrieve user wallets: %v", err)
+		log.GetLogger().Errorf("Failed to retrieve user wallets: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to retrieve user wallets",
 			"details": err.Error(),

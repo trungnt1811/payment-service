@@ -2,131 +2,148 @@ package log
 
 import (
 	"io"
-	"sync"
-	"time"
+	"os"
 
 	"github.com/rs/zerolog"
 )
 
-var (
-	LG       *ZerologLogger
-	initOnce sync.Once
-)
-
-// ZerologLogger implements applogger.Logger interface and provide logging service
-// using zerolog.
 type ZerologLogger struct {
-	Instance *zerolog.Logger
+	logger      *zerolog.Logger
+	level       Level
+	serviceName string
+	config      interface{}
 }
 
-func InitZerologLogger(output io.Writer, level zerolog.Level) {
-	initOnce.Do(func() {
-		LG = newZerologLogger(output, level, false)
-	})
-}
-
-func InitZerologLoggerWithColor(output io.Writer, level zerolog.Level) {
-	initOnce.Do(func() {
-		LG = newZerologLogger(output, level, true)
-	})
-}
-
-func newZerologLogger(output io.Writer, level zerolog.Level, withColor bool) *ZerologLogger {
-	zlog := zerolog.New(zerolog.ConsoleWriter{
-		Out:        output,
-		NoColor:    withColor,
-		TimeFormat: time.RFC3339,
-	})
-
-	instance := &ZerologLogger{
-		Instance: &zlog,
+func NewZerologLogger(output io.Writer, level Level, useColors bool) *ZerologLogger {
+	if output == nil {
+		output = os.Stdout
 	}
 
-	instance.SetLogLevel(level)
+	if useColors {
+		output = zerolog.ConsoleWriter{Out: output, TimeFormat: "2006-01-02 15:04:05"}
+	}
 
-	zerolog.TimestampFieldName = "t"
-	zerolog.LevelFieldName = "l"
-	zerolog.MessageFieldName = "m"
-
-	return instance
+	zl := zerolog.New(output).With().Timestamp().Logger()
+	logger := &ZerologLogger{
+		logger: &zl,
+		level:  level,
+	}
+	logger.SetLogLevel(level)
+	return logger
 }
 
-/**
-* Setting
-**/
-
-func (logger *ZerologLogger) SetLogLevel(level zerolog.Level) {
-	updatedLogger := logger.Instance.Level(level)
-
-	logger.Instance = &updatedLogger
+func (l *ZerologLogger) SetLogLevel(level Level) {
+	l.level = level
+	zerolog.SetGlobalLevel(convertLevel(level))
 }
 
-func (logger *ZerologLogger) GetLogLevel() zerolog.Level {
-	return logger.Instance.GetLevel()
+func (l *ZerologLogger) GetLogLevel() Level {
+	return l.level
 }
 
-/**
-* Logging function
-**/
-
-func (logger *ZerologLogger) Panic(message string) {
-	logger.Instance.Panic().Timestamp().Msg(message)
+func (l *ZerologLogger) Panic(message string) {
+	l.logger.Panic().Msg(message)
 }
 
-func (logger *ZerologLogger) Panicf(format string, values ...interface{}) {
-	logger.Instance.Panic().Timestamp().Msgf(format, values...)
+func (l *ZerologLogger) Panicf(format string, values ...interface{}) {
+	l.logger.Panic().Msgf(format, values...)
 }
 
-func (logger *ZerologLogger) Fatal(message string) {
-	logger.Instance.Fatal().Timestamp().Msg(message)
+func (l *ZerologLogger) Fatal(message string) {
+	l.logger.Fatal().Msg(message)
 }
 
-func (logger *ZerologLogger) Fatalf(format string, values ...interface{}) {
-	logger.Instance.Fatal().Timestamp().Msgf(format, values...)
+func (l *ZerologLogger) Fatalf(format string, values ...interface{}) {
+	l.logger.Fatal().Msgf(format, values...)
 }
 
-func (logger *ZerologLogger) Error(message string) {
-	logger.Instance.Error().Timestamp().Msg(message)
+func (l *ZerologLogger) Error(message string) {
+	l.logger.Error().Msg(message)
 }
 
-func (logger *ZerologLogger) Errorf(format string, values ...interface{}) {
-	logger.Instance.Error().Timestamp().Msgf(format, values...)
+func (l *ZerologLogger) Errorf(format string, values ...interface{}) {
+	l.logger.Error().Msgf(format, values...)
 }
 
-func (logger *ZerologLogger) Info(message string) {
-	logger.Instance.Info().Timestamp().Msg(message)
+func (l *ZerologLogger) Info(message string) {
+	l.logger.Info().Msg(message)
 }
 
-func (logger *ZerologLogger) Infof(format string, values ...interface{}) {
-	logger.Instance.Info().Timestamp().Msgf(format, values...)
+func (l *ZerologLogger) Infof(format string, values ...interface{}) {
+	l.logger.Info().Msgf(format, values...)
 }
 
-func (logger *ZerologLogger) Debug(message string) {
-	logger.Instance.Debug().Timestamp().Msg(message)
+func (l *ZerologLogger) Debug(message string) {
+	l.logger.Debug().Msg(message)
 }
 
-func (logger *ZerologLogger) Debugf(format string, values ...interface{}) {
-	logger.Instance.Debug().Timestamp().Msgf(format, values...)
+func (l *ZerologLogger) Debugf(format string, values ...interface{}) {
+	l.logger.Debug().Msgf(format, values...)
 }
 
-func (logger *ZerologLogger) Warn(message string) {
-	logger.Instance.Warn().Timestamp().Msg(message)
+func (l *ZerologLogger) Warn(message string) {
+	l.logger.Warn().Msg(message)
 }
 
-func (logger *ZerologLogger) Warnf(format string, values ...interface{}) {
-	logger.Instance.Warn().Timestamp().Msgf(format, values...)
+func (l *ZerologLogger) Warnf(format string, values ...interface{}) {
+	l.logger.Warn().Msgf(format, values...)
 }
 
-func (logger *ZerologLogger) WithInterface(key string, value interface{}) *ZerologLogger {
-	Instance := logger.Instance.With().Interface(key, value).Logger()
-	return &ZerologLogger{
-		Instance: &Instance,
+func (l *ZerologLogger) WithInterface(key string, value interface{}) Logger {
+	newLogger := l.logger.With().Interface(key, value).Logger()
+	return &ZerologLogger{logger: &newLogger, level: l.level, serviceName: l.serviceName, config: l.config}
+}
+
+func (l *ZerologLogger) WithFields(fields map[string]interface{}) Logger {
+	ctx := l.logger.With()
+	for k, v := range fields {
+		ctx = ctx.Interface(k, v)
+	}
+	newLogger := ctx.Logger()
+	return &ZerologLogger{logger: &newLogger, level: l.level, serviceName: l.serviceName, config: l.config}
+}
+
+func (l *ZerologLogger) SetConfigModeByCode(code string) {
+	// Implement the logic to set the configuration mode by code
+	// This is a placeholder implementation
+	if code == DEVELOPMENT_ENVIRONMENT_CODE_MODE {
+		l.SetLogLevel(DebugLevel)
+	} else if code == PRODUCTION_ENVIRONMENT_CODE_MODE {
+		l.SetLogLevel(InfoLevel)
 	}
 }
 
-func (logger *ZerologLogger) WithFields(fields interface{}) *ZerologLogger {
-	Instance := logger.Instance.With().Fields(fields).Logger()
-	return &ZerologLogger{
-		Instance: &Instance,
+func (l *ZerologLogger) SetConfig(config interface{}) {
+	l.config = config
+}
+
+func (l *ZerologLogger) GetConfig() interface{} {
+	return l.config
+}
+
+func (l *ZerologLogger) SetServiceName(serviceName string) {
+	l.serviceName = serviceName
+}
+
+func (l *ZerologLogger) GetServiceName() string {
+	return l.serviceName
+}
+
+func convertLevel(level Level) zerolog.Level {
+	switch level {
+	case DebugLevel:
+		return zerolog.DebugLevel
+	case InfoLevel:
+		return zerolog.InfoLevel
+	case WarnLevel:
+		return zerolog.WarnLevel
+	case ErrorLevel:
+		return zerolog.ErrorLevel
+	case FatalLevel:
+		return zerolog.FatalLevel
+	case PanicLevel:
+		return zerolog.PanicLevel
+	default:
+		return zerolog.InfoLevel
 	}
 }

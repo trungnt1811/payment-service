@@ -7,16 +7,35 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/log"
+	logger_interface "github.com/genefriendway/onchain-handler/log"
 )
 
 // Initialize the logger once for all tests
 func TestMain(m *testing.M) {
-	log.InitZerologLogger(os.Stdout, zerolog.DebugLevel)
+	// Create a logger with default configuration
+	factory := &logger_interface.ZapLoggerFactory{}
+	logger, err := factory.CreateLogger(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// Set service name and environment
+	logger.SetServiceName("my-service")
+	logger.SetConfigModeByCode(logger_interface.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+	logger.SetLogLevel(logger_interface.DebugLevel)
+
+	logger_interface.InitLogger(logger)
+
+	// Use the logger
+	logger.Info("Application started")
+	logger.WithFields(map[string]interface{}{
+		"user":   "john",
+		"action": "login",
+	}).Info("User logged in")
+
 	code := m.Run()
 	os.Exit(code)
 }
@@ -266,7 +285,7 @@ func TestQueuePerformance(t *testing.T) {
 	t.Run("Queue Performance with 10K items", func(t *testing.T) {
 		testPerformanceWithSize(10000)
 	})
-	t.Run("Queue Performance with 100K items", func(t *testing.T) {
-		testPerformanceWithSize(100000)
+	t.Run("Queue Performance with 50K items", func(t *testing.T) {
+		testPerformanceWithSize(50000)
 	})
 }

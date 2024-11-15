@@ -31,7 +31,7 @@ func (w *orderCleanWorker) Start(ctx context.Context) {
 		case <-ticker.C:
 			go w.run(ctx)
 		case <-ctx.Done():
-			log.LG.Info("Shutting down orderCleanWorker")
+			log.GetLogger().Info("Shutting down orderCleanWorker")
 			return
 		}
 	}
@@ -40,7 +40,7 @@ func (w *orderCleanWorker) Start(ctx context.Context) {
 func (w *orderCleanWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		log.LG.Warn("Previous orderCleanWorker run still in progress, skipping this cycle")
+		log.GetLogger().Warn("Previous orderCleanWorker run still in progress, skipping this cycle")
 		w.mu.Unlock()
 		return
 	}
@@ -61,7 +61,7 @@ func (w *orderCleanWorker) run(ctx context.Context) {
 func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 	err := w.paymentOrderUCase.UpdateExpiredOrdersToFailed(ctx)
 	if err != nil {
-		log.LG.Errorf("Failed to update expired orders to failed and release wallet: %v", err)
+		log.GetLogger().Errorf("Failed to update expired orders to failed and release wallet: %v", err)
 		return
 	}
 }
@@ -69,7 +69,7 @@ func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
 	err := w.paymentOrderUCase.UpdateActiveOrdersToExpired(ctx)
 	if err != nil {
-		log.LG.Errorf("Failed to update active orders to expired: %v", err)
+		log.GetLogger().Errorf("Failed to update active orders to expired: %v", err)
 		return
 	}
 }

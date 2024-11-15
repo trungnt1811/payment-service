@@ -45,7 +45,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.LG.Errorf("Invalid payload: %v", err)
+		log.GetLogger().Errorf("Invalid payload: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid payload",
 			"details": err.Error(),
@@ -56,7 +56,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	// Validate each payment order
 	for _, order := range req {
 		if err := validatePaymentOrder(order); err != nil {
-			log.LG.Errorf("Validation failed for request id %s: %v", order.RequestID, err)
+			log.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"details": err.Error(),
@@ -68,7 +68,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	// Call the use case to create the payment orders
 	response, err := h.ucase.CreatePaymentOrders(ctx, req, h.config.GetExpiredOrderTime())
 	if err != nil {
-		log.LG.Errorf("Failed to create payment orders: %v", err)
+		log.GetLogger().Errorf("Failed to create payment orders: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create payment orders",
 			"details": err.Error(),
@@ -134,14 +134,14 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Parse page and size into integers
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
-		log.LG.Errorf("Invalid page number: %v", err)
+		log.GetLogger().Errorf("Invalid page number: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
 		return
 	}
 
 	sizeInt, err := strconv.Atoi(size)
 	if err != nil || sizeInt < 1 {
-		log.LG.Errorf("Invalid size: %v", err)
+		log.GetLogger().Errorf("Invalid size: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
 		return
 	}
@@ -163,7 +163,7 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Call the use case to get payment order histories
 	response, err := h.ucase.GetPaymentOrderHistories(ctx, requestIDs, status, pageInt, sizeInt)
 	if err != nil {
-		log.LG.Errorf("Failed to retrieve payment order histories: %v", err)
+		log.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to retrieve payment order histories",
 			"details": err.Error(),

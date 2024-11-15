@@ -101,7 +101,7 @@ func (q *Queue[T]) Dequeue(condition func(T) bool) error {
 
 	for i, item := range q.items {
 		if condition(item) {
-			log.LG.Infof("Dequeueing item: %v", item)
+			log.GetLogger().Infof("Dequeueing item: %v", item)
 			// Fast removal, maintaining order
 			copy(q.items[i:], q.items[i+1:])
 			q.items = q.items[:len(q.items)-1]
@@ -123,7 +123,7 @@ func (q *Queue[T]) FillQueue() error {
 
 	// If current items exceed the MaxQueueLimit, log a message and return early
 	if len(q.items) >= constants.MaxQueueLimit {
-		log.LG.Infof("Queue size has reached the maximum limit of %d items. No additional items will be loaded.", constants.MaxQueueLimit)
+		log.GetLogger().Infof("Queue size has reached the maximum limit of %d items. No additional items will be loaded.", constants.MaxQueueLimit)
 		q.mu.Unlock()
 		return nil
 	}
@@ -135,10 +135,10 @@ func (q *Queue[T]) FillQueue() error {
 	// Load more items
 	newItems, err := q.loader(q.ctx, remainingCapacity+1, offset)
 	if err != nil {
-		log.LG.Infof("Error loading items: %v", err)
+		log.GetLogger().Infof("Error loading items: %v", err)
 		return fmt.Errorf("failed to load more items: %w", err)
 	}
-	log.LG.Infof("Loaded %d new items", len(newItems))
+	log.GetLogger().Infof("Loaded %d new items", len(newItems))
 
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -161,7 +161,7 @@ func (q *Queue[T]) FillQueue() error {
 func (q *Queue[T]) scaleQueue() {
 	if q.limit >= constants.MaxQueueLimit {
 		q.limit = constants.MaxQueueLimit
-		log.LG.Infof("Reached max queue limit: %d", q.limit)
+		log.GetLogger().Infof("Reached max queue limit: %d", q.limit)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (q *Queue[T]) scaleQueue() {
 		newLimit = constants.MaxQueueLimit
 	}
 	q.limit = newLimit
-	log.LG.Infof("Scaling queue to new limit: %d", q.limit)
+	log.GetLogger().Infof("Scaling queue to new limit: %d", q.limit)
 }
 
 // maybeShrink reduces the queue's size if it's consistently underutilized.
@@ -188,7 +188,7 @@ func (q *Queue[T]) maybeShrink() {
 			q.limit = newLimit
 		}
 	}
-	log.LG.Infof("Shrinking queue to new limit: %d", q.limit)
+	log.GetLogger().Infof("Shrinking queue to new limit: %d", q.limit)
 }
 
 // GetItems returns a copy of all current items.
