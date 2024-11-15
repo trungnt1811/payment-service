@@ -70,7 +70,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 				break
 			}
 
-			log.GetLogger().Infof("Attempt %d failed, retrying in %v\n", i+1, backoff)
+			log.GetLogger().Infof("Attempt %d failed, retrying in %v", i+1, backoff)
 			time.Sleep(backoff)
 			backoff *= 2
 		}
