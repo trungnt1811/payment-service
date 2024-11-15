@@ -7,7 +7,7 @@
 //
 
 // Package interfaces is a generated GoMock package.
-package interfaces
+package mocks
 
 import (
 	reflect "reflect"

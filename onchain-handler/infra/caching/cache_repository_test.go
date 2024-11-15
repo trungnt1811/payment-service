@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/infra/mocks"
 )
 
 func TestSaveItem(t *testing.T) {
@@ -17,11 +17,11 @@ func TestSaveItem(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockCacheClient := interfaces.NewMockCacheClient(ctrl)
+		mockCacheClient := mocks.NewMockCacheClient(ctrl)
 		ctx := context.Background()
 		repo := NewCachingRepository(ctx, mockCacheClient)
 
-		key := interfaces.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
+		key := mocks.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
 		value := "testValue"
 		expire := 5 * time.Minute
 
@@ -37,11 +37,11 @@ func TestRetrieveItem(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockClient := interfaces.NewMockCacheClient(ctrl)
+		mockClient := mocks.NewMockCacheClient(ctrl)
 		ctx := context.Background()
 		repo := NewCachingRepository(ctx, mockClient)
 
-		key := interfaces.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
+		key := mocks.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
 		var value string
 
 		mockClient.EXPECT().Get(ctx, key.String(), &value).Return(nil)
@@ -56,11 +56,11 @@ func TestRemoveItem(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockClient := interfaces.NewMockCacheClient(ctrl)
+		mockClient := mocks.NewMockCacheClient(ctrl)
 		ctx := context.Background()
 		repo := NewCachingRepository(ctx, mockClient)
 
-		key := interfaces.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
+		key := mocks.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
 
 		mockClient.EXPECT().Del(ctx, key.String()).Return(nil)
 
