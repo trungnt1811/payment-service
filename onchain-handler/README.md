@@ -25,4 +25,4 @@ How to generate mock for uniitest
 1. Install: 
 ```go install go.uber.org/mock/mockgen@latest```
 2. Generate:
-```mockgen -source=[path_inteface_file] -destination=[path_mock_file]```
+```mockgen -source=[path_inteface_file] -destination=[path_mock_file] -package=mocks```
