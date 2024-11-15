@@ -158,6 +158,7 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 				successfulOrderIDs = append(successfulOrderIDs, order.ID)
 			}
 			log.GetLogger().Infof("Successfully updated block heights for orders with IDs: %v", successfulOrderIDs)
+			w.processedOrderIDs = make(map[uint64]struct{})
 		}
 	}
 }
