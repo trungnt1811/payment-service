@@ -12,7 +12,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/external/dto"
-	"github.com/genefriendway/onchain-handler/log"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 const (
@@ -70,7 +70,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 				break
 			}
 
-			log.GetLogger().Infof("Attempt %d failed, retrying in %v", i+1, backoff)
+			logger.GetLogger().Infof("Attempt %d failed, retrying in %v", i+1, backoff)
 			time.Sleep(backoff)
 			backoff *= 2
 		}
@@ -88,7 +88,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 		// Map balances by address in the batch
 		for _, response := range responses {
 			if response.Error != nil {
-				log.GetLogger().Infof("Error in response ID %d: %v", response.ID, response.Error.Message)
+				logger.GetLogger().Infof("Error in response ID %d: %v", response.ID, response.Error.Message)
 				continue
 			}
 
@@ -98,7 +98,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 				balance.SetString(response.Result[2:], 16)
 				balances[addressBatch[response.ID]] = balance
 			} else {
-				log.GetLogger().Infof("Empty or invalid result for address %s in batch request", addressBatch[response.ID])
+				logger.GetLogger().Infof("Empty or invalid result for address %s in batch request", addressBatch[response.ID])
 			}
 		}
 

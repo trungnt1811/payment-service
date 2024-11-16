@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	logger "github.com/genefriendway/onchain-handler/log"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 // RequestLoggerMiddleware returns a gin middleware for HTTP request logging

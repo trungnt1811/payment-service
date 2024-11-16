@@ -10,13 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	logger_interface "github.com/genefriendway/onchain-handler/log"
+	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
 )
 
 // Initialize the logger once for all tests
 func TestMain(m *testing.M) {
 	// Create a logger with default configuration
-	factory := &logger_interface.ZapLoggerFactory{}
+	factory := &zap.ZapLoggerFactory{}
 	logger, err := factory.CreateLogger(nil)
 	if err != nil {
 		panic(err)
@@ -24,10 +25,10 @@ func TestMain(m *testing.M) {
 
 	// Set service name and environment
 	logger.SetServiceName("my-service")
-	logger.SetConfigModeByCode(logger_interface.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
-	logger.SetLogLevel(logger_interface.DebugLevel)
+	logger.SetConfigModeByCode(pkglogger.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+	logger.SetLogLevel(pkglogger.DebugLevel)
 
-	logger_interface.InitLogger(logger)
+	pkglogger.InitLogger(logger)
 
 	// Use the logger
 	logger.Info("Application started")

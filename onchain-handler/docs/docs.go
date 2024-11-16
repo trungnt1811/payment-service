@@ -120,13 +120,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -170,13 +170,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid payload or invalid recipient address/transaction type",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error, failed to distribute tokens",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -243,13 +243,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -302,13 +302,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/utils.GeneralError"
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -427,22 +427,19 @@ const docTemplate = `{
                 }
             }
         },
-        "utils.GeneralError": {
+        "response.GeneralError": {
             "type": "object",
             "properties": {
                 "code": {
-                    "description": "HTTP error code, or custom error code",
                     "type": "integer"
                 },
                 "errors": {
-                    "description": "List of error send server 2 server",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "string": {
-                    "description": "Friendly error message",
+                "message": {
                     "type": "string"
                 }
             }

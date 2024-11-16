@@ -8,7 +8,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/log"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 func CalculatePaymentCovering(amount *big.Int, paymentCoveringFactor float64) *big.Int {
@@ -66,7 +66,7 @@ func InitPaymentWallets(
 		if err != nil {
 			return err
 		}
-		log.GetLogger().Info("Successfully created payment wallets")
+		logger.GetLogger().Info("Successfully created payment wallets")
 	}
 
 	return nil

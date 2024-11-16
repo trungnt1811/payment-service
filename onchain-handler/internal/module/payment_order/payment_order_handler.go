@@ -12,7 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/log"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type paymentOrderHandler struct {
@@ -45,7 +45,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.GetLogger().Errorf("Invalid payload: %v", err)
+		logger.GetLogger().Errorf("Invalid payload: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid payload",
 			"details": err.Error(),
@@ -56,7 +56,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	// Validate each payment order
 	for _, order := range req {
 		if err := validatePaymentOrder(order); err != nil {
-			log.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
+			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"details": err.Error(),
@@ -68,7 +68,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	// Call the use case to create the payment orders
 	response, err := h.ucase.CreatePaymentOrders(ctx, req, h.config.GetExpiredOrderTime())
 	if err != nil {
-		log.GetLogger().Errorf("Failed to create payment orders: %v", err)
+		logger.GetLogger().Errorf("Failed to create payment orders: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create payment orders",
 			"details": err.Error(),
@@ -123,8 +123,8 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 // @Param request_ids query []string false "List of request IDs to filter"
 // @Param status query string false "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
-// @Failure 400 {object} utils.GeneralError "Invalid parameters"
-// @Failure 500 {object} utils.GeneralError "Internal server error"
+// @Failure 400 {object} response.GeneralError "Invalid parameters"
+// @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders/histories [get]
 func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Set default values for page and size if they are not provided
@@ -134,14 +134,14 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Parse page and size into integers
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
-		log.GetLogger().Errorf("Invalid page number: %v", err)
+		logger.GetLogger().Errorf("Invalid page number: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
 		return
 	}
 
 	sizeInt, err := strconv.Atoi(size)
 	if err != nil || sizeInt < 1 {
-		log.GetLogger().Errorf("Invalid size: %v", err)
+		logger.GetLogger().Errorf("Invalid size: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
 		return
 	}
@@ -163,7 +163,7 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Call the use case to get payment order histories
 	response, err := h.ucase.GetPaymentOrderHistories(ctx, requestIDs, status, pageInt, sizeInt)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
+		logger.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to retrieve payment order histories",
 			"details": err.Error(),

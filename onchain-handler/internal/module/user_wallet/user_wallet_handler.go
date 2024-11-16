@@ -13,7 +13,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
-	"github.com/genefriendway/onchain-handler/log"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type userWalletHandler struct {
@@ -46,7 +46,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 
 	// Parse and validate the request payload (list of user IDs)
 	if err := ctx.ShouldBindJSON(&userIDs); err != nil {
-		log.GetLogger().Errorf("Invalid payload: %v", err)
+		logger.GetLogger().Errorf("Invalid payload: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid payload",
 			"details": err.Error(),
@@ -57,7 +57,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 	// Ensure each user ID is a valid integer
 	for _, userID := range userIDs {
 		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
-			log.GetLogger().Errorf("Validation failed: User ID '%s' is not a valid integer", userID)
+			logger.GetLogger().Errorf("Validation failed: User ID '%s' is not a valid integer", userID)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"details": "User IDs must be valid integers",
@@ -75,7 +75,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		// Convert userID string to uint64
 		userID, err := strconv.ParseUint(userIDString, 10, 64)
 		if err != nil {
-			log.GetLogger().Errorf("Failed to parse user ID '%s' as integer: %v", userIDString, err)
+			logger.GetLogger().Errorf("Failed to parse user ID '%s' as integer: %v", userIDString, err)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid user ID",
 				"details": "User ID must be a valid integer",
@@ -86,7 +86,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		// Generate the account based on mnemonic, passphrase, and salt
 		account, _, err := utils.GenerateAccount(mnemonic, passphrase, salt, constants.UserWallet, userID)
 		if err != nil {
-			log.GetLogger().Errorf("Failed to generate account for user ID '%d': %v", userID, err)
+			logger.GetLogger().Errorf("Failed to generate account for user ID '%d': %v", userID, err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "Account generation failed",
 				"details": err.Error(),
@@ -104,7 +104,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 
 	// Call the use case to create wallets for the provided user IDs
 	if err := h.ucase.CreateUserWallets(ctx, payloads); err != nil {
-		log.GetLogger().Errorf("Failed to create user wallets: %v", err)
+		logger.GetLogger().Errorf("Failed to create user wallets: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create user wallets",
 			"details": err.Error(),
@@ -129,8 +129,8 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 // @Param size query int false "Page size, default is 10"
 // @Param user_ids query []string false "List of user IDs to filter"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of user wallets"
-// @Failure 400 {object} utils.GeneralError "Invalid parameters"
-// @Failure 500 {object} utils.GeneralError "Internal server error"
+// @Failure 400 {object} response.GeneralError "Invalid parameters"
+// @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/user-wallets [get]
 func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Set default values for page and size if they are not provided
@@ -140,14 +140,14 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Parse page and size into integers
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
-		log.GetLogger().Errorf("Invalid page number: %v", err)
+		logger.GetLogger().Errorf("Invalid page number: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
 		return
 	}
 
 	sizeInt, err := strconv.Atoi(size)
 	if err != nil || sizeInt < 1 {
-		log.GetLogger().Errorf("Invalid size: %v", err)
+		logger.GetLogger().Errorf("Invalid size: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
 		return
 	}
@@ -162,7 +162,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Validate each user ID to ensure it is a valid uint64
 	for _, userID := range userIDs {
 		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
-			log.GetLogger().Errorf("Invalid user ID: %v", userID)
+			logger.GetLogger().Errorf("Invalid user ID: %v", userID)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid user ID",
 				"details": fmt.Sprintf("User ID '%s' is not a valid uint64", userID),
@@ -174,7 +174,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Call the use case to get user wallets
 	response, err := h.ucase.GetUserWallets(ctx, pageInt, sizeInt, userIDs)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to retrieve user wallets: %v", err)
+		logger.GetLogger().Errorf("Failed to retrieve user wallets: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to retrieve user wallets",
 			"details": err.Error(),

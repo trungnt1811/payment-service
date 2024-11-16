@@ -14,8 +14,8 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	util "github.com/genefriendway/onchain-handler/internal/utils"
-	"github.com/genefriendway/onchain-handler/log"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type tokenTransferHandler struct {
@@ -39,15 +39,15 @@ func NewTokenTransferHandler(ucase interfaces.TokenTransferUCase, config *conf.C
 // @Produce json
 // @Param payload body []dto.TokenTransferPayloadDTO true "List of transfer requests. Each request must include request id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain)."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"results\": [{\"request_id\": \"requestID1\", \"status\": true, \"error_message\": \"\"}, {\"request_id\": \"requestID2\", \"status\": false, \"error_message\": \"Failed: some error message\"}]}"
-// @Failure 400 {object} utils.GeneralError "Invalid payload or invalid recipient address/transaction type"
-// @Failure 500 {object} utils.GeneralError "Internal server error, failed to distribute tokens"
+// @Failure 400 {object} response.GeneralError "Invalid payload or invalid recipient address/transaction type"
+// @Failure 500 {object} response.GeneralError "Internal server error, failed to distribute tokens"
 // @Router /api/v1/token-transfer [post]
 func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 	var req []dto.TokenTransferPayloadDTO
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.GetLogger().Errorf("Invalid payload: %v", err)
+		logger.GetLogger().Errorf("Invalid payload: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid payload",
 			"details": err.Error(),
@@ -106,8 +106,8 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 	// Proceed to distribute tokens if all checks pass
 	transferResults, err := h.ucase.TransferTokens(ctx, req)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to distribute tokens: %v", err)
-		util.RespondError(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
+		logger.GetLogger().Errorf("Failed to distribute tokens: %v", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to distribute tokens", err)
 		return
 	}
 
@@ -141,8 +141,8 @@ func getValidPools() string {
 // @Param start_time query string false "Start time in RFC3339 format to filter example("2024-01-01T00:00:00Z")"
 // @Param end_time query string false "End time in RFC3339 format to filter example("2024-02-01T00:00:00Z")"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
-// @Failure 400 {object} utils.GeneralError "Invalid parameters"
-// @Failure 500 {object} utils.GeneralError "Internal server error"
+// @Failure 400 {object} response.GeneralError "Invalid parameters"
+// @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/token-transfer/histories [get]
 func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Set default values for page and size if they are not provided
@@ -152,14 +152,14 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Parse page and size into integers
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
-		log.GetLogger().Errorf("Invalid page number: %v", err)
+		logger.GetLogger().Errorf("Invalid page number: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
 		return
 	}
 
 	sizeInt, err := strconv.Atoi(size)
 	if err != nil || sizeInt < 1 {
-		log.GetLogger().Errorf("Invalid size: %v", err)
+		logger.GetLogger().Errorf("Invalid size: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
 		return
 	}
@@ -175,7 +175,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	startTimeStr := ctx.Query("start_time")
 	startTime, err := time.Parse(time.RFC3339, startTimeStr)
 	if startTimeStr != "" && err != nil {
-		log.GetLogger().Errorf("Invalid start time: %v", err)
+		logger.GetLogger().Errorf("Invalid start time: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start time. Must be in RFC3339 format."})
 		return
 	}
@@ -184,7 +184,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	endTimeStr := ctx.Query("end_time")
 	endTime, err := time.Parse(time.RFC3339, endTimeStr)
 	if endTimeStr != "" && err != nil {
-		log.GetLogger().Errorf("Invalid end time: %v", err)
+		logger.GetLogger().Errorf("Invalid end time: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end time. Must be in RFC3339 format."})
 		return
 	}
@@ -198,8 +198,8 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
 	response, err := h.ucase.GetTokenTransferHistories(ctx, requestIDs, startTime, endTime, pageInt, sizeInt)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to retrieve token transfer histories: %v", err)
-		util.RespondError(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)
+		logger.GetLogger().Errorf("Failed to retrieve token transfer histories: %v", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)
 		return
 	}
 

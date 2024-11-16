@@ -39,18 +39,15 @@ definitions:
       token_amount:
         type: string
     type: object
-  utils.GeneralError:
+  response.GeneralError:
     properties:
       code:
-        description: HTTP error code, or custom error code
         type: integer
       errors:
-        description: List of error send server 2 server
         items:
           type: string
         type: array
-      string:
-        description: Friendly error message
+      message:
         type: string
     type: object
 info:
@@ -128,11 +125,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
       summary: Retrieve payment order histories
       tags:
       - payment-order
@@ -167,11 +164,11 @@ paths:
         "400":
           description: Invalid payload or invalid recipient address/transaction type
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error, failed to distribute tokens
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
       summary: Distribute tokens to recipients
       tags:
       - token-transfer
@@ -217,11 +214,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
       summary: Get list of token transfer histories
       tags:
       - token-transfer
@@ -256,11 +253,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/utils.GeneralError'
+            $ref: '#/definitions/response.GeneralError'
       summary: Retrieve user wallets
       tags:
       - user-wallet

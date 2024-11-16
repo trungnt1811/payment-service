@@ -27,7 +27,8 @@ import (
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/internal/workers"
-	logger_interface "github.com/genefriendway/onchain-handler/log"
+	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
 	"github.com/genefriendway/onchain-handler/wire"
 )
 
@@ -147,7 +148,7 @@ func RunApp(config *conf.Configuration) {
 func initializeLoggerAndMode(config *conf.Configuration) {
 	// config logger config. Can be replaced with any logger config
 	// Create a logger with default configuration
-	factory := &logger_interface.ZapLoggerFactory{}
+	factory := &zap.ZapLoggerFactory{}
 	logger, err := factory.CreateLogger(nil)
 	if err != nil {
 		panic(err)
@@ -156,16 +157,16 @@ func initializeLoggerAndMode(config *conf.Configuration) {
 	// Set service name and environment
 	logger.SetServiceName("OnchainHandler")
 	if config.Env == "PROD" {
-		logger.SetConfigModeByCode(logger_interface.PRODUCTION_ENVIRONMENT_CODE_MODE)
-		logger.SetLogLevel(logger_interface.InfoLevel)
+		logger.SetConfigModeByCode(pkglogger.PRODUCTION_ENVIRONMENT_CODE_MODE)
+		logger.SetLogLevel(pkglogger.InfoLevel)
 		gin.SetMode(gin.ReleaseMode)
 	} else {
-		logger.SetConfigModeByCode(logger_interface.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
-		logger.SetLogLevel(logger_interface.DebugLevel)
+		logger.SetConfigModeByCode(pkglogger.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+		logger.SetLogLevel(pkglogger.DebugLevel)
 	}
 
 	// Use the logger
-	logger_interface.InitLogger(logger)
+	pkglogger.InitLogger(logger)
 	logger.Info("Application started")
 	logger.WithFields(map[string]interface{}{
 		"appName": config.AppName,
@@ -184,7 +185,7 @@ func initializeRouter() *gin.Engine {
 func initializeEthClient(rpcUrl string) *ethclient.Client {
 	ethClient, err := utils.InitEthClient(rpcUrl)
 	if err != nil {
-		logger_interface.GetLogger().Fatalf("Failed to connect to ETH client: %v", err)
+		pkglogger.GetLogger().Fatalf("Failed to connect to ETH client: %v", err)
 	}
 	return ethClient
 }
@@ -201,7 +202,7 @@ func initializePaymentWallets(
 ) {
 	err := utils.InitPaymentWallets(ctx, config, paymentWalletUCase)
 	if err != nil {
-		logger_interface.GetLogger().Fatalf("Init payment wallets error: %v", err)
+		pkglogger.GetLogger().Fatalf("Init payment wallets error: %v", err)
 	}
 }
 
@@ -211,7 +212,7 @@ func initializePaymentOrderQueue(
 ) *queue.Queue[dto.PaymentOrderDTO] {
 	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, loader)
 	if err != nil {
-		logger_interface.GetLogger().Fatalf("Create payment order queue error: %v", err)
+		pkglogger.GetLogger().Fatalf("Create payment order queue error: %v", err)
 	}
 	return paymentOrderQueue
 }
@@ -275,13 +276,13 @@ func startEventListeners(
 		paymentOrderQueue,
 	)
 	if err != nil {
-		logger_interface.GetLogger().Fatalf("Failed to initialize tokenTransferListener: %v", err)
+		pkglogger.GetLogger().Fatalf("Failed to initialize tokenTransferListener: %v", err)
 	}
 
 	tokenTransferListener.Register(ctx)
 	go func() {
 		if err := baseEventListener.RunListener(ctx); err != nil {
-			logger_interface.GetLogger().Errorf("Error running event listeners: %v", err)
+			pkglogger.GetLogger().Errorf("Error running event listeners: %v", err)
 		}
 	}()
 }
@@ -300,7 +301,7 @@ func startServer(
 
 	go func() {
 		if err := r.Run(fmt.Sprintf("0.0.0.0:%v", config.AppPort)); err != nil {
-			logger_interface.GetLogger().Fatalf("Failed to run gin router: %v", err)
+			pkglogger.GetLogger().Fatalf("Failed to run gin router: %v", err)
 		}
 	}()
 }
@@ -309,6 +310,6 @@ func waitForShutdownSignal(cancel context.CancelFunc) {
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, syscall.SIGTERM, syscall.SIGINT)
 	<-sigC
-	logger_interface.GetLogger().Debug("Shutting down gracefully...")
+	pkglogger.GetLogger().Debug("Shutting down gracefully...")
 	cancel()
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/utils"
-	"github.com/genefriendway/onchain-handler/log"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 // expiredOrderCatchupWorker is a worker that processes expired orders.
@@ -49,7 +49,7 @@ func NewExpiredOrderCatchupWorker(
 ) interfaces.Worker {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
-		log.GetLogger().Infof("failed to parse ERC20 ABI: %v", err)
+		logger.GetLogger().Infof("failed to parse ERC20 ABI: %v", err)
 		return nil
 	}
 	return &expiredOrderCatchupWorker{
@@ -74,7 +74,7 @@ func (w *expiredOrderCatchupWorker) Start(ctx context.Context) {
 		case <-ticker.C:
 			go w.run(ctx) // Run the catchup process in a separate goroutine
 		case <-ctx.Done():
-			log.GetLogger().Infof("Shutting down expiredOrderCatchupWorker on network %s", string(w.network))
+			logger.GetLogger().Infof("Shutting down expiredOrderCatchupWorker on network %s", string(w.network))
 			return
 		}
 	}
@@ -84,7 +84,7 @@ func (w *expiredOrderCatchupWorker) Start(ctx context.Context) {
 func (w *expiredOrderCatchupWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		log.GetLogger().Warnf("Previous catchupExpiredOrders on network %s run still in progress, skipping this cycle", string(w.network))
+		logger.GetLogger().Warnf("Previous catchupExpiredOrders on network %s run still in progress, skipping this cycle", string(w.network))
 		w.mu.Unlock()
 		return
 	}
@@ -106,13 +106,13 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	// Fetch expired orders from the repository
 	expiredOrders, err := w.paymentOrderUCase.GetExpiredPaymentOrders(ctx, w.network)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to retrieve expired payment orders on network %s: %v", string(w.network), err)
+		logger.GetLogger().Errorf("Failed to retrieve expired payment orders on network %s: %v", string(w.network), err)
 		return
 	}
 
 	// No expired orders to process
 	if len(expiredOrders) == 0 {
-		log.GetLogger().Infof("No expired orders on network %s found", string(w.network))
+		logger.GetLogger().Infof("No expired orders on network %s found", string(w.network))
 		return
 	}
 
@@ -122,7 +122,7 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	// Define the maximum block we should query up to
 	latestBlock, err := w.getLatestBlockFromCacheOrBlockchain(ctx)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to retrieve latest block number on network %s: %v", string(w.network), err)
+		logger.GetLogger().Errorf("Failed to retrieve latest block number on network %s: %v", string(w.network), err)
 		return
 	}
 
@@ -150,14 +150,14 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 			for _, order := range nonProcessedOrders {
 				failedOrderIDs = append(failedOrderIDs, order.ID)
 			}
-			log.GetLogger().Errorf("Failed to update block heights for orders with IDs: %v, error: %v", failedOrderIDs, err)
+			logger.GetLogger().Errorf("Failed to update block heights for orders with IDs: %v, error: %v", failedOrderIDs, err)
 		} else {
 			// Log all successful order IDs
 			var successfulOrderIDs []uint64
 			for _, order := range nonProcessedOrders {
 				successfulOrderIDs = append(successfulOrderIDs, order.ID)
 			}
-			log.GetLogger().Infof("Successfully updated block heights for orders with IDs: %v", successfulOrderIDs)
+			logger.GetLogger().Infof("Successfully updated block heights for orders with IDs: %v", successfulOrderIDs)
 			w.processedOrderIDs = make(map[uint64]struct{})
 		}
 	}
@@ -165,17 +165,17 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 
 // processExpiredOrders processes logs from the blockchain starting from the given block height
 func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, startBlock, endBlock uint64, expiredOrders []dto.PaymentOrderDTO) {
-	log.GetLogger().Infof("Processing expired orders on network %s starting from block %d to block %d", string(w.network), startBlock, endBlock)
+	logger.GetLogger().Infof("Processing expired orders on network %s starting from block %d to block %d", string(w.network), startBlock, endBlock)
 
 	// Check for invalid end block height
 	if endBlock <= 0 {
-		log.GetLogger().Warnf("End block (%d) is non-positive. Skipping processing for expired orders on network %s", endBlock, string(w.network))
+		logger.GetLogger().Warnf("End block (%d) is non-positive. Skipping processing for expired orders on network %s", endBlock, string(w.network))
 		return
 	}
 
 	// Safeguard if start block is beyond the end block
 	if startBlock > endBlock {
-		log.GetLogger().Warnf("Start block %d is beyond the end block %d. No logs to process on network %s", startBlock, endBlock, string(w.network))
+		logger.GetLogger().Warnf("Start block %d is beyond the end block %d. No logs to process on network %s", startBlock, endBlock, string(w.network))
 		return
 	}
 
@@ -187,12 +187,12 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 			chunkEnd = endBlock
 		}
 
-		log.GetLogger().Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, string(w.network))
+		logger.GetLogger().Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, string(w.network))
 
 		// Poll logs from blockchain for this block range
 		logs, err := utils.PollForLogsFromBlock(ctx, w.ethClient, []common.Address{address}, chunkStart, chunkEnd)
 		if err != nil {
-			log.GetLogger().Errorf("Failed to poll logs on network %s from block range %d-%d: %v", string(w.network), chunkStart, chunkEnd, err)
+			logger.GetLogger().Errorf("Failed to poll logs on network %s from block range %d-%d: %v", string(w.network), chunkStart, chunkEnd, err)
 			continue
 		}
 
@@ -200,7 +200,7 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 		for _, logEntry := range logs {
 			err := w.processLog(ctx, logEntry, expiredOrders, logEntry.BlockNumber)
 			if err != nil {
-				log.GetLogger().Errorf("Error processing log entry on network %s: %v", string(w.network), err)
+				logger.GetLogger().Errorf("Error processing log entry on network %s: %v", string(w.network), err)
 				continue
 			}
 		}
@@ -214,7 +214,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 	orders []dto.PaymentOrderDTO,
 	blockHeight uint64,
 ) error {
-	log.GetLogger().Infof("Processing log entry on network %s from address: %s", string(w.network), vLog.Address.Hex())
+	logger.GetLogger().Infof("Processing log entry on network %s from address: %s", string(w.network), vLog.Address.Hex())
 
 	tokenSymbol, err := w.config.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
@@ -232,7 +232,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 		// Check if the event's "To" address matches the order's wallet address
 		if order.Status != constants.Success && w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Found a matching order, now process the payment for that order
-			log.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), string(w.network), order.ID)
+			logger.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), string(w.network), order.ID)
 
 			// Call processOrderPayment to handle the order update logic based on the transfer event
 			isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
@@ -244,16 +244,16 @@ func (w *expiredOrderCatchupWorker) processLog(
 				if err := w.createPaymentEventHistory(ctx, order, transferEvent, tokenSymbol, vLog.Address.Hex(), vLog.TxHash.Hex()); err != nil {
 					return fmt.Errorf("failed to create payment event history for order ID %d on network %s: %w", order.ID, string(w.network), err)
 				}
-				log.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
+				logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
 			}
 
-			log.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
+			logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
 			return nil // Stop once we've processed the matching order
 		}
 	}
 
 	// No matching order found for this log entry
-	log.GetLogger().Warnf("No matching expired order found for transfer to address: %s on network %s", transferEvent.To.Hex(), string(w.network))
+	logger.GetLogger().Warnf("No matching expired order found for transfer to address: %s on network %s", transferEvent.To.Hex(), string(w.network))
 	return nil
 }
 
@@ -266,7 +266,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 ) error {
 	transferEventValueInEth, err := utils.ConvertWeiToEth(transferEvent.Value.String())
 	if err != nil {
-		log.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
+		logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
 		return err
 	}
 
@@ -295,7 +295,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	blockHeight uint64,
 ) (bool, error) {
 	if blockHeight <= order.BlockHeight {
-		log.GetLogger().Infof("Processed order: %d on network %s. Ignore this turn.", order.ID, string(w.network))
+		logger.GetLogger().Infof("Processed order: %d on network %s. Ignore this turn.", order.ID, string(w.network))
 		return false, nil
 	}
 	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
@@ -318,7 +318,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
-		log.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(w.network), order.ID)
+		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(w.network), order.ID)
 
 		// Set to false as the wallet is no longer in use after full payment (release wallet).
 		inUse = false
@@ -327,7 +327,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		return true, w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), inUse, blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
-		log.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(w.network), order.ID)
+		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(w.network), order.ID)
 
 		// Set to true as the wallet is still in use for further payments.
 		inUse = true
@@ -363,7 +363,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 		return fmt.Errorf("failed to update payment order status for order ID %d: %w", order.ID, err)
 	}
 
-	log.GetLogger().Infof("Order ID %d on network %s updated to status %s with transferred amount: %s", order.ID, string(w.network), status, transferredAmount)
+	logger.GetLogger().Infof("Order ID %d on network %s updated to status %s with transferred amount: %s", order.ID, string(w.network), status, transferredAmount)
 	w.processedOrderIDs[order.ID] = struct{}{}
 	return nil
 }
@@ -388,7 +388,7 @@ func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (dto.Tra
 	// Unpack the value (the non-indexed parameter) from the data field
 	err := w.parsedABI.UnpackIntoInterface(&transferEvent, constants.TransferEventName, vLog.Data)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to unpack transfer event on network %s: %v", string(w.network), err)
+		logger.GetLogger().Errorf("Failed to unpack transfer event on network %s: %v", string(w.network), err)
 		return transferEvent, err
 	}
 
@@ -401,17 +401,17 @@ func (w *expiredOrderCatchupWorker) getLatestBlockFromCacheOrBlockchain(ctx cont
 	var latestBlock uint64
 	err := w.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
 	if err == nil {
-		log.GetLogger().Debugf("Retrieved latest block number on network %s from cache: %d", string(w.network), latestBlock)
+		logger.GetLogger().Debugf("Retrieved latest block number on network %s from cache: %d", string(w.network), latestBlock)
 		return latestBlock, nil
 	}
 
 	// If cache is empty, load from blockchain
 	latest, err := utils.GetLatestBlockNumber(ctx, w.ethClient)
 	if err != nil {
-		log.GetLogger().Errorf("Failed to retrieve the latest block number on network %s from blockchain: %v", string(w.network), err)
+		logger.GetLogger().Errorf("Failed to retrieve the latest block number on network %s from blockchain: %v", string(w.network), err)
 		return 0, err
 	}
 
-	log.GetLogger().Debugf("Retrieved latest block number from %s: %d", string(w.network), latest.Uint64())
+	logger.GetLogger().Debugf("Retrieved latest block number from %s: %d", string(w.network), latest.Uint64())
 	return latest.Uint64(), nil
 }

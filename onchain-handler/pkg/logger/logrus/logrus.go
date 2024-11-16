@@ -5,16 +5,18 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type LogrusLogger struct {
 	logger      *logrus.Entry
-	level       Level
+	level       logger.Level
 	serviceName string
 	config      interface{}
 }
 
-func NewLogrusLogger(output io.Writer, level Level) *LogrusLogger {
+func NewLogrusLogger(output io.Writer, level logger.Level) *LogrusLogger {
 	if output == nil {
 		output = os.Stdout
 	}
@@ -29,12 +31,12 @@ func NewLogrusLogger(output io.Writer, level Level) *LogrusLogger {
 	}
 }
 
-func (l *LogrusLogger) SetLogLevel(level Level) {
+func (l *LogrusLogger) SetLogLevel(level logger.Level) {
 	l.level = level
 	l.logger.Logger.SetLevel(convertLogrusLevel(level))
 }
 
-func (l *LogrusLogger) GetLogLevel() Level {
+func (l *LogrusLogger) GetLogLevel() logger.Level {
 	return l.level
 }
 
@@ -86,14 +88,14 @@ func (l *LogrusLogger) Warnf(format string, values ...interface{}) {
 	l.logger.Warnf(format, values...)
 }
 
-func (l *LogrusLogger) WithInterface(key string, value interface{}) Logger {
+func (l *LogrusLogger) WithInterface(key string, value interface{}) logger.Logger {
 	return &LogrusLogger{
 		logger: l.logger.WithField(key, value),
 		level:  l.level,
 	}
 }
 
-func (l *LogrusLogger) WithFields(fields map[string]interface{}) Logger {
+func (l *LogrusLogger) WithFields(fields map[string]interface{}) logger.Logger {
 	return &LogrusLogger{
 		logger: l.logger.WithFields(fields),
 		level:  l.level,
@@ -120,19 +122,19 @@ func (l *LogrusLogger) GetServiceName() string {
 	return l.serviceName
 }
 
-func convertLogrusLevel(level Level) logrus.Level {
+func convertLogrusLevel(level logger.Level) logrus.Level {
 	switch level {
-	case DebugLevel:
+	case logger.DebugLevel:
 		return logrus.DebugLevel
-	case InfoLevel:
+	case logger.InfoLevel:
 		return logrus.InfoLevel
-	case WarnLevel:
+	case logger.WarnLevel:
 		return logrus.WarnLevel
-	case ErrorLevel:
+	case logger.ErrorLevel:
 		return logrus.ErrorLevel
-	case FatalLevel:
+	case logger.FatalLevel:
 		return logrus.FatalLevel
-	case PanicLevel:
+	case logger.PanicLevel:
 		return logrus.PanicLevel
 	default:
 		return logrus.InfoLevel

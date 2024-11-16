@@ -1,20 +1,22 @@
-package log
+package zerolog
 
 import (
 	"io"
 	"os"
 
 	"github.com/rs/zerolog"
+
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type ZerologLogger struct {
 	logger      *zerolog.Logger
-	level       Level
+	level       logger.Level
 	serviceName string
 	config      interface{}
 }
 
-func NewZerologLogger(output io.Writer, level Level, useColors bool) *ZerologLogger {
+func NewZerologLogger(output io.Writer, level logger.Level, useColors bool) *ZerologLogger {
 	if output == nil {
 		output = os.Stdout
 	}
@@ -32,12 +34,12 @@ func NewZerologLogger(output io.Writer, level Level, useColors bool) *ZerologLog
 	return logger
 }
 
-func (l *ZerologLogger) SetLogLevel(level Level) {
+func (l *ZerologLogger) SetLogLevel(level logger.Level) {
 	l.level = level
 	zerolog.SetGlobalLevel(convertLevel(level))
 }
 
-func (l *ZerologLogger) GetLogLevel() Level {
+func (l *ZerologLogger) GetLogLevel() logger.Level {
 	return l.level
 }
 
@@ -89,12 +91,12 @@ func (l *ZerologLogger) Warnf(format string, values ...interface{}) {
 	l.logger.Warn().Msgf(format, values...)
 }
 
-func (l *ZerologLogger) WithInterface(key string, value interface{}) Logger {
+func (l *ZerologLogger) WithInterface(key string, value interface{}) logger.Logger {
 	newLogger := l.logger.With().Interface(key, value).Logger()
 	return &ZerologLogger{logger: &newLogger, level: l.level, serviceName: l.serviceName, config: l.config}
 }
 
-func (l *ZerologLogger) WithFields(fields map[string]interface{}) Logger {
+func (l *ZerologLogger) WithFields(fields map[string]interface{}) logger.Logger {
 	ctx := l.logger.With()
 	for k, v := range fields {
 		ctx = ctx.Interface(k, v)
@@ -106,10 +108,10 @@ func (l *ZerologLogger) WithFields(fields map[string]interface{}) Logger {
 func (l *ZerologLogger) SetConfigModeByCode(code string) {
 	// Implement the logic to set the configuration mode by code
 	// This is a placeholder implementation
-	if code == DEVELOPMENT_ENVIRONMENT_CODE_MODE {
-		l.SetLogLevel(DebugLevel)
-	} else if code == PRODUCTION_ENVIRONMENT_CODE_MODE {
-		l.SetLogLevel(InfoLevel)
+	if code == logger.DEVELOPMENT_ENVIRONMENT_CODE_MODE {
+		l.SetLogLevel(logger.DebugLevel)
+	} else if code == logger.PRODUCTION_ENVIRONMENT_CODE_MODE {
+		l.SetLogLevel(logger.InfoLevel)
 	}
 }
 
@@ -129,19 +131,19 @@ func (l *ZerologLogger) GetServiceName() string {
 	return l.serviceName
 }
 
-func convertLevel(level Level) zerolog.Level {
+func convertLevel(level logger.Level) zerolog.Level {
 	switch level {
-	case DebugLevel:
+	case logger.DebugLevel:
 		return zerolog.DebugLevel
-	case InfoLevel:
+	case logger.InfoLevel:
 		return zerolog.InfoLevel
-	case WarnLevel:
+	case logger.WarnLevel:
 		return zerolog.WarnLevel
-	case ErrorLevel:
+	case logger.ErrorLevel:
 		return zerolog.ErrorLevel
-	case FatalLevel:
+	case logger.FatalLevel:
 		return zerolog.FatalLevel
-	case PanicLevel:
+	case logger.PanicLevel:
 		return zerolog.PanicLevel
 	default:
 		return zerolog.InfoLevel
