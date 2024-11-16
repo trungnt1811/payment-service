@@ -15,7 +15,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
-	"github.com/genefriendway/onchain-handler/external/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/utils"
 	pkgcrypto "github.com/genefriendway/onchain-handler/pkg/crypto"
 )
