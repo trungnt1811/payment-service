@@ -13,7 +13,7 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -107,7 +107,7 @@ func (listener *baseEventListener) getLatestBlockFromCacheOrBlockchain(ctx conte
 	}
 
 	// If cache is empty, load from blockchain
-	latest, err := utils.GetLatestBlockNumber(ctx, listener.ethClient)
+	latest, err := eth.GetLatestBlockNumber(ctx, listener.ethClient)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
 		return 0, err
@@ -192,7 +192,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 			// Poll logs from the blockchain with retries in case of failure.
 			for retries := 0; retries < constants.MaxRetries; retries++ {
 				// Poll logs from the chunk of blocks.
-				logs, err = utils.PollForLogsFromBlock(ctx, listener.ethClient, contractAddresses, chunkStart, chunkEnd)
+				logs, err = eth.PollForLogsFromBlock(ctx, listener.ethClient, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
 					logger.GetLogger().Warnf("Failed to poll logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
 					time.Sleep(constants.RetryDelay)

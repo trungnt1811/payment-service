@@ -16,7 +16,8 @@ import (
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
 	"github.com/genefriendway/onchain-handler/external/interfaces"
-	"github.com/genefriendway/onchain-handler/external/utils"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain/utils"
+	pkgcrypto "github.com/genefriendway/onchain-handler/pkg/crypto"
 )
 
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
@@ -39,7 +40,7 @@ func BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate ERC20 contract for token contract address %s: %w", tokenContractAddress, err)
 	}
 
-	privateKeyECDSA, err := utils.PrivateKeyFromHex(poolPrivateKey)
+	privateKeyECDSA, err := pkgcrypto.PrivateKeyFromHex(poolPrivateKey)
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to retrieve pool private key: %w", err)
 	}

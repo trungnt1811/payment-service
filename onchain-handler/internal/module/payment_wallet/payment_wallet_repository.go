@@ -11,7 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
-	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/pkg/crypto"
 )
 
 type paymentWalletRepository struct {
@@ -75,7 +75,7 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context)
 		nextID := uint64(recordCount + 1)
 
 		// Generate a new wallet account
-		account, _, genErr := utils.GenerateAccount(
+		account, _, genErr := crypto.GenerateAccount(
 			r.config.Wallet.Mnemonic,
 			r.config.Wallet.Passphrase,
 			r.config.Wallet.Salt,

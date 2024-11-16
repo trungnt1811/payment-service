@@ -1,31 +1,15 @@
-package utils
+package payment
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
-
-func CalculatePaymentCovering(amount *big.Int, paymentCoveringFactor float64) *big.Int {
-	// Convert the covering factor to a multiplier as a float64.
-	coveringFactorMultiplier := 1 - (paymentCoveringFactor / 100)
-
-	amountFloat := new(big.Float).SetInt(amount)
-	coveringFactorFloat := big.NewFloat(coveringFactorMultiplier)
-
-	// Perform the multiplication (big.Float * big.Float)
-	minimumAcceptedAmountFloat := new(big.Float).Mul(amountFloat, coveringFactorFloat)
-
-	// Convert the result back to a big.Int (this rounds the float result)
-	minimumAcceptedAmount := new(big.Int)
-	minimumAcceptedAmountFloat.Int(minimumAcceptedAmount)
-	return minimumAcceptedAmount
-}
 
 // Function to generate wallets and insert them into the database if none exist
 func InitPaymentWallets(
@@ -44,7 +28,7 @@ func InitPaymentWallets(
 		var wallets []dto.PaymentWalletPayloadDTO
 		initWalletCount := config.PaymentGateway.InitWalletCount
 		for index := 1; index <= int(initWalletCount); index++ {
-			account, _, err := GenerateAccount(
+			account, _, err := crypto.GenerateAccount(
 				config.Wallet.Mnemonic,
 				config.Wallet.Passphrase,
 				config.Wallet.Salt,

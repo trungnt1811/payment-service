@@ -25,10 +25,11 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/listeners"
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
-	"github.com/genefriendway/onchain-handler/internal/utils"
 	"github.com/genefriendway/onchain-handler/internal/workers"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
+	"github.com/genefriendway/onchain-handler/pkg/payment"
 	"github.com/genefriendway/onchain-handler/wire"
 )
 
@@ -183,7 +184,7 @@ func initializeRouter() *gin.Engine {
 }
 
 func initializeEthClient(rpcUrl string) *ethclient.Client {
-	ethClient, err := utils.InitEthClient(rpcUrl)
+	ethClient, err := eth.InitClient(rpcUrl)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to connect to ETH client: %v", err)
 	}
@@ -200,7 +201,7 @@ func initializePaymentWallets(
 	config *conf.Configuration,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 ) {
-	err := utils.InitPaymentWallets(ctx, config, paymentWalletUCase)
+	err := payment.InitPaymentWallets(ctx, config, paymentWalletUCase)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Init payment wallets error: %v", err)
 	}

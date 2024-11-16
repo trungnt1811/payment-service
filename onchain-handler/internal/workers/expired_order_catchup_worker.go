@@ -19,8 +19,10 @@ import (
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain/converter"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/payment"
 )
 
 // expiredOrderCatchupWorker is a worker that processes expired orders.
@@ -190,7 +192,7 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 		logger.GetLogger().Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, string(w.network))
 
 		// Poll logs from blockchain for this block range
-		logs, err := utils.PollForLogsFromBlock(ctx, w.ethClient, []common.Address{address}, chunkStart, chunkEnd)
+		logs, err := eth.PollForLogsFromBlock(ctx, w.ethClient, []common.Address{address}, chunkStart, chunkEnd)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to poll logs on network %s from block range %d-%d: %v", string(w.network), chunkStart, chunkEnd, err)
 			continue
@@ -264,7 +266,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 	transferEvent dto.TransferEventDTO,
 	tokenSymbol, contractAddress, txHash string,
 ) error {
-	transferEventValueInEth, err := utils.ConvertWeiToEth(transferEvent.Value.String())
+	transferEventValueInEth, err := converter.ConvertWeiToEth(transferEvent.Value.String())
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
 		return err
@@ -299,13 +301,13 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		return false, nil
 	}
 	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
-	orderAmount, err := utils.ConvertFloatEthToWei(order.Amount)
+	orderAmount, err := converter.ConvertFloatEthToWei(order.Amount)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
-	minimumAcceptedAmount := utils.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
+	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
 
-	transferredAmount, err := utils.ConvertFloatEthToWei(order.Transferred)
+	transferredAmount, err := converter.ConvertFloatEthToWei(order.Transferred)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert transferred amount to wei: %v", err)
 	}
@@ -348,7 +350,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth (Ether)
-	transferredAmountInEth, err := utils.ConvertWeiToEth(transferredAmount)
+	transferredAmountInEth, err := converter.ConvertWeiToEth(transferredAmount)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}
@@ -406,7 +408,7 @@ func (w *expiredOrderCatchupWorker) getLatestBlockFromCacheOrBlockchain(ctx cont
 	}
 
 	// If cache is empty, load from blockchain
-	latest, err := utils.GetLatestBlockNumber(ctx, w.ethClient)
+	latest, err := eth.GetLatestBlockNumber(ctx, w.ethClient)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve the latest block number on network %s from blockchain: %v", string(w.network), err)
 		return 0, err

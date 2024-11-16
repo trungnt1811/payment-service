@@ -14,7 +14,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/model"
-	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/pkg/crypto"
 )
 
 type paymentOrderUCase struct {
@@ -138,7 +138,7 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 		orderDTO.PaymentAddress = order.Wallet.Address
 
 		// Get private key from wallet id
-		_, privateKey, err := utils.GenerateAccount(
+		_, privateKey, err := crypto.GenerateAccount(
 			u.config.Wallet.Mnemonic,
 			u.config.Wallet.Passphrase,
 			u.config.Wallet.Salt,
@@ -149,7 +149,7 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 			return nil, fmt.Errorf("error get payment wallet private key: %w", err)
 		}
 
-		signature, err := utils.SignMessage(privateKey, []byte(orderDTO.RequestID+orderDTO.Amount+orderDTO.Symbol))
+		signature, err := crypto.SignMessage(privateKey, []byte(orderDTO.RequestID+orderDTO.Amount+orderDTO.Symbol))
 		if err != nil {
 			return nil, fmt.Errorf("error signing message: %w", err)
 		}

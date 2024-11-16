@@ -11,7 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -98,7 +98,7 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 	}
 
 	// Fetch the latest block from the Ethereum blockchain
-	blockNumber, err := utils.GetLatestBlockNumber(ctx, w.ethClient)
+	blockNumber, err := eth.GetLatestBlockNumber(ctx, w.ethClient)
 	if err != nil {
 		logger.GetLogger().Infof("Failed to fetch latest block from %s: %v", string(w.network), err)
 		return

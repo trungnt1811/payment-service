@@ -12,7 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/utils"
+	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -84,7 +84,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		}
 
 		// Generate the account based on mnemonic, passphrase, and salt
-		account, _, err := utils.GenerateAccount(mnemonic, passphrase, salt, constants.UserWallet, userID)
+		account, _, err := crypto.GenerateAccount(mnemonic, passphrase, salt, constants.UserWallet, userID)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to generate account for user ID '%d': %v", userID, err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
