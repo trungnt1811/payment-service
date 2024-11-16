@@ -57,7 +57,7 @@ func (w *latestBlockWorker) Start(ctx context.Context) {
 func (w *latestBlockWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		log.GetLogger().Warn("Previous catchupExpiredOrders run still in progress, skipping this cycle")
+		log.GetLogger().Warnf("Previous latestBlockWorker on network %s run still in progress, skipping this cycle", string(w.network))
 		w.mu.Unlock()
 		return
 	}
