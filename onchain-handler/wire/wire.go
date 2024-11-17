@@ -6,48 +6,44 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/genefriendway/onchain-handler/conf"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/module/block_state"
-	"github.com/genefriendway/onchain-handler/internal/module/payment_event_history"
-	"github.com/genefriendway/onchain-handler/internal/module/payment_order"
-	"github.com/genefriendway/onchain-handler/internal/module/payment_wallet"
-	"github.com/genefriendway/onchain-handler/internal/module/token_transfer"
-	"github.com/genefriendway/onchain-handler/internal/module/user_wallet"
+	"github.com/genefriendway/onchain-handler/internal/ucases"
 	"github.com/google/wire"
 	"gorm.io/gorm"
 )
 
 // UCase set
 var blockStateUCaseSet = wire.NewSet(
-	block_state.NewBlockstateRepository,
-	block_state.NewBlockStateUCase,
+	repositories.NewBlockstateRepository,
+	ucases.NewBlockStateUCase,
 )
 
 var paymentOrderUCaseSet = wire.NewSet(
-	payment_order.NewPaymentOrderRepository,
-	payment_wallet.NewPaymentWalletRepository,
-	block_state.NewBlockstateRepository,
-	payment_order.NewPaymentOrderUCase,
+	repositories.NewPaymentOrderRepository,
+	repositories.NewPaymentWalletRepository,
+	repositories.NewBlockstateRepository,
+	ucases.NewPaymentOrderUCase,
 )
 
 var tokenTransferUCaseSet = wire.NewSet(
-	token_transfer.NewTokenTransferRepository,
-	token_transfer.NewTokenTransferUCase,
+	repositories.NewTokenTransferRepository,
+	ucases.NewTokenTransferUCase,
 )
 
 var paymentEventHistoryUCaseSet = wire.NewSet(
-	payment_event_history.NewPaymentEventHistoryRepository,
-	payment_event_history.NewPaymentEventHistoryUCase,
+	repositories.NewPaymentEventHistoryRepository,
+	ucases.NewPaymentEventHistoryUCase,
 )
 
 var paymentWalletUCaseSet = wire.NewSet(
-	payment_wallet.NewPaymentWalletRepository,
-	payment_wallet.NewPaymentWalletUCase,
+	repositories.NewPaymentWalletRepository,
+	ucases.NewPaymentWalletUCase,
 )
 
 var userWalletUCaseSet = wire.NewSet(
-	user_wallet.NewUserWalletRepository,
-	user_wallet.NewUserWalletUCase,
+	repositories.NewUserWalletRepository,
+	ucases.NewUserWalletUCase,
 )
 
 // Init ucase

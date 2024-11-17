@@ -157,7 +157,7 @@ func initializeLoggerAndMode(config *conf.Configuration) {
 	}
 
 	// Set service name and environment
-	logger.SetServiceName("OnchainHandler")
+	logger.SetServiceName(config.AppName)
 	if config.Env == "PROD" {
 		logger.SetConfigModeByCode(pkginterfaces.PRODUCTION_ENVIRONMENT_CODE_MODE)
 		logger.SetLogLevel(pkginterfaces.InfoLevel)

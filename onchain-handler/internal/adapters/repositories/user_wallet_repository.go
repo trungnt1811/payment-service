@@ -1,4 +1,4 @@
-package user_wallet
+package repositories
 
 import (
 	"context"

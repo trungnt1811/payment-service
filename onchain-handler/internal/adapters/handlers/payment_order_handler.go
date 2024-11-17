@@ -1,4 +1,4 @@
-package payment_order
+package handlers
 
 import (
 	"fmt"

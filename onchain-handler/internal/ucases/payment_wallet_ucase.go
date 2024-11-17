@@ -1,4 +1,4 @@
-package payment_wallet
+package ucases
 
 import (
 	"context"

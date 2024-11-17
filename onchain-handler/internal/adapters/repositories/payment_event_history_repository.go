@@ -1,4 +1,4 @@
-package payment_event_history
+package repositories
 
 import (
 	"context"

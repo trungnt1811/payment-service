@@ -1,4 +1,4 @@
-package user_wallet
+package handlers
 
 import (
 	"fmt"

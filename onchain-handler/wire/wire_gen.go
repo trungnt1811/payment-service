@@ -10,13 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/genefriendway/onchain-handler/conf"
 	interfaces2 "github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/module/block_state"
-	"github.com/genefriendway/onchain-handler/internal/module/payment_event_history"
-	"github.com/genefriendway/onchain-handler/internal/module/payment_order"
-	"github.com/genefriendway/onchain-handler/internal/module/payment_wallet"
-	"github.com/genefriendway/onchain-handler/internal/module/token_transfer"
-	"github.com/genefriendway/onchain-handler/internal/module/user_wallet"
+	"github.com/genefriendway/onchain-handler/internal/ucases"
 	"github.com/google/wire"
 	"gorm.io/gorm"
 )
@@ -25,54 +21,54 @@ import (
 
 // Init ucase
 func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
-	blockStateRepository := block_state.NewBlockstateRepository(db)
-	blockStateUCase := block_state.NewBlockStateUCase(blockStateRepository)
+	blockStateRepository := repositories.NewBlockstateRepository(db)
+	blockStateUCase := ucases.NewBlockStateUCase(blockStateRepository)
 	return blockStateUCase
 }
 
 func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
-	paymentOrderRepository := payment_order.NewPaymentOrderRepository(db)
-	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
-	blockStateRepository := block_state.NewBlockstateRepository(db)
-	paymentOrderUCase := payment_order.NewPaymentOrderUCase(db, paymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
+	paymentOrderRepository := repositories.NewPaymentOrderRepository(db)
+	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
+	blockStateRepository := repositories.NewBlockstateRepository(db)
+	paymentOrderUCase := ucases.NewPaymentOrderUCase(db, paymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
 	return paymentOrderUCase
 }
 
 func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
-	tokenTransferRepository := token_transfer.NewTokenTransferRepository(db)
-	tokenTransferUCase := token_transfer.NewTokenTransferUCase(tokenTransferRepository, ethClient, config)
+	tokenTransferRepository := repositories.NewTokenTransferRepository(db)
+	tokenTransferUCase := ucases.NewTokenTransferUCase(tokenTransferRepository, ethClient, config)
 	return tokenTransferUCase
 }
 
 func InitializePaymentEventHistoryUCase(db *gorm.DB) interfaces.PaymentEventHistoryUCase {
-	paymentEventHistoryRepository := payment_event_history.NewPaymentEventHistoryRepository(db)
-	paymentEventHistoryUCase := payment_event_history.NewPaymentEventHistoryUCase(paymentEventHistoryRepository)
+	paymentEventHistoryRepository := repositories.NewPaymentEventHistoryRepository(db)
+	paymentEventHistoryUCase := ucases.NewPaymentEventHistoryUCase(paymentEventHistoryRepository)
 	return paymentEventHistoryUCase
 }
 
 func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.PaymentWalletUCase {
-	paymentWalletRepository := payment_wallet.NewPaymentWalletRepository(db, config)
-	paymentWalletUCase := payment_wallet.NewPaymentWalletUCase(paymentWalletRepository)
+	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
+	paymentWalletUCase := ucases.NewPaymentWalletUCase(paymentWalletRepository)
 	return paymentWalletUCase
 }
 
 func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.UserWalletUCase {
-	userWalletRepository := user_wallet.NewUserWalletRepository(db)
-	userWalletUCase := user_wallet.NewUserWalletUCase(userWalletRepository)
+	userWalletRepository := repositories.NewUserWalletRepository(db)
+	userWalletUCase := ucases.NewUserWalletUCase(userWalletRepository)
 	return userWalletUCase
 }
 
 // wire.go:
 
 // UCase set
-var blockStateUCaseSet = wire.NewSet(block_state.NewBlockstateRepository, block_state.NewBlockStateUCase)
+var blockStateUCaseSet = wire.NewSet(repositories.NewBlockstateRepository, ucases.NewBlockStateUCase)
 
-var paymentOrderUCaseSet = wire.NewSet(payment_order.NewPaymentOrderRepository, payment_wallet.NewPaymentWalletRepository, block_state.NewBlockstateRepository, payment_order.NewPaymentOrderUCase)
+var paymentOrderUCaseSet = wire.NewSet(repositories.NewPaymentOrderRepository, repositories.NewPaymentWalletRepository, repositories.NewBlockstateRepository, ucases.NewPaymentOrderUCase)
 
-var tokenTransferUCaseSet = wire.NewSet(token_transfer.NewTokenTransferRepository, token_transfer.NewTokenTransferUCase)
+var tokenTransferUCaseSet = wire.NewSet(repositories.NewTokenTransferRepository, ucases.NewTokenTransferUCase)
 
-var paymentEventHistoryUCaseSet = wire.NewSet(payment_event_history.NewPaymentEventHistoryRepository, payment_event_history.NewPaymentEventHistoryUCase)
+var paymentEventHistoryUCaseSet = wire.NewSet(repositories.NewPaymentEventHistoryRepository, ucases.NewPaymentEventHistoryUCase)
 
-var paymentWalletUCaseSet = wire.NewSet(payment_wallet.NewPaymentWalletRepository, payment_wallet.NewPaymentWalletUCase)
+var paymentWalletUCaseSet = wire.NewSet(repositories.NewPaymentWalletRepository, ucases.NewPaymentWalletUCase)
 
-var userWalletUCaseSet = wire.NewSet(user_wallet.NewUserWalletRepository, user_wallet.NewUserWalletUCase)
+var userWalletUCaseSet = wire.NewSet(repositories.NewUserWalletRepository, ucases.NewUserWalletUCase)

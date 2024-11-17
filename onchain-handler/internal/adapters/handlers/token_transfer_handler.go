@@ -1,4 +1,4 @@
-package token_transfer
+package handlers
 
 import (
 	"fmt"

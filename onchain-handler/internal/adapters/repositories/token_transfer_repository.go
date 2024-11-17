@@ -1,4 +1,4 @@
-package token_transfer
+package repositories
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package block_state
+package repositories
 
 import (
 	"context"
