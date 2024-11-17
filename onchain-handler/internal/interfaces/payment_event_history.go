@@ -3,12 +3,12 @@ package interfaces
 import (
 	"context"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type PaymentEventHistoryRepository interface {
-	CreatePaymentEventHistory(ctx context.Context, paymentEvents []model.PaymentEventHistory) error
+	CreatePaymentEventHistory(ctx context.Context, paymentEvents []domain.PaymentEventHistory) error
 }
 
 type PaymentEventHistoryUCase interface {

@@ -6,8 +6,8 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type userWalletRepository struct {
@@ -20,7 +20,7 @@ func NewUserWalletRepository(db *gorm.DB) interfaces.UserWalletRepository {
 	}
 }
 
-func (r *userWalletRepository) CreateUserWallets(ctx context.Context, userWallets []model.UserWallet) error {
+func (r *userWalletRepository) CreateUserWallets(ctx context.Context, userWallets []domain.UserWallet) error {
 	err := r.db.WithContext(ctx).Create(&userWallets).Error
 	if err != nil {
 		return fmt.Errorf("failed to create user wallets: %w", err)
@@ -33,8 +33,8 @@ func (r *userWalletRepository) GetUserWallets(
 	ctx context.Context,
 	limit, offset int,
 	userIDs []uint64,
-) ([]model.UserWallet, error) {
-	var wallets []model.UserWallet
+) ([]domain.UserWallet, error) {
+	var wallets []domain.UserWallet
 
 	// Start the query with pagination
 	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)

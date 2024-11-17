@@ -6,8 +6,8 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type blockstateRepository struct {
@@ -23,7 +23,7 @@ func NewBlockstateRepository(db *gorm.DB) interfaces.BlockStateRepository {
 
 // GetLastProcessedBlock retrieves the last processed block for the specified network from the database.
 func (r *blockstateRepository) GetLastProcessedBlock(ctx context.Context, network string) (uint64, error) {
-	var blockState model.BlockState
+	var blockState domain.BlockState
 
 	// Attempt to find the block state entry for the specified network
 	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
@@ -38,7 +38,7 @@ func (r *blockstateRepository) GetLastProcessedBlock(ctx context.Context, networ
 
 // UpdateLastProcessedBlock updates the last processed block for the specified network in the database.
 func (r *blockstateRepository) UpdateLastProcessedBlock(ctx context.Context, blockNumber uint64, network string) error {
-	var blockState model.BlockState
+	var blockState domain.BlockState
 
 	// Check if the block state record for the network exists
 	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
@@ -58,7 +58,7 @@ func (r *blockstateRepository) UpdateLastProcessedBlock(ctx context.Context, blo
 
 // GetLatestBlock retrieves the latest block for the specified network from the database.
 func (r *blockstateRepository) GetLatestBlock(ctx context.Context, network string) (uint64, error) {
-	var blockState model.BlockState
+	var blockState domain.BlockState
 
 	// Attempt to find the block state entry for the specified network
 	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
@@ -73,7 +73,7 @@ func (r *blockstateRepository) GetLatestBlock(ctx context.Context, network strin
 
 // UpdateLatestBlock updates the latest block for the specified network in the database.
 func (r *blockstateRepository) UpdateLatestBlock(ctx context.Context, blockNumber uint64, network string) error {
-	var blockState model.BlockState
+	var blockState domain.BlockState
 
 	// Check if the block state record for the network exists
 	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {

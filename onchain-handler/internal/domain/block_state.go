@@ -1,4 +1,4 @@
-package model
+package domain
 
 // BlockState represents the state of the last processed block.
 type BlockState struct {

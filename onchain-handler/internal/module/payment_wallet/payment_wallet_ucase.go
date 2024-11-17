@@ -3,9 +3,9 @@ package payment_wallet
 import (
 	"context"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type paymentWalletUCase struct {
@@ -21,9 +21,9 @@ func NewPaymentWalletUCase(
 }
 
 func (u *paymentWalletUCase) CreatePaymentWallets(ctx context.Context, payloads []dto.PaymentWalletPayloadDTO) error {
-	var wallets []model.PaymentWallet
+	var wallets []domain.PaymentWallet
 	for _, payload := range payloads {
-		wallet := model.PaymentWallet{
+		wallet := domain.PaymentWallet{
 			ID:      payload.ID,
 			Address: payload.Address,
 			InUse:   payload.InUse,

@@ -11,9 +11,9 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 )
 
@@ -78,7 +78,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 
 		// Begin a new transaction
 		err = u.db.Transaction(func(tx *gorm.DB) error {
-			var orders []model.PaymentOrder
+			var orders []domain.PaymentOrder
 
 			// Convert each payload to a PaymentOrder model, associating it with the latest block
 			for _, payload := range groupedPayloads {
@@ -89,7 +89,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 				}
 
 				// Create the PaymentOrder model for the current payload
-				order := model.PaymentOrder{
+				order := domain.PaymentOrder{
 					Amount:      payload.Amount,
 					WalletID:    assignWallet.ID, // Associate the order with the claimed wallet
 					Wallet:      *assignWallet,
@@ -129,7 +129,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 
 // mapOrderIDsAndSignPayloads maps order IDs and signs payloads.
 func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
-	orders []model.PaymentOrder,
+	orders []domain.PaymentOrder,
 ) ([]dto.CreatedPaymentOrderDTO, error) {
 	var response []dto.CreatedPaymentOrderDTO
 
@@ -292,7 +292,7 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 }
 
 // Helper function to map PaymentEventHistory to PaymentHistoryDTO
-func mapEventHistoriesToDTO(eventHistories []model.PaymentEventHistory) []dto.PaymentHistoryDTO {
+func mapEventHistoriesToDTO(eventHistories []domain.PaymentEventHistory) []dto.PaymentHistoryDTO {
 	eventHistoriesDTO := make([]dto.PaymentHistoryDTO, len(eventHistories))
 	for i, eventHistory := range eventHistories {
 		eventHistoriesDTO[i] = dto.PaymentHistoryDTO{

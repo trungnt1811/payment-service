@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type PaymentOrderRepository interface {
-	CreatePaymentOrders(ctx context.Context, orders []model.PaymentOrder) ([]model.PaymentOrder, error)
-	GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]model.PaymentOrder, error)
+	CreatePaymentOrders(ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
+	GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(
 		ctx context.Context,
 		orderID uint64,
@@ -21,11 +21,11 @@ type PaymentOrderRepository interface {
 	) error
 	BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
-	GetExpiredPaymentOrders(ctx context.Context, network string) ([]model.PaymentOrder, error)
+	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) error
 	UpdateActiveOrdersToExpired(ctx context.Context) error
 	GetPaymentOrderHistories(ctx context.Context, limit, offset int, requestIDs []string, status *string) (
-		[]model.PaymentOrder, error,
+		[]domain.PaymentOrder, error,
 	)
 }
 

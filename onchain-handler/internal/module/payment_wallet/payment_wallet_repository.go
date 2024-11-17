@@ -9,8 +9,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 )
 
@@ -26,7 +26,7 @@ func NewPaymentWalletRepository(db *gorm.DB, config *conf.Configuration) interfa
 	}
 }
 
-func (r *paymentWalletRepository) CreatePaymentWallets(ctx context.Context, wallets []model.PaymentWallet) error {
+func (r *paymentWalletRepository) CreatePaymentWallets(ctx context.Context, wallets []domain.PaymentWallet) error {
 	err := r.db.WithContext(ctx).Create(&wallets).Error
 	if err != nil {
 		return fmt.Errorf("failed to create payment wallets: %w", err)
@@ -35,9 +35,9 @@ func (r *paymentWalletRepository) CreatePaymentWallets(ctx context.Context, wall
 }
 
 func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) {
-	var wallet model.PaymentWallet
+	var wallet domain.PaymentWallet
 	// Try to fetch the first row from the PaymentWallet table
-	err := r.db.WithContext(ctx).Model(&model.PaymentWallet{}).First(&wallet).Error
+	err := r.db.WithContext(ctx).Model(&domain.PaymentWallet{}).First(&wallet).Error
 	if err != nil {
 		// If the error is "record not found", return false without error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -51,8 +51,8 @@ func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) 
 }
 
 // ClaimFirstAvailableWallet fetches the first available wallet or creates a new one if none are available
-func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context) (*model.PaymentWallet, error) {
-	var wallet model.PaymentWallet
+func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context) (*domain.PaymentWallet, error) {
+	var wallet domain.PaymentWallet
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Attempt to find and lock the first available wallet
@@ -69,7 +69,7 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context)
 
 		// If no wallet found, count current records to derive next ID
 		var recordCount int64
-		if err := tx.Model(&model.PaymentWallet{}).Count(&recordCount).Error; err != nil {
+		if err := tx.Model(&domain.PaymentWallet{}).Count(&recordCount).Error; err != nil {
 			return fmt.Errorf("failed to count wallets: %w", err)
 		}
 		nextID := uint64(recordCount + 1)
@@ -87,7 +87,7 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context)
 		}
 
 		// Initialize the new wallet struct
-		wallet = model.PaymentWallet{
+		wallet = domain.PaymentWallet{
 			ID:      nextID,
 			Address: account.Address.Hex(),
 			InUse:   true,

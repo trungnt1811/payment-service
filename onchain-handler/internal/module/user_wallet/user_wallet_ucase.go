@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type userWalletUCase struct {
@@ -23,9 +23,9 @@ func NewUserWalletUCase(
 }
 
 func (u *userWalletUCase) CreateUserWallets(ctx context.Context, payloads []dto.UserWalletPayloadDTO) error {
-	var wallets []model.UserWallet
+	var wallets []domain.UserWallet
 	for _, payload := range payloads {
-		wallet := model.UserWallet{
+		wallet := domain.UserWallet{
 			UserID:  payload.UserID,
 			Address: payload.Address,
 		}

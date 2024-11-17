@@ -10,9 +10,9 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 )
 
@@ -115,12 +115,12 @@ func (u *tokenTransferUCase) convertToRecipientsAndAmounts(req []dto.TokenTransf
 }
 
 // prepareTokenTransferHistories prepares token transfer history based on the payload
-func (u *tokenTransferUCase) prepareTokenTransferHistories(payloads []dto.TokenTransferPayloadDTO) ([]model.TokenTransferHistory, error) {
-	var tokenTransfers []model.TokenTransferHistory
+func (u *tokenTransferUCase) prepareTokenTransferHistories(payloads []dto.TokenTransferPayloadDTO) ([]domain.TokenTransferHistory, error) {
+	var tokenTransfers []domain.TokenTransferHistory
 
 	for _, payload := range payloads {
 		// Prepare reward entry
-		tokenTransfers = append(tokenTransfers, model.TokenTransferHistory{
+		tokenTransfers = append(tokenTransfers, domain.TokenTransferHistory{
 			RequestID:   payload.RequestID,
 			Network:     payload.Network,
 			FromAddress: payload.FromAddress,
@@ -136,11 +136,11 @@ func (u *tokenTransferUCase) prepareTokenTransferHistories(payloads []dto.TokenT
 // bulkTransferAndSaveTokenTransferHistories performs bulk token transfer and updates token transfer history.
 func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	ctx context.Context,
-	tokenTransfers []model.TokenTransferHistory,
+	tokenTransfers []domain.TokenTransferHistory,
 	fromAddress, symbol string,
 	recipients []string,
 	amounts []*big.Int,
-) ([]model.TokenTransferHistory, error) {
+) ([]domain.TokenTransferHistory, error) {
 	// TODO: currently this supports only AVAX C-Chain, need support other networks like BSC
 	chainID := u.config.Blockchain.AvaxNetwork.AvaxChainID
 	bulkSenderContractAddress := u.config.Blockchain.AvaxNetwork.AvaxBulkSenderContractAddress
@@ -193,7 +193,7 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 
 // handleTransferSuccess updates token transfer history on success.
 func (u *tokenTransferUCase) handleTransferSuccess(
-	tokenTransfer *model.TokenTransferHistory,
+	tokenTransfer *domain.TokenTransferHistory,
 	txHash *string,
 	tokenSymbol *string,
 	txFee *big.Float,
@@ -206,7 +206,7 @@ func (u *tokenTransferUCase) handleTransferSuccess(
 
 // handleTransferError updates token transfer history on error.
 func (u *tokenTransferUCase) handleTransferError(
-	tokenTransfer *model.TokenTransferHistory,
+	tokenTransfer *domain.TokenTransferHistory,
 	err error,
 	txHash *string,
 	tokenSymbol *string,

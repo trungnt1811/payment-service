@@ -7,8 +7,8 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/model"
 )
 
 type tokenTransferRepository struct {
@@ -21,7 +21,7 @@ func NewTokenTransferRepository(db *gorm.DB) interfaces.TokenTransferRepository 
 	}
 }
 
-func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Context, models []model.TokenTransferHistory) error {
+func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Context, models []domain.TokenTransferHistory) error {
 	err := r.db.WithContext(ctx).Create(&models).Error
 	if err != nil {
 		return fmt.Errorf("failed to create transfer histories: %w", err)
@@ -34,8 +34,8 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 	limit, offset int,
 	requestIDs []string, // List of request IDs to filter
 	startTime, endTime time.Time, // Range of time to filter by
-) ([]model.TokenTransferHistory, error) {
-	var tokenTransfers []model.TokenTransferHistory
+) ([]domain.TokenTransferHistory, error) {
+	var tokenTransfers []domain.TokenTransferHistory
 
 	// Start with pagination setup
 	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
