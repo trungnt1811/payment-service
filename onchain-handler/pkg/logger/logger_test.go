@@ -142,3 +142,52 @@ func TestSetAndGetLogLevel(t *testing.T) {
 		})
 	}
 }
+
+func TestIsLevelEnabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name          string
+		currentLevel  interfaces.Level
+		testLevel     interfaces.Level
+		expectEnabled bool
+	}{
+		{
+			name:          "Debug level enabled when current is Debug",
+			currentLevel:  interfaces.DebugLevel,
+			testLevel:     interfaces.DebugLevel,
+			expectEnabled: true,
+		},
+		{
+			name:          "Info level enabled when current is Debug",
+			currentLevel:  interfaces.DebugLevel,
+			testLevel:     interfaces.InfoLevel,
+			expectEnabled: true,
+		},
+		{
+			name:          "Debug level disabled when current is Info",
+			currentLevel:  interfaces.InfoLevel,
+			testLevel:     interfaces.DebugLevel,
+			expectEnabled: false,
+		},
+		{
+			name:          "Error level enabled when current is Info",
+			currentLevel:  interfaces.InfoLevel,
+			testLevel:     interfaces.ErrorLevel,
+			expectEnabled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			Reset()
+			mockLogger := mocks.NewMockLogger(ctrl)
+			mockLogger.EXPECT().GetLogLevel().Return(tt.currentLevel).AnyTimes()
+			InitLogger(mockLogger)
+
+			enabled := IsLevelEnabled(tt.testLevel)
+			require.Equal(t, tt.expectEnabled, enabled)
+		})
+	}
+}
