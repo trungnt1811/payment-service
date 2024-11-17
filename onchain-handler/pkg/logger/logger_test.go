@@ -3,103 +3,120 @@ package logger
 import (
 	"testing"
 
+	"go.uber.org/mock/gomock"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/genefriendway/onchain-handler/pkg/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/mocks"
 )
 
-type MockLogger struct {
-	level interfaces.Level
-}
-
-func (m *MockLogger) SetLogLevel(level interfaces.Level) {
-	m.level = level
-}
-
-func (m *MockLogger) GetLogLevel() interfaces.Level {
-	return m.level
-}
-
-func (m *MockLogger) Panic(message string)                                          {}
-func (m *MockLogger) Panicf(format string, values ...interface{})                   {}
-func (m *MockLogger) Fatal(message string)                                          {}
-func (m *MockLogger) Fatalf(format string, values ...interface{})                   {}
-func (m *MockLogger) Error(message string)                                          {}
-func (m *MockLogger) Errorf(format string, values ...interface{})                   {}
-func (m *MockLogger) Info(message string)                                           {}
-func (m *MockLogger) Infof(format string, values ...interface{})                    {}
-func (m *MockLogger) Debug(message string)                                          {}
-func (m *MockLogger) Debugf(format string, values ...interface{})                   {}
-func (m *MockLogger) Warn(message string)                                           {}
-func (m *MockLogger) Warnf(format string, values ...interface{})                    {}
-func (m *MockLogger) WithInterface(key string, value interface{}) interfaces.Logger { return m }
-func (m *MockLogger) WithFields(fields map[string]interface{}) interfaces.Logger    { return m }
-func (m *MockLogger) SetConfigModeByCode(code string)                               {}
-func (m *MockLogger) SetConfig(config interface{})                                  {}
-func (m *MockLogger) GetConfig() interface{}                                        { return nil }
-func (m *MockLogger) SetServiceName(serviceName string)                             {}
-func (m *MockLogger) GetServiceName() string                                        { return "" }
-
 func TestInitLogger(t *testing.T) {
-	// Define test cases
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	tests := []struct {
-		name     string
-		logger   *MockLogger
-		expected *MockLogger
+		name      string
+		setup     func() interfaces.Logger
+		wantPanic bool
 	}{
-		{name: "Initialize Logger", logger: &MockLogger{}, expected: &MockLogger{}},
+		{
+			name: "Successfully initialize logger",
+			setup: func() interfaces.Logger {
+				return mocks.NewMockLogger(ctrl)
+			},
+			wantPanic: false,
+		},
+		{
+			name: "Panic when initializing nil logger",
+			setup: func() interfaces.Logger {
+				return nil
+			},
+			wantPanic: true,
+		},
+		{
+			name: "Initialize logger only once (singleton)",
+			setup: func() interfaces.Logger {
+				firstLogger := mocks.NewMockLogger(ctrl)
+				InitLogger(firstLogger)
+				return mocks.NewMockLogger(ctrl)
+			},
+			wantPanic: false,
+		},
 	}
 
-	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			Reset() // Ensure the logger is reset before each test
-			InitLogger(tt.logger)
-			if instance != tt.logger {
-				t.Errorf("Expected logger instance to be %v, got %v", tt.logger, instance)
+			Reset() // Ensure logger is reset before each test
+			logger := tt.setup()
+
+			if tt.wantPanic {
+				require.Panics(t, func() {
+					InitLogger(logger)
+				})
+			} else {
+				require.NotPanics(t, func() {
+					InitLogger(logger)
+				})
+
+				// Verify the logger is correctly initialized
+				actualLogger := GetLogger()
+				require.NotNil(t, actualLogger)
+
+				// For singleton test case, verify the first logger remains
+				if tt.name == "Initialize logger only once (singleton)" {
+					require.Equal(t, instance, GetLogger())
+				}
 			}
 		})
 	}
 }
 
 func TestGetLogger(t *testing.T) {
-	// Define test cases
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	tests := []struct {
-		name     string
-		init     bool
-		expected *MockLogger
+		name      string
+		setup     func()
+		wantPanic bool
 	}{
-		{name: "Get Logger After Init", init: true, expected: &MockLogger{}},
-		{name: "Get Logger Without Init", init: false, expected: nil},
+		{
+			name: "Successfully get initialized logger",
+			setup: func() {
+				mockLogger := mocks.NewMockLogger(ctrl)
+				Reset()
+				InitLogger(mockLogger)
+			},
+			wantPanic: false,
+		},
+		{
+			name:      "Panic when logger not initialized",
+			setup:     func() { Reset() },
+			wantPanic: true,
+		},
 	}
 
-	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.init {
-				InitLogger(tt.expected)
+			tt.setup()
+
+			if tt.wantPanic {
+				require.Panics(t, func() {
+					GetLogger()
+				})
 			} else {
-				// Reset instance and once for testing purposes
-				Reset()
-			}
-
-			defer func() {
-				if r := recover(); r != nil && tt.expected != nil {
-					t.Errorf("Did not expect panic, but got one")
-				} else if r == nil && tt.expected == nil {
-					t.Errorf("Expected panic, but did not get one")
-				}
-			}()
-
-			logger := GetLogger()
-			if (logger == nil && tt.expected != nil) || (logger != nil && tt.expected == nil) {
-				t.Errorf("Expected logger to be %v, got %v", tt.expected, logger)
-			} else if logger != nil && tt.expected != nil && logger.(*MockLogger).level != tt.expected.level {
-				t.Errorf("Expected logger level to be %v, got %v", tt.expected.level, logger.(*MockLogger).level)
+				logger := GetLogger()
+				require.NotNil(t, logger)
 			}
 		})
 	}
 }
 
 func TestSetAndGetLogLevel(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	// Define test cases
 	tests := []struct {
 		name     string
@@ -113,14 +130,15 @@ func TestSetAndGetLogLevel(t *testing.T) {
 	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockLogger := &MockLogger{}
+			mockLogger := mocks.NewMockLogger(ctrl)
 			Reset() // Ensure the logger is reset before each test
 			InitLogger(mockLogger)
 
+			mockLogger.EXPECT().SetLogLevel(tt.level).Times(1)
+			mockLogger.EXPECT().GetLogLevel().Return(tt.expected).Times(1)
+
 			mockLogger.SetLogLevel(tt.level)
-			if mockLogger.GetLogLevel() != tt.expected {
-				t.Errorf("Expected log level to be %v, got %v", tt.expected, mockLogger.GetLogLevel())
-			}
+			require.Equal(t, tt.expected, mockLogger.GetLogLevel())
 		})
 	}
 }
