@@ -7,12 +7,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 func TestLogrusLogger_SetConfigModeByCode(t *testing.T) {
 	var buf bytes.Buffer
-	logger := NewLogrusLogger(&buf, pkglogger.InfoLevel)
+	logger := NewLogrusLogger(&buf, interfaces.InfoLevel)
 
 	logger.SetConfigModeByCode("test_code")
 	// Since SetConfigModeByCode is currently empty, we just verify it doesn't panic
@@ -21,7 +21,7 @@ func TestLogrusLogger_SetConfigModeByCode(t *testing.T) {
 
 func TestLogrusLogger_SetAndGetConfig(t *testing.T) {
 	var buf bytes.Buffer
-	logger := NewLogrusLogger(&buf, pkglogger.InfoLevel)
+	logger := NewLogrusLogger(&buf, interfaces.InfoLevel)
 
 	testConfig := map[string]string{"key": "value"}
 	logger.SetConfig(testConfig)
@@ -32,7 +32,7 @@ func TestLogrusLogger_SetAndGetConfig(t *testing.T) {
 
 func TestLogrusLogger_SetAndGetServiceName(t *testing.T) {
 	var buf bytes.Buffer
-	logger := NewLogrusLogger(&buf, pkglogger.InfoLevel)
+	logger := NewLogrusLogger(&buf, interfaces.InfoLevel)
 
 	testServiceName := "test-service"
 	logger.SetServiceName(testServiceName)
@@ -45,7 +45,7 @@ func TestLogrusLogger_FormatFunctions(t *testing.T) {
 	tests := []struct {
 		name        string
 		logFunc     func(*LogrusLogger, string, ...interface{})
-		level       pkglogger.Level
+		level       interfaces.Level
 		format      string
 		args        []interface{}
 		expectedLog string
@@ -53,7 +53,7 @@ func TestLogrusLogger_FormatFunctions(t *testing.T) {
 		{
 			name:        "Debugf",
 			logFunc:     (*LogrusLogger).Debugf,
-			level:       pkglogger.DebugLevel,
+			level:       interfaces.DebugLevel,
 			format:      "Debug %s",
 			args:        []interface{}{"message"},
 			expectedLog: "Debug message",
@@ -61,7 +61,7 @@ func TestLogrusLogger_FormatFunctions(t *testing.T) {
 		{
 			name:        "Infof",
 			logFunc:     (*LogrusLogger).Infof,
-			level:       pkglogger.InfoLevel,
+			level:       interfaces.InfoLevel,
 			format:      "Info %s",
 			args:        []interface{}{"message"},
 			expectedLog: "Info message",
@@ -69,7 +69,7 @@ func TestLogrusLogger_FormatFunctions(t *testing.T) {
 		{
 			name:        "Warnf",
 			logFunc:     (*LogrusLogger).Warnf,
-			level:       pkglogger.WarnLevel,
+			level:       interfaces.WarnLevel,
 			format:      "Warn %s",
 			args:        []interface{}{"message"},
 			expectedLog: "Warn message",
@@ -77,7 +77,7 @@ func TestLogrusLogger_FormatFunctions(t *testing.T) {
 		{
 			name:        "Errorf",
 			logFunc:     (*LogrusLogger).Errorf,
-			level:       pkglogger.ErrorLevel,
+			level:       interfaces.ErrorLevel,
 			format:      "Error %s",
 			args:        []interface{}{"message"},
 			expectedLog: "Error message",
@@ -119,7 +119,7 @@ func TestLogrusLogger_PanicAndFatalF(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			logger := NewLogrusLogger(&buf, pkglogger.PanicLevel)
+			logger := NewLogrusLogger(&buf, interfaces.PanicLevel)
 
 			require.Panics(t, func() {
 				test.logFunc(logger, test.format, test.args...)

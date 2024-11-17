@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 func TestDefaultZapConfig(t *testing.T) {
@@ -46,13 +46,13 @@ func TestDevelopmentAndProductionConfigs(t *testing.T) {
 func TestNewZapLogger(t *testing.T) {
 	tests := []struct {
 		name         string
-		initialLevel pkglogger.Level
+		initialLevel interfaces.Level
 		config       *ZapLoggerConfig
 		wantErr      bool
 	}{
-		{"default-info", pkglogger.InfoLevel, nil, false},
-		{"custom-debug", pkglogger.DebugLevel, DefaultZapConfig("test"), false},
-		{"custom-error", pkglogger.ErrorLevel, defaultZapConfigDevelop("test"), false},
+		{"default-info", interfaces.InfoLevel, nil, false},
+		{"custom-debug", interfaces.DebugLevel, DefaultZapConfig("test"), false},
+		{"custom-error", interfaces.ErrorLevel, defaultZapConfigDevelop("test"), false},
 	}
 
 	for _, tt := range tests {
@@ -70,12 +70,12 @@ func TestNewZapLogger(t *testing.T) {
 }
 
 func TestZapLogger_Operations(t *testing.T) {
-	logger, err := NewZapLogger(pkglogger.InfoLevel)
+	logger, err := NewZapLogger(interfaces.InfoLevel)
 	require.NoError(t, err)
 
 	t.Run("level operations", func(t *testing.T) {
-		logger.SetLogLevel(pkglogger.DebugLevel)
-		require.Equal(t, pkglogger.DebugLevel, logger.GetLogLevel())
+		logger.SetLogLevel(interfaces.DebugLevel)
+		require.Equal(t, interfaces.DebugLevel, logger.GetLogLevel())
 	})
 
 	t.Run("with fields", func(t *testing.T) {
@@ -97,16 +97,16 @@ func TestZapLogger_Operations(t *testing.T) {
 
 func TestConvertZapLevel(t *testing.T) {
 	tests := []struct {
-		level    pkglogger.Level
+		level    interfaces.Level
 		expected zapcore.Level
 	}{
-		{pkglogger.DebugLevel, zapcore.DebugLevel},
-		{pkglogger.InfoLevel, zapcore.InfoLevel},
-		{pkglogger.WarnLevel, zapcore.WarnLevel},
-		{pkglogger.ErrorLevel, zapcore.ErrorLevel},
-		{pkglogger.FatalLevel, zapcore.FatalLevel},
-		{pkglogger.PanicLevel, zapcore.PanicLevel},
-		{pkglogger.Level(99), zapcore.InfoLevel}, // default case
+		{interfaces.DebugLevel, zapcore.DebugLevel},
+		{interfaces.InfoLevel, zapcore.InfoLevel},
+		{interfaces.WarnLevel, zapcore.WarnLevel},
+		{interfaces.ErrorLevel, zapcore.ErrorLevel},
+		{interfaces.FatalLevel, zapcore.FatalLevel},
+		{interfaces.PanicLevel, zapcore.PanicLevel},
+		{interfaces.Level(99), zapcore.InfoLevel}, // default case
 	}
 
 	for _, tt := range tests {

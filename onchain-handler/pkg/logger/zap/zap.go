@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 // DefaultZapConfig returns default configuration for Zap logger
@@ -68,19 +68,19 @@ func defaultZapConfigProduction(serviceName string) *ZapLoggerConfig {
 	}
 }
 
-func convertZapLevel(level logger.Level) zapcore.Level {
+func convertZapLevel(level interfaces.Level) zapcore.Level {
 	switch level {
-	case logger.DebugLevel:
+	case interfaces.DebugLevel:
 		return zapcore.DebugLevel
-	case logger.InfoLevel:
+	case interfaces.InfoLevel:
 		return zapcore.InfoLevel
-	case logger.WarnLevel:
+	case interfaces.WarnLevel:
 		return zapcore.WarnLevel
-	case logger.ErrorLevel:
+	case interfaces.ErrorLevel:
 		return zapcore.ErrorLevel
-	case logger.FatalLevel:
+	case interfaces.FatalLevel:
 		return zapcore.FatalLevel
-	case logger.PanicLevel:
+	case interfaces.PanicLevel:
 		return zapcore.PanicLevel
 	default:
 		return zapcore.InfoLevel
@@ -115,9 +115,9 @@ type ZapLoggerConfig struct {
 // ZapLoggerFactory implements LoggerFactory for creating ZapLogger instances
 type ZapLoggerFactory struct{}
 
-func (f *ZapLoggerFactory) CreateLogger(config interface{}) (logger.Logger, error) {
+func (f *ZapLoggerFactory) CreateLogger(config interface{}) (interfaces.Logger, error) {
 	if config == nil {
-		return NewZapLogger(logger.InfoLevel)
+		return NewZapLogger(interfaces.InfoLevel)
 	}
 
 	zapConfig, ok := config.(*ZapLoggerConfig)
@@ -125,16 +125,16 @@ func (f *ZapLoggerFactory) CreateLogger(config interface{}) (logger.Logger, erro
 		return nil, fmt.Errorf("invalid config type: expected *ZapLoggerConfig, got %T", config)
 	}
 
-	return NewZapLoggerWithConfig(logger.InfoLevel, zapConfig)
+	return NewZapLoggerWithConfig(interfaces.InfoLevel, zapConfig)
 }
 
 // NewZapLogger creates a new ZapLogger with default configuration
-func NewZapLogger(level logger.Level) (logger.Logger, error) {
+func NewZapLogger(level interfaces.Level) (interfaces.Logger, error) {
 	return NewZapLoggerWithConfig(level, nil)
 }
 
 // NewZapLoggerWithConfig creates a new ZapLogger with the specified configuration
-func NewZapLoggerWithConfig(level logger.Level, config *ZapLoggerConfig) (*ZapLogger, error) {
+func NewZapLoggerWithConfig(level interfaces.Level, config *ZapLoggerConfig) (*ZapLogger, error) {
 	if config == nil {
 		config = DefaultZapConfig("")
 	}
@@ -197,7 +197,7 @@ func createEncoderConfig(config *ZapLoggerConfig) zapcore.EncoderConfig {
 }
 
 // Thread-safe atomic operations
-func (l *ZapLogger) setLevel(level logger.Level) {
+func (l *ZapLogger) setLevel(level interfaces.Level) {
 	l.level.Store(level)
 	// Update the underlying zap logger's level
 	if l.atomicLevel != (zap.AtomicLevel{}) {
@@ -205,15 +205,15 @@ func (l *ZapLogger) setLevel(level logger.Level) {
 	}
 }
 
-func (l *ZapLogger) getLevel() logger.Level {
-	return l.level.Load().(logger.Level)
+func (l *ZapLogger) getLevel() interfaces.Level {
+	return l.level.Load().(interfaces.Level)
 }
 
 func (l *ZapLogger) setConfig(config *ZapLoggerConfig) {
 	l.config.Store(config)
 }
 
-func (l *ZapLogger) IsLevelEnabled(level logger.Level) bool {
+func (l *ZapLogger) IsLevelEnabled(level interfaces.Level) bool {
 	// Add nil check for atomicLevel
 	if l.atomicLevel == (zap.AtomicLevel{}) {
 		// If atomicLevel is not set, fall back to comparing with stored level
@@ -227,88 +227,88 @@ func (l *ZapLogger) getConfig() *ZapLoggerConfig {
 }
 
 // Logger interface implementation
-func (l *ZapLogger) SetLogLevel(level logger.Level) {
+func (l *ZapLogger) SetLogLevel(level interfaces.Level) {
 	l.setLevel(level)
 }
 
-func (l *ZapLogger) GetLogLevel() logger.Level {
+func (l *ZapLogger) GetLogLevel() interfaces.Level {
 	return l.getLevel()
 }
 
 func (l *ZapLogger) Debug(message string) {
-	if l.IsLevelEnabled(logger.DebugLevel) {
+	if l.IsLevelEnabled(interfaces.DebugLevel) {
 		l.logger.Debug(message)
 	}
 }
 
 func (l *ZapLogger) Debugf(format string, values ...interface{}) {
-	if l.IsLevelEnabled(logger.DebugLevel) {
+	if l.IsLevelEnabled(interfaces.DebugLevel) {
 		l.logger.Debugf(format, values...)
 	}
 }
 
 func (l *ZapLogger) Info(message string) {
-	if l.IsLevelEnabled(logger.DebugLevel) {
+	if l.IsLevelEnabled(interfaces.DebugLevel) {
 		l.logger.Info(message)
 	}
 }
 
 func (l *ZapLogger) Infof(format string, values ...interface{}) {
-	if l.IsLevelEnabled(logger.DebugLevel) {
+	if l.IsLevelEnabled(interfaces.DebugLevel) {
 		l.logger.Infof(format, values...)
 	}
 }
 
 func (l *ZapLogger) Warn(message string) {
-	if l.IsLevelEnabled(logger.WarnLevel) {
+	if l.IsLevelEnabled(interfaces.WarnLevel) {
 		l.logger.Warn(message)
 	}
 }
 
 func (l *ZapLogger) Warnf(format string, values ...interface{}) {
-	if l.IsLevelEnabled(logger.WarnLevel) {
+	if l.IsLevelEnabled(interfaces.WarnLevel) {
 		l.logger.Warnf(format, values...)
 	}
 }
 
 func (l *ZapLogger) Error(message string) {
-	if l.IsLevelEnabled(logger.ErrorLevel) {
+	if l.IsLevelEnabled(interfaces.ErrorLevel) {
 		l.logger.Error(message)
 	}
 }
 
 func (l *ZapLogger) Errorf(format string, values ...interface{}) {
-	if l.IsLevelEnabled(logger.ErrorLevel) {
+	if l.IsLevelEnabled(interfaces.ErrorLevel) {
 		l.logger.Errorf(format, values...)
 	}
 }
 
 func (l *ZapLogger) Fatal(message string) {
-	if l.IsLevelEnabled(logger.FatalLevel) {
+	if l.IsLevelEnabled(interfaces.FatalLevel) {
 		l.logger.Fatal(message)
 	}
 }
 
 func (l *ZapLogger) Fatalf(format string, values ...interface{}) {
-	if l.IsLevelEnabled(logger.FatalLevel) {
+	if l.IsLevelEnabled(interfaces.FatalLevel) {
 		l.logger.Fatalf(format, values...)
 	}
 }
 
 func (l *ZapLogger) Panic(message string) {
-	if l.IsLevelEnabled(logger.PanicLevel) {
+	if l.IsLevelEnabled(interfaces.PanicLevel) {
 		l.logger.Panic(message)
 	}
 }
 
 func (l *ZapLogger) Panicf(format string, values ...interface{}) {
-	if l.IsLevelEnabled(logger.PanicLevel) {
+	if l.IsLevelEnabled(interfaces.PanicLevel) {
 		l.logger.Panicf(format, values...)
 	}
 }
 
 // WithInterface creates a new logger with the added field while preserving atomicLevel
-func (l *ZapLogger) WithInterface(key string, value interface{}) logger.Logger {
+func (l *ZapLogger) WithInterface(key string, value interface{}) interfaces.Logger {
 	return &ZapLogger{
 		logger:      l.logger.With(key, value),
 		atomicLevel: l.atomicLevel,
@@ -319,7 +319,7 @@ func (l *ZapLogger) WithInterface(key string, value interface{}) logger.Logger {
 }
 
 // WithFields creates a new logger with the added fields while preserving atomicLevel
-func (l *ZapLogger) WithFields(fields map[string]interface{}) logger.Logger {
+func (l *ZapLogger) WithFields(fields map[string]interface{}) interfaces.Logger {
 	args := make([]interface{}, 0, len(fields)*2)
 	for k, v := range fields {
 		args = append(args, k, v)
@@ -338,9 +338,9 @@ func (l *ZapLogger) SetConfigModeByCode(code string) {
 	serviceName := l.GetServiceName()
 
 	switch code {
-	case logger.DEVELOPMENT_ENVIRONMENT_CODE_MODE:
+	case interfaces.DEVELOPMENT_ENVIRONMENT_CODE_MODE:
 		config = defaultZapConfigDevelop(serviceName)
-	case logger.PRODUCTION_ENVIRONMENT_CODE_MODE:
+	case interfaces.PRODUCTION_ENVIRONMENT_CODE_MODE:
 		config = defaultZapConfigProduction(serviceName)
 	default:
 		config = DefaultZapConfig(serviceName)

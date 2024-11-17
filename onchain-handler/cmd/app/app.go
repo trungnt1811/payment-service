@@ -27,6 +27,7 @@ import (
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/workers"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
+	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
@@ -158,12 +159,12 @@ func initializeLoggerAndMode(config *conf.Configuration) {
 	// Set service name and environment
 	logger.SetServiceName("OnchainHandler")
 	if config.Env == "PROD" {
-		logger.SetConfigModeByCode(pkglogger.PRODUCTION_ENVIRONMENT_CODE_MODE)
-		logger.SetLogLevel(pkglogger.InfoLevel)
+		logger.SetConfigModeByCode(pkginterfaces.PRODUCTION_ENVIRONMENT_CODE_MODE)
+		logger.SetLogLevel(pkginterfaces.InfoLevel)
 		gin.SetMode(gin.ReleaseMode)
 	} else {
-		logger.SetConfigModeByCode(pkglogger.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
-		logger.SetLogLevel(pkglogger.DebugLevel)
+		logger.SetConfigModeByCode(pkginterfaces.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+		logger.SetLogLevel(pkginterfaces.DebugLevel)
 	}
 
 	// Use the logger

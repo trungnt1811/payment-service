@@ -15,9 +15,9 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/utils"
 	pkgcrypto "github.com/genefriendway/onchain-handler/pkg/crypto"
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer

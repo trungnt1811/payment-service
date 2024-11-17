@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/pkg/dto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 

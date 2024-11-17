@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
 )
@@ -25,8 +26,8 @@ func TestMain(m *testing.M) {
 
 	// Set service name and environment
 	logger.SetServiceName("my-service")
-	logger.SetConfigModeByCode(pkglogger.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
-	logger.SetLogLevel(pkglogger.DebugLevel)
+	logger.SetConfigModeByCode(interfaces.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+	logger.SetLogLevel(interfaces.DebugLevel)
 
 	pkglogger.InitLogger(logger)
 

@@ -6,19 +6,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 func TestNewZerologLogger(t *testing.T) {
 	tests := []struct {
 		name     string
-		level    pkglogger.Level
-		expected pkglogger.Level
+		level    interfaces.Level
+		expected interfaces.Level
 		useColor bool
 	}{
-		{"Info level without colors", pkglogger.InfoLevel, pkglogger.InfoLevel, false},
-		{"Debug level with colors", pkglogger.DebugLevel, pkglogger.DebugLevel, true},
-		{"Error level without colors", pkglogger.ErrorLevel, pkglogger.ErrorLevel, false},
+		{"Info level without colors", interfaces.InfoLevel, interfaces.InfoLevel, false},
+		{"Debug level with colors", interfaces.DebugLevel, interfaces.DebugLevel, true},
+		{"Error level without colors", interfaces.ErrorLevel, interfaces.ErrorLevel, false},
 	}
 
 	for _, test := range tests {
@@ -34,7 +34,7 @@ func TestNewZerologLogger(t *testing.T) {
 
 func TestSetAndGetConfig(t *testing.T) {
 	var buf bytes.Buffer
-	logger := NewZerologLogger(&buf, pkglogger.InfoLevel, false)
+	logger := NewZerologLogger(&buf, interfaces.InfoLevel, false)
 
 	config := map[string]string{"key": "value"}
 	logger.SetConfig(config)
@@ -44,7 +44,7 @@ func TestSetAndGetConfig(t *testing.T) {
 
 func TestSetAndGetServiceName(t *testing.T) {
 	var buf bytes.Buffer
-	logger := NewZerologLogger(&buf, pkglogger.InfoLevel, false)
+	logger := NewZerologLogger(&buf, interfaces.InfoLevel, false)
 
 	serviceName := "my-service"
 	logger.SetServiceName(serviceName)
@@ -56,16 +56,16 @@ func TestSetConfigModeByCode(t *testing.T) {
 	tests := []struct {
 		name          string
 		code          string
-		expectedLevel pkglogger.Level
+		expectedLevel interfaces.Level
 	}{
-		{"Development mode", pkglogger.DEVELOPMENT_ENVIRONMENT_CODE_MODE, pkglogger.DebugLevel},
-		{"Production mode", pkglogger.PRODUCTION_ENVIRONMENT_CODE_MODE, pkglogger.InfoLevel},
+		{"Development mode", interfaces.DEVELOPMENT_ENVIRONMENT_CODE_MODE, interfaces.DebugLevel},
+		{"Production mode", interfaces.PRODUCTION_ENVIRONMENT_CODE_MODE, interfaces.InfoLevel},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			logger := NewZerologLogger(&buf, pkglogger.InfoLevel, false)
+			logger := NewZerologLogger(&buf, interfaces.InfoLevel, false)
 
 			logger.SetConfigModeByCode(test.code)
 			require.Equal(t, test.expectedLevel, logger.GetLogLevel())
@@ -88,7 +88,7 @@ func TestLoggingMethods(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.expected, func(t *testing.T) {
 			var buf bytes.Buffer
-			logger := NewZerologLogger(&buf, pkglogger.DebugLevel, false)
+			logger := NewZerologLogger(&buf, interfaces.DebugLevel, false)
 
 			test.logFunc(logger, test.message)
 			require.Contains(t, buf.String(), test.expected)
@@ -112,7 +112,7 @@ func TestLoggingMethodsf(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.expected, func(t *testing.T) {
 			var buf bytes.Buffer
-			logger := NewZerologLogger(&buf, pkglogger.DebugLevel, false)
+			logger := NewZerologLogger(&buf, interfaces.DebugLevel, false)
 
 			test.logFunc(logger, test.format, test.args...)
 			require.Contains(t, buf.String(), test.expected)
@@ -134,7 +134,7 @@ func TestWithInterface(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.expected, func(t *testing.T) {
 			var buf bytes.Buffer
-			logger := NewZerologLogger(&buf, pkglogger.DebugLevel, false)
+			logger := NewZerologLogger(&buf, interfaces.DebugLevel, false)
 
 			newLogger := logger.WithInterface(test.key, test.value)
 			newLogger.Info("test message")
@@ -161,7 +161,7 @@ func TestWithFields(t *testing.T) {
 	for _, test := range tests {
 		t.Run("WithFields", func(t *testing.T) {
 			var buf bytes.Buffer
-			logger := NewZerologLogger(&buf, pkglogger.DebugLevel, false)
+			logger := NewZerologLogger(&buf, interfaces.DebugLevel, false)
 
 			newLogger := logger.WithFields(test.fields)
 			newLogger.Info("test message")

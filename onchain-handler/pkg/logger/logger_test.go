@@ -2,39 +2,41 @@ package logger
 
 import (
 	"testing"
+
+	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 type MockLogger struct {
-	level Level
+	level interfaces.Level
 }
 
-func (m *MockLogger) SetLogLevel(level Level) {
+func (m *MockLogger) SetLogLevel(level interfaces.Level) {
 	m.level = level
 }
 
-func (m *MockLogger) GetLogLevel() Level {
+func (m *MockLogger) GetLogLevel() interfaces.Level {
 	return m.level
 }
 
-func (m *MockLogger) Panic(message string)                               {}
-func (m *MockLogger) Panicf(format string, values ...interface{})        {}
-func (m *MockLogger) Fatal(message string)                               {}
-func (m *MockLogger) Fatalf(format string, values ...interface{})        {}
-func (m *MockLogger) Error(message string)                               {}
-func (m *MockLogger) Errorf(format string, values ...interface{})        {}
-func (m *MockLogger) Info(message string)                                {}
-func (m *MockLogger) Infof(format string, values ...interface{})         {}
-func (m *MockLogger) Debug(message string)                               {}
-func (m *MockLogger) Debugf(format string, values ...interface{})        {}
-func (m *MockLogger) Warn(message string)                                {}
-func (m *MockLogger) Warnf(format string, values ...interface{})         {}
-func (m *MockLogger) WithInterface(key string, value interface{}) Logger { return m }
-func (m *MockLogger) WithFields(fields map[string]interface{}) Logger    { return m }
-func (m *MockLogger) SetConfigModeByCode(code string)                    {}
-func (m *MockLogger) SetConfig(config interface{})                       {}
-func (m *MockLogger) GetConfig() interface{}                             { return nil }
-func (m *MockLogger) SetServiceName(serviceName string)                  {}
-func (m *MockLogger) GetServiceName() string                             { return "" }
+func (m *MockLogger) Panic(message string)                                          {}
+func (m *MockLogger) Panicf(format string, values ...interface{})                   {}
+func (m *MockLogger) Fatal(message string)                                          {}
+func (m *MockLogger) Fatalf(format string, values ...interface{})                   {}
+func (m *MockLogger) Error(message string)                                          {}
+func (m *MockLogger) Errorf(format string, values ...interface{})                   {}
+func (m *MockLogger) Info(message string)                                           {}
+func (m *MockLogger) Infof(format string, values ...interface{})                    {}
+func (m *MockLogger) Debug(message string)                                          {}
+func (m *MockLogger) Debugf(format string, values ...interface{})                   {}
+func (m *MockLogger) Warn(message string)                                           {}
+func (m *MockLogger) Warnf(format string, values ...interface{})                    {}
+func (m *MockLogger) WithInterface(key string, value interface{}) interfaces.Logger { return m }
+func (m *MockLogger) WithFields(fields map[string]interface{}) interfaces.Logger    { return m }
+func (m *MockLogger) SetConfigModeByCode(code string)                               {}
+func (m *MockLogger) SetConfig(config interface{})                                  {}
+func (m *MockLogger) GetConfig() interface{}                                        { return nil }
+func (m *MockLogger) SetServiceName(serviceName string)                             {}
+func (m *MockLogger) GetServiceName() string                                        { return "" }
 
 func TestInitLogger(t *testing.T) {
 	// Define test cases
@@ -101,11 +103,11 @@ func TestSetAndGetLogLevel(t *testing.T) {
 	// Define test cases
 	tests := []struct {
 		name     string
-		level    Level
-		expected Level
+		level    interfaces.Level
+		expected interfaces.Level
 	}{
-		{name: "Set and Get Info Level", level: InfoLevel, expected: InfoLevel},
-		{name: "Set and Get Debug Level", level: DebugLevel, expected: DebugLevel},
+		{name: "Set and Get Info Level", level: interfaces.InfoLevel, expected: interfaces.InfoLevel},
+		{name: "Set and Get Debug Level", level: interfaces.DebugLevel, expected: interfaces.DebugLevel},
 	}
 
 	// Run test cases
