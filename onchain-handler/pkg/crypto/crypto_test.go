@@ -160,3 +160,26 @@ func TestPubkeyToAddress(t *testing.T) {
 		require.NotNil(t, address)
 	})
 }
+
+func TestPrivateKeyFromHex(t *testing.T) {
+	t.Run("Valid hex string", func(t *testing.T) {
+		hexKey := "4c0883a69102937d6231471b5dbb6204fe512961708279f1d7e1b8d3e5e8a6e4"
+		privateKey, err := PrivateKeyFromHex(hexKey)
+		require.NoError(t, err)
+		require.NotNil(t, privateKey)
+	})
+
+	t.Run("Invalid hex string", func(t *testing.T) {
+		hexKey := "invalid-hex-string"
+		privateKey, err := PrivateKeyFromHex(hexKey)
+		require.Error(t, err)
+		require.Nil(t, privateKey)
+	})
+
+	t.Run("Empty hex string", func(t *testing.T) {
+		hexKey := ""
+		privateKey, err := PrivateKeyFromHex(hexKey)
+		require.Error(t, err)
+		require.Nil(t, privateKey)
+	})
+}

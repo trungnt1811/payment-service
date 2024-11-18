@@ -23,7 +23,7 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
-type Client struct {
+type client struct {
 	client *ethclient.Client
 }
 
@@ -34,15 +34,15 @@ func NewClient(rpcUrl string) interfaces.Client {
 		logger.GetLogger().Fatalf("Failed to connect to ETH client: %v", err)
 		return nil
 	}
-	return &Client{client: ethClient}
+	return &client{client: ethClient}
 }
 
-func (c *Client) Close() {
+func (c *client) Close() {
 	c.client.Close()
 }
 
 // PollForLogsFromBlock polls logs from a specified block number onwards for the given contract.
-func (c *Client) PollForLogsFromBlock(
+func (c *client) PollForLogsFromBlock(
 	ctx context.Context,
 	contractAddresses []common.Address, // Contract addresses to filter logs
 	fromBlock uint64, // Block number to start querying from
@@ -65,7 +65,7 @@ func (c *Client) PollForLogsFromBlock(
 }
 
 // GetLatestBlockNumber retrieves the latest block number from the blockchain
-func (c *Client) GetLatestBlockNumber(ctx context.Context) (*big.Int, error) {
+func (c *client) GetLatestBlockNumber(ctx context.Context) (*big.Int, error) {
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch the latest block header: %w", err)
@@ -74,7 +74,7 @@ func (c *Client) GetLatestBlockNumber(ctx context.Context) (*big.Int, error) {
 }
 
 // BulkTransfer transfers tokens from the pool address to recipients using bulk transfer
-func (c *Client) BulkTransfer(
+func (c *client) BulkTransfer(
 	ctx context.Context,
 	chainID uint64,
 	bulkSenderContractAddress, poolAddress, poolPrivateKey, tokenContractAddress string,
@@ -195,7 +195,7 @@ func (c *Client) BulkTransfer(
 }
 
 // getAuth creates a new keyed transactor for signing transactions with the given private key and network chain ID
-func (c *Client) getAuth(
+func (c *client) getAuth(
 	ctx context.Context,
 	privateKey *ecdsa.PrivateKey,
 	chainID *big.Int,
@@ -225,7 +225,7 @@ func (c *Client) getAuth(
 }
 
 // Helper function to retry nonce retrieval
-func (c *Client) getNonceWithRetry(ctx context.Context, poolAddress string) (uint64, error) {
+func (c *client) getNonceWithRetry(ctx context.Context, poolAddress string) (uint64, error) {
 	var nonce uint64
 	var err error
 	for retryCount := 0; retryCount < constants.MaxRetries; retryCount++ {
