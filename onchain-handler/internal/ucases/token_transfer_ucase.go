@@ -6,23 +6,21 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain"
+	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 )
 
 type tokenTransferUCase struct {
 	tokenTransferRepository interfaces.TokenTransferRepository
-	ethClient               *ethclient.Client
+	ethClient               pkginterfaces.Client
 	config                  *conf.Configuration
 }
 
-func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepository, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
+func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepository, ethClient pkginterfaces.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
 	return &tokenTransferUCase{
 		tokenTransferRepository: tokenTransferRepository,
 		ethClient:               ethClient,
@@ -156,9 +154,8 @@ func (u *tokenTransferUCase) bulkTransferAndSaveTokenTransferHistories(
 	}
 
 	// Perform the bulk transfer.
-	txHash, tokenSymbol, txFee, err := blockchain.BulkTransfer(
+	txHash, tokenSymbol, txFee, err := u.ethClient.BulkTransfer(
 		ctx,
-		u.ethClient,
 		uint64(chainID),
 		bulkSenderContractAddress,
 		fromAddress,

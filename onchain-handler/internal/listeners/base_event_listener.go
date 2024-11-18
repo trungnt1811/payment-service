@@ -7,19 +7,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
+	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 // baseEventListener represents the shared behavior of any blockchain event listener.
 type baseEventListener struct {
-	ethClient       *ethclient.Client
+	ethClient       pkginterfaces.Client
 	network         constants.NetworkType
 	eventChan       chan interface{}
 	blockStateUCase interfaces.BlockStateUCase
@@ -30,7 +29,7 @@ type baseEventListener struct {
 
 // NewBaseEventListener initializes a base listener.
 func NewBaseEventListener(
-	client *ethclient.Client,
+	client pkginterfaces.Client,
 	network constants.NetworkType,
 	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
@@ -107,7 +106,7 @@ func (listener *baseEventListener) getLatestBlockFromCacheOrBlockchain(ctx conte
 	}
 
 	// If cache is empty, load from blockchain
-	latest, err := eth.GetLatestBlockNumber(ctx, listener.ethClient)
+	latest, err := listener.ethClient.GetLatestBlockNumber(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
 		return 0, err
@@ -192,7 +191,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 			// Poll logs from the blockchain with retries in case of failure.
 			for retries := 0; retries < constants.MaxRetries; retries++ {
 				// Poll logs from the chunk of blocks.
-				logs, err = eth.PollForLogsFromBlock(ctx, listener.ethClient, contractAddresses, chunkStart, chunkEnd)
+				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
 					logger.GetLogger().Warnf("Failed to poll logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
 					time.Sleep(constants.RetryDelay)

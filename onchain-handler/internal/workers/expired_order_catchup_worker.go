@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
@@ -20,7 +19,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/converter"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
+	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 )
@@ -33,7 +32,7 @@ type expiredOrderCatchupWorker struct {
 	cacheRepo                infrainterfaces.CacheRepository
 	contractAddress          string
 	parsedABI                abi.ABI
-	ethClient                *ethclient.Client
+	ethClient                pkginterfaces.Client
 	network                  constants.NetworkType
 	processedOrderIDs        map[uint64]struct{}
 	isRunning                bool       // Tracks if catchup is running
@@ -46,7 +45,7 @@ func NewExpiredOrderCatchupWorker(
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	cacheRepo infrainterfaces.CacheRepository,
 	contractAddress string,
-	ethClient *ethclient.Client,
+	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 ) interfaces.Worker {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
@@ -192,7 +191,7 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 		logger.GetLogger().Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, string(w.network))
 
 		// Poll logs from blockchain for this block range
-		logs, err := eth.PollForLogsFromBlock(ctx, w.ethClient, []common.Address{address}, chunkStart, chunkEnd)
+		logs, err := w.ethClient.PollForLogsFromBlock(ctx, []common.Address{address}, chunkStart, chunkEnd)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to poll logs on network %s from block range %d-%d: %v", string(w.network), chunkStart, chunkEnd, err)
 			continue
@@ -408,7 +407,7 @@ func (w *expiredOrderCatchupWorker) getLatestBlockFromCacheOrBlockchain(ctx cont
 	}
 
 	// If cache is empty, load from blockchain
-	latest, err := eth.GetLatestBlockNumber(ctx, w.ethClient)
+	latest, err := w.ethClient.GetLatestBlockNumber(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve the latest block number on network %s from blockchain: %v", string(w.network), err)
 		return 0, err

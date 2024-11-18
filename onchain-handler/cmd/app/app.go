@@ -9,7 +9,6 @@ import (
 
 	"gorm.io/gorm/logger"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginswagger "github.com/swaggo/gin-swagger"
@@ -48,11 +47,11 @@ func RunApp(config *conf.Configuration) {
 	db := database.DBConnWithLoglevel(logger.Info)
 
 	// Initialize AVAX C-Chain client
-	ethClientAvax := initializeEthClient(config.Blockchain.AvaxNetwork.AvaxRpcUrl)
+	ethClientAvax := eth.NewClient(config.Blockchain.AvaxNetwork.AvaxRpcUrl)
 	defer ethClientAvax.Close()
 
 	// Initialize BSC client
-	ethClientBsc := initializeEthClient(config.Blockchain.BscNetwork.BscRpcUrl)
+	ethClientBsc := eth.NewClient(config.Blockchain.BscNetwork.BscRpcUrl)
 	defer ethClientBsc.Close()
 
 	// Initialize caching
@@ -136,7 +135,7 @@ func RunApp(config *conf.Configuration) {
 	)
 
 	// Register routes
-	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, ethClientAvax)
+	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase)
 
 	// Start server
 	startServer(r, config)
@@ -184,14 +183,6 @@ func initializeRouter() *gin.Engine {
 	return r
 }
 
-func initializeEthClient(rpcUrl string) *ethclient.Client {
-	ethClient, err := eth.InitClient(rpcUrl)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to connect to ETH client: %v", err)
-	}
-	return ethClient
-}
-
 func initializeCache(ctx context.Context) infrainterfaces.CacheRepository {
 	cacheClient := caching.NewGoCacheClient()
 	return caching.NewCachingRepository(ctx, cacheClient)
@@ -223,7 +214,7 @@ func startWorkers(
 	ctx context.Context,
 	config *conf.Configuration,
 	cacheRepository infrainterfaces.CacheRepository,
-	ethClient *ethclient.Client,
+	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 	usdtContractAddress string,
 	blockstateUcase interfaces.BlockStateUCase,
@@ -248,7 +239,7 @@ func startWorkers(
 func startEventListeners(
 	ctx context.Context,
 	config *conf.Configuration,
-	ethClient *ethclient.Client,
+	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 	startBlockListener uint64,
 	usdtContractAddress string,

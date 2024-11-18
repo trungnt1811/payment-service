@@ -5,7 +5,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/conf"
@@ -21,7 +20,6 @@ func RegisterRoutes(
 	transferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	userWalletUCase interfaces.UserWalletUCase,
-	ethClient *ethclient.Client,
 ) {
 	v1 := r.Group("/api/v1")
 	appRouter := v1.Group("")

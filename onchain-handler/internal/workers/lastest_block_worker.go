@@ -5,20 +5,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
+	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type latestBlockWorker struct {
 	cacheRepo       infrainterfaces.CacheRepository
 	blockStateUCase interfaces.BlockStateUCase
-	ethClient       *ethclient.Client
+	ethClient       pkginterfaces.Client
 	network         constants.NetworkType
 	isRunning       bool       // Tracks if catchup is running
 	mu              sync.Mutex // Mutex to protect the isRunning flag
@@ -27,7 +25,7 @@ type latestBlockWorker struct {
 func NewLatestBlockWorker(
 	cacheRepo infrainterfaces.CacheRepository,
 	blockStateUCase interfaces.BlockStateUCase,
-	ethClient *ethclient.Client,
+	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 ) interfaces.Worker {
 	return &latestBlockWorker{
@@ -98,7 +96,7 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 	}
 
 	// Fetch the latest block from the Ethereum blockchain
-	blockNumber, err := eth.GetLatestBlockNumber(ctx, w.ethClient)
+	blockNumber, err := w.ethClient.GetLatestBlockNumber(ctx)
 	if err != nil {
 		logger.GetLogger().Infof("Failed to fetch latest block from %s: %v", string(w.network), err)
 		return

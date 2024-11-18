@@ -3,12 +3,12 @@
 package wire
 
 import (
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/genefriendway/onchain-handler/conf"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/ucases"
+	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/google/wire"
 	"gorm.io/gorm"
 )
@@ -57,7 +57,7 @@ func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo infrainterfaces.CacheRep
 	return nil
 }
 
-func InitializeTokenTransferUCase(db *gorm.DB, ethClient *ethclient.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
+func InitializeTokenTransferUCase(db *gorm.DB, ethClient pkginterfaces.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
 	wire.Build(tokenTransferUCaseSet)
 	return nil
 }
