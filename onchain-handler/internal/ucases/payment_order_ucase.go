@@ -243,7 +243,8 @@ func (u *paymentOrderUCase) GetActivePaymentOrdersOnBsc(ctx context.Context, lim
 
 func (u *paymentOrderUCase) GetPaymentOrderHistories(
 	ctx context.Context,
-	requestIDs []string,
+	filterByIDType *constants.IDFilterType,
+	ids []string,
 	status *string,
 	page, size int,
 ) (dto.PaginationDTOResponse, error) {
@@ -252,7 +253,7 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 	offset := (page - 1) * size
 
 	// Fetch the orders with event histories from the repository
-	orders, err := u.paymentOrderRepository.GetPaymentOrderHistories(ctx, limit, offset, requestIDs, status)
+	orders, err := u.paymentOrderRepository.GetPaymentOrderHistories(ctx, limit, offset, filterByIDType, ids, status)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}
@@ -265,6 +266,7 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 			break
 		}
 		orderDTO := dto.PaymentOrderDTOResponse{
+			ID:             order.ID,
 			RequestID:      order.RequestID,
 			Network:        order.Network,
 			Amount:         order.Amount,

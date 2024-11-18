@@ -30,7 +30,7 @@ const docTemplate = `{
                 "summary": "Create payment orders",
                 "parameters": [
                     {
-                        "description": "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain).",
+                        "description": "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC).",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -69,7 +69,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-orders/histories": {
             "get": {
-                "description": "This endpoint retrieves payment order histories based on request IDs and an optional status filter.",
+                "description": "This endpoint retrieves payment order histories based on IDs, request IDs, and an optional status filter.",
                 "consumes": [
                     "application/json"
                 ],
@@ -94,13 +94,19 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by (request_id or id)",
+                        "name": "filter_by",
+                        "in": "query"
+                    },
+                    {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "List of request IDs to filter",
-                        "name": "request_ids",
+                        "description": "List of IDs or request IDs to filter",
+                        "name": "ids",
                         "in": "query"
                     },
                     {
@@ -112,7 +118,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successful retrieval of token transfer histories",
+                        "description": "Successful retrieval of payment order histories",
                         "schema": {
                             "$ref": "#/definitions/dto.PaginationDTOResponse"
                         }

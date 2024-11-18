@@ -17,11 +17,12 @@ type TokenTransferResultDTOResponse struct {
 }
 
 type PaymentOrderDTOResponse struct {
+	ID             uint64              `json:"id"`
 	RequestID      string              `json:"request_id"`
 	Network        string              `json:"network"`
 	Amount         string              `json:"amount"`
 	Transferred    string              `json:"transferred"`
 	Status         string              `json:"status"`
 	SucceededAt    time.Time           `json:"succeeded_at,omitempty"`
-	EventHistories []PaymentHistoryDTO `json:"event_histories"`
+	EventHistories []PaymentHistoryDTO `json:"event_histories,omitempty"`
 }

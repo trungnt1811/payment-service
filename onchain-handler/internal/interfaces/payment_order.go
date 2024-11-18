@@ -24,9 +24,13 @@ type PaymentOrderRepository interface {
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) error
 	UpdateActiveOrdersToExpired(ctx context.Context) error
-	GetPaymentOrderHistories(ctx context.Context, limit, offset int, requestIDs []string, status *string) (
-		[]domain.PaymentOrder, error,
-	)
+	GetPaymentOrderHistories(
+		ctx context.Context,
+		limit, offset int,
+		filterByIDType *constants.IDFilterType,
+		ids []string,
+		status *string,
+	) ([]domain.PaymentOrder, error)
 }
 
 type PaymentOrderUCase interface {
@@ -49,7 +53,11 @@ type PaymentOrderUCase interface {
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error
 	GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
 	GetActivePaymentOrdersOnBsc(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
-	GetPaymentOrderHistories(ctx context.Context, requestIDs []string, status *string, page, size int) (
-		dto.PaginationDTOResponse, error,
-	)
+	GetPaymentOrderHistories(
+		ctx context.Context,
+		filterByIDType *constants.IDFilterType,
+		ids []string,
+		status *string,
+		page, size int,
+	) (dto.PaginationDTOResponse, error)
 }

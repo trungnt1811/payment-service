@@ -236,7 +236,8 @@ func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 func (r *paymentOrderRepository) GetPaymentOrderHistories(
 	ctx context.Context,
 	limit, offset int,
-	requestIDs []string,
+	filterByIDType *constants.IDFilterType,
+	ids []string,
 	status *string,
 ) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
@@ -244,11 +245,14 @@ func (r *paymentOrderRepository) GetPaymentOrderHistories(
 	// Start with pagination setup
 	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
 
-	// Apply filter for request IDs if provided
-	if len(requestIDs) > 0 {
-		query = query.Preload("PaymentEventHistories").Where("request_id IN ?", requestIDs)
-	} else {
-		query = query.Preload("PaymentEventHistories")
+	// Apply filter for ID type and values if provided
+	if filterByIDType != nil && len(ids) > 0 {
+		switch *filterByIDType {
+		case constants.FilterByRequestID, constants.FilterByID:
+			query = query.Preload("PaymentEventHistories").Where(fmt.Sprintf("%s IN ?", *filterByIDType), ids)
+		default:
+			return nil, fmt.Errorf("invalid filterByIDType: %s", *filterByIDType)
+		}
 	}
 
 	// If a status filter is provided, apply it to the query

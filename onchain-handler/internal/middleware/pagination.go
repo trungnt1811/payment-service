@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -65,4 +66,21 @@ func New(pageText, sizeText, defaultPage, defaultPageSize string, minPageSize, m
 
 		c.Next()
 	}
+}
+
+func ParsePaginationParams(ctx *gin.Context) (int, int, error) {
+	page := ctx.DefaultQuery("page", DEFAULT_PAGE)
+	size := ctx.DefaultQuery("size", DEFAULT_PAGE_SIZE)
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 1 {
+		return 0, 0, fmt.Errorf("invalid page number")
+	}
+
+	sizeInt, err := strconv.Atoi(size)
+	if err != nil || sizeInt < 1 {
+		return 0, 0, fmt.Errorf("invalid page size")
+	}
+
+	return pageInt, sizeInt, nil
 }

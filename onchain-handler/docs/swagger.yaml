@@ -60,7 +60,7 @@ paths:
       description: This endpoint allows creating payment orders for users.
       parameters:
       - description: List of payment orders. Each order must include request id, amount,
-          symbol (USDT) and network (AVAX C-Chain).
+          symbol (USDT) and network (AVAX C-Chain or BSC).
         in: body
         name: payload
         required: true
@@ -93,8 +93,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: This endpoint retrieves payment order histories based on request
-        IDs and an optional status filter.
+      description: This endpoint retrieves payment order histories based on IDs, request
+        IDs, and an optional status filter.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -104,12 +104,16 @@ paths:
         in: query
         name: size
         type: integer
+      - description: Filter by (request_id or id)
+        in: query
+        name: filter_by
+        type: string
       - collectionFormat: csv
-        description: List of request IDs to filter
+        description: List of IDs or request IDs to filter
         in: query
         items:
           type: string
-        name: request_ids
+        name: ids
         type: array
       - description: Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)
         in: query
@@ -119,7 +123,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successful retrieval of token transfer histories
+          description: Successful retrieval of payment order histories
           schema:
             $ref: '#/definitions/dto.PaginationDTOResponse'
         "400":

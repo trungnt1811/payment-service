@@ -12,6 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/middleware"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -133,22 +134,11 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/user-wallets [get]
 func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
-	// Set default values for page and size if they are not provided
-	page := ctx.DefaultQuery("page", "1")
-	size := ctx.DefaultQuery("size", "10")
-
-	// Parse page and size into integers
-	pageInt, err := strconv.Atoi(page)
-	if err != nil || pageInt < 1 {
-		logger.GetLogger().Errorf("Invalid page number: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
-		return
-	}
-
-	sizeInt, err := strconv.Atoi(size)
-	if err != nil || sizeInt < 1 {
-		logger.GetLogger().Errorf("Invalid size: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
+	// Parse pagination parameters
+	page, size, err := middleware.ParsePaginationParams(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -172,7 +162,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	}
 
 	// Call the use case to get user wallets
-	response, err := h.ucase.GetUserWallets(ctx, pageInt, sizeInt, userIDs)
+	response, err := h.ucase.GetUserWallets(ctx, page, size, userIDs)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve user wallets: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{

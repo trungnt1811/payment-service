@@ -12,6 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/middleware"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -35,7 +36,7 @@ func NewPaymentOrderHandler(
 // @Tags payment-order
 // @Accept json
 // @Produce json
-// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain)."
+// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC)."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []interface{}}"
 // @Failure 400 {object} map[string]interface{} "Invalid payload"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
@@ -112,56 +113,52 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 	return nil
 }
 
-// GetPaymentOrderHistories retrieves payment orders by request IDs and optionally filters by status.
+// GetPaymentOrderHistories retrieves payment orders by request IDs or IDs and optionally filters by status.
 // @Summary Retrieve payment order histories
-// @Description This endpoint retrieves payment order histories based on request IDs and an optional status filter.
+// @Description This endpoint retrieves payment order histories based on IDs, request IDs, and an optional status filter.
 // @Tags payment-order
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param request_ids query []string false "List of request IDs to filter"
+// @Param filter_by query string false "Filter by (request_id or id)"
+// @Param ids query []string false "List of IDs or request IDs to filter"
 // @Param status query string false "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
-// @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
+// @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders/histories [get]
 func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
-	// Set default values for page and size if they are not provided
-	page := ctx.DefaultQuery("page", "1")
-	size := ctx.DefaultQuery("size", "10")
-
-	// Parse page and size into integers
-	pageInt, err := strconv.Atoi(page)
-	if err != nil || pageInt < 1 {
-		logger.GetLogger().Errorf("Invalid page number: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+	// Parse pagination parameters
+	page, size, err := middleware.ParsePaginationParams(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	sizeInt, err := strconv.Atoi(size)
-	if err != nil || sizeInt < 1 {
-		logger.GetLogger().Errorf("Invalid size: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid size"})
+	// Parse `filter_by` and `ids` query parameters
+	filterBy := ctx.Query("filter_by")
+	if filterBy != "" && filterBy != "request_id" && filterBy != "id" {
+		logger.GetLogger().Errorf("Invalid filter_by value: %s", filterBy)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter_by value, must be 'request_id' or 'id'"})
 		return
 	}
 
-	// Extract and parse request IDs from query string
-	requestIDsStr := ctx.Query("request_ids")
-	var requestIDs []string
-	if requestIDsStr != "" {
-		requestIDs = strings.Split(requestIDsStr, ",")
-	}
+	ids := parseQueryList(ctx.Query("ids"))
 
-	// Parse and validate `status` parameter if provided
-	statusParam := ctx.Query("status")
-	var status *string
-	if statusParam != "" {
-		status = &statusParam
+	// Parse `status` query parameter
+	status := parseOptionalQuery(ctx.Query("status"))
+
+	// Determine ID filter type
+	var filterByIDType *constants.IDFilterType
+	if filterBy != "" {
+		filter := constants.IDFilterType(filterBy) // Convert string to IDFilterType
+		filterByIDType = &filter
 	}
 
 	// Call the use case to get payment order histories
-	response, err := h.ucase.GetPaymentOrderHistories(ctx, requestIDs, status, pageInt, sizeInt)
+	response, err := h.ucase.GetPaymentOrderHistories(ctx, filterByIDType, ids, status, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -171,6 +168,20 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Return the response as a JSON response
+	// Return the response
 	ctx.JSON(http.StatusOK, response)
+}
+
+func parseQueryList(param string) []string {
+	if param == "" {
+		return nil
+	}
+	return strings.Split(param, ",")
+}
+
+func parseOptionalQuery(param string) *string {
+	if param == "" {
+		return nil
+	}
+	return &param
 }
