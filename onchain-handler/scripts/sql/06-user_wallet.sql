@@ -5,6 +5,3 @@ CREATE TABLE IF NOT EXISTS user_wallet (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE UNIQUE INDEX user_wallet_user_id_idx ON user_wallet (user_id);
-CREATE UNIQUE INDEX user_wallet_address_idx ON user_wallet (address);

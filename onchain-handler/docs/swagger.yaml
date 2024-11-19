@@ -86,6 +86,15 @@ definitions:
       token_amount:
         type: string
     type: object
+  dto.TokenTransferResultDTOResponse:
+    properties:
+      error_message:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: boolean
+    type: object
   response.GeneralError:
     properties:
       code:
@@ -184,20 +193,18 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Success response: {\"success\": true, \"data\": []interface{}}'
+          description: 'Success response: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}'
           schema:
             additionalProperties: true
             type: object
         "400":
           description: Invalid payload
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/response.GeneralError'
       summary: Create payment orders
       tags:
       - payment-order
@@ -226,8 +233,7 @@ paths:
         "500":
           description: Internal server error
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/response.GeneralError'
       summary: Retrieves a payment wallet by its address.
       tags:
       - payment_wallet
@@ -252,13 +258,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Success response: {\"success\": true, \"results\": [{\"request_id\":
-            \"requestID1\", \"status\": true, \"error_message\": \"\"}, {\"request_id\":
-            \"requestID2\", \"status\": false, \"error_message\": \"Failed: some error
-            message\"}]}'
+          description: Successful distribution of tokens
           schema:
-            additionalProperties: true
-            type: object
+            items:
+              $ref: '#/definitions/dto.TokenTransferResultDTOResponse'
+            type: array
         "400":
           description: Invalid payload or invalid recipient address/transaction type
           schema:
@@ -376,20 +380,18 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Success response: {\"success\": true, \"data\": []interface{}}'
+          description: 'Success response: {\"success\": true, \"data\": []dto.UserWalletPayloadDTO}'
           schema:
             additionalProperties: true
             type: object
         "400":
           description: Invalid payload
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/response.GeneralError'
       summary: Create wallets for users
       tags:
       - user-wallet

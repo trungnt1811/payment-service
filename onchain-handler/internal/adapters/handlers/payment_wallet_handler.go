@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/utils"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -29,19 +31,19 @@ func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase) *paymentWallet
 // @Param address path string true "Address"
 // @Success 200 {object} dto.PaymentWalletDTO
 // @Failure 400 {object} response.GeneralError "Invalid address"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallet/{address} [get]
 func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 	address := ctx.Param("address")
 	if !utils.IsValidEthAddress(address) {
 		logger.GetLogger().Errorf("Invalid order address: %v", address)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid address"})
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment wallet by address", fmt.Errorf("invalid address: %v", address))
 		return
 	}
 
 	wallet, err := h.ucase.GetPaymentWalletByAddress(ctx, address)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallet by address", err)
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": wallet})

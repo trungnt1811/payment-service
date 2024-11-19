@@ -12,6 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/middleware"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -36,9 +37,9 @@ func NewPaymentOrderHandler(
 // @Accept json
 // @Produce json
 // @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC)."
-// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []interface{}}"
-// @Failure 400 {object} map[string]interface{} "Invalid payload"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}"
+// @Failure 400 {object} response.GeneralError "Invalid payload"
+// @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders [post]
 func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	var req []dto.PaymentOrderPayloadDTO
@@ -46,10 +47,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.GetLogger().Errorf("Invalid payload: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid payload",
-			"details": err.Error(),
-		})
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create payment orders", fmt.Errorf("invalid payload: %v", err))
 		return
 	}
 
@@ -57,10 +55,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	for _, order := range req {
 		if err := validatePaymentOrder(order); err != nil {
 			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "Validation error",
-				"details": err.Error(),
-			})
+			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create payment orders", fmt.Errorf("validation failed for request id %s: %v", order.RequestID, err))
 			return
 		}
 	}
@@ -69,10 +64,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	response, err := h.ucase.CreatePaymentOrders(ctx, req, h.config.GetExpiredOrderTime())
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to create payment orders: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to create payment orders",
-			"details": err.Error(),
-		})
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create payment orders", fmt.Errorf("failed to create payment orders: %v", err))
 		return
 	}
 
@@ -130,7 +122,7 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	page, size, err := middleware.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order histories", fmt.Errorf("invalid pagination parameters: %v", err))
 		return
 	}
 
@@ -141,10 +133,7 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	response, err := h.ucase.GetPaymentOrderHistories(ctx, status, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to retrieve payment order histories",
-			"details": err.Error(),
-		})
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order histories", fmt.Errorf("failed to retrieve payment order histories: %v", err))
 		return
 	}
 
@@ -174,17 +163,14 @@ func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid order ID: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order", fmt.Errorf("invalid order ID: %v", err))
 		return
 	}
 
 	response, err := h.ucase.GetPaymentOrderByID(ctx, id)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to retrieve payment order",
-			"details": err.Error(),
-		})
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order", fmt.Errorf("failed to retrieve payment order: %v", err))
 		return
 	}
 

@@ -16,6 +16,5 @@ CREATE TABLE IF NOT EXISTS payment_order (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX payment_order_request_id_idx ON payment_order (request_id);
 CREATE INDEX payment_order_expired_time_idx ON payment_order (expired_time);
 CREATE INDEX payment_order_status_expired_time_idx ON payment_order (status, expired_time);

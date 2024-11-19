@@ -141,7 +141,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"data\\\": []interface{}}",
+                        "description": "Success response: {\\\"success\\\": true, \\\"data\\\": []dto.CreatedPaymentOrderDTO}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -150,15 +150,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -202,8 +200,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -238,10 +235,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"results\\\": [{\\\"request_id\\\": \\\"requestID1\\\", \\\"status\\\": true, \\\"error_message\\\": \\\"\\\"}, {\\\"request_id\\\": \\\"requestID2\\\", \\\"status\\\": false, \\\"error_message\\\": \\\"Failed: some error message\\\"}]}",
+                        "description": "Successful distribution of tokens",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TokenTransferResultDTOResponse"
+                            }
                         }
                     },
                     "400": {
@@ -418,7 +417,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"data\\\": []interface{}}",
+                        "description": "Success response: {\\\"success\\\": true, \\\"data\\\": []dto.UserWalletPayloadDTO}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -427,15 +426,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     }
                 }
@@ -573,6 +570,20 @@ const docTemplate = `{
                 },
                 "token_amount": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.TokenTransferResultDTOResponse": {
+            "type": "object",
+            "properties": {
+                "error_message": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "boolean"
                 }
             }
         },
