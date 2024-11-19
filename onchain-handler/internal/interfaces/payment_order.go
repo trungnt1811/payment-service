@@ -29,7 +29,7 @@ type PaymentOrderRepository interface {
 		limit, offset int,
 		status *string,
 	) ([]domain.PaymentOrder, error)
-	GetPaymentOrdersByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error)
+	GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error)
 }
 
 type PaymentOrderUCase interface {
@@ -57,5 +57,5 @@ type PaymentOrderUCase interface {
 		status *string,
 		page, size int,
 	) (dto.PaginationDTOResponse, error)
-	GetPaymentOrdersByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error)
+	GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error)
 }

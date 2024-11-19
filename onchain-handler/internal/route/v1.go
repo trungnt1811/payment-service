@@ -20,6 +20,7 @@ func RegisterRoutes(
 	transferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	userWalletUCase interfaces.UserWalletUCase,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
 ) {
 	v1 := r.Group("/api/v1")
 	appRouter := v1.Group("")
@@ -33,10 +34,14 @@ func RegisterRoutes(
 	paymentOrderHandler := handlers.NewPaymentOrderHandler(paymentOrderUCase, config)
 	appRouter.POST("/payment-orders", paymentOrderHandler.CreateOrders)
 	appRouter.GET("/payment-orders", paymentOrderHandler.GetPaymentOrderHistories)
-	appRouter.GET("/payment-orders/:id", paymentOrderHandler.GetPaymentOrderByID)
+	appRouter.GET("/payment-order/:id", paymentOrderHandler.GetPaymentOrderByID)
 
 	// SECTION: user wallet
 	userWalletHander := handlers.NewUserWalletHandler(userWalletUCase, config)
 	appRouter.POST("/user-wallets", userWalletHander.CreateUserWallets)
 	appRouter.GET("/user-wallets", userWalletHander.GetUserWallets)
+
+	// SECTION: payment wallet
+	paymentWalletHander := handlers.NewPaymentWalletHandler(paymentWalletUCase)
+	appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
 }

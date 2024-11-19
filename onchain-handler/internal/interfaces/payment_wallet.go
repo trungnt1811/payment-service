@@ -11,9 +11,11 @@ type PaymentWalletRepository interface {
 	CreatePaymentWallets(ctx context.Context, models []domain.PaymentWallet) error
 	IsRowExist(ctx context.Context) (bool, error)
 	ClaimFirstAvailableWallet(ctx context.Context) (*domain.PaymentWallet, error)
+	GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error)
 }
 
 type PaymentWalletUCase interface {
 	CreatePaymentWallets(ctx context.Context, payloads []dto.PaymentWalletPayloadDTO) error
 	IsRowExist(ctx context.Context) (bool, error)
+	GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletDTO, error)
 }

@@ -15,6 +15,50 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/payment-order/{id}": {
+            "get": {
+                "description": "This endpoint retrieves a payment order by its ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment order by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of payment order",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid order ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-orders": {
             "get": {
                 "description": "This endpoint retrieves payment order histories based on optional status filter.",
@@ -120,9 +164,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/payment-orders/{id}": {
+        "/api/v1/payment-wallet/{address}": {
             "get": {
-                "description": "This endpoint retrieves a payment order by its ID.",
+                "description": "Retrieves a payment wallet by its address.",
                 "consumes": [
                     "application/json"
                 ],
@@ -130,27 +174,27 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment-order"
+                    "payment_wallet"
                 ],
-                "summary": "Retrieve payment order by ID",
+                "summary": "Retrieves a payment wallet by its address.",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Payment order ID",
-                        "name": "id",
+                        "type": "string",
+                        "description": "Address",
+                        "name": "address",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successful retrieval of payment order",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
+                            "$ref": "#/definitions/dto.PaymentWalletDTO"
                         }
                     },
                     "400": {
-                        "description": "Invalid order ID",
+                        "description": "Invalid address",
                         "schema": {
                             "$ref": "#/definitions/response.GeneralError"
                         }
@@ -158,7 +202,8 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -491,6 +536,20 @@ const docTemplate = `{
                 },
                 "symbol": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.PaymentWalletDTO": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "in_use": {
+                    "type": "boolean"
                 }
             }
         },

@@ -106,3 +106,14 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context)
 
 	return &wallet, nil
 }
+
+func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error) {
+	var wallet domain.PaymentWallet
+	if err := r.db.WithContext(ctx).Where("address = ?", address).First(&wallet).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &wallet, nil
+}

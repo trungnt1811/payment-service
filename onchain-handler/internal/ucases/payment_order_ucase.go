@@ -290,8 +290,8 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 	}, nil
 }
 
-func (u *paymentOrderUCase) GetPaymentOrdersByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error) {
-	order, err := u.paymentOrderRepository.GetPaymentOrdersByID(ctx, id)
+func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error) {
+	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, id)
 	if err != nil {
 		return dto.PaymentOrderDTOResponse{}, err
 	}

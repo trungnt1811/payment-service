@@ -169,7 +169,7 @@ func parseOptionalQuery(param string) *string {
 // @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
 // @Failure 400 {object} response.GeneralError "Invalid order ID"
 // @Failure 500 {object} response.GeneralError "Internal server error"
-// @Router /api/v1/payment-orders/{id} [get]
+// @Router /api/v1/payment-order/{id} [get]
 func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
@@ -178,7 +178,7 @@ func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 		return
 	}
 
-	response, err := h.ucase.GetPaymentOrdersByID(ctx, id)
+	response, err := h.ucase.GetPaymentOrderByID(ctx, id)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{

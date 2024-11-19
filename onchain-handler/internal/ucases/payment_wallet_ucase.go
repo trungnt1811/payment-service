@@ -36,3 +36,11 @@ func (u *paymentWalletUCase) CreatePaymentWallets(ctx context.Context, payloads 
 func (u *paymentWalletUCase) IsRowExist(ctx context.Context) (bool, error) {
 	return u.paymentWalletRepository.IsRowExist(ctx)
 }
+
+func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletDTO, error) {
+	wallet, err := u.paymentWalletRepository.GetPaymentWalletByAddress(ctx, address)
+	if err != nil {
+		return dto.PaymentWalletDTO{}, err
+	}
+	return wallet.ToDto(), nil
+}

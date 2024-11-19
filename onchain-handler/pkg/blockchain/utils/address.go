@@ -10,3 +10,8 @@ func ConvertToCommonAddresses(recipients []string) []common.Address {
 	}
 	return addresses
 }
+
+// IsValidEthAddress checks if a given string is a valid Ethereum address
+func IsValidEthAddress(address string) bool {
+	return common.IsHexAddress(address)
+}

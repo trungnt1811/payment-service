@@ -135,7 +135,7 @@ func RunApp(config *conf.Configuration) {
 	)
 
 	// Register routes
-	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase)
+	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, paymentWalletUCase)
 
 	// Start server
 	startServer(r, config)

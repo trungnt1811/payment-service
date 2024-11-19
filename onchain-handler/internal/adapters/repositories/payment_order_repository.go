@@ -258,7 +258,7 @@ func (r *paymentOrderRepository) GetPaymentOrderHistories(
 }
 
 // GetPaymentOrdersByID retrieves a single payment order by its ID.
-func (r *paymentOrderRepository) GetPaymentOrdersByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error) {
 	var order domain.PaymentOrder
 
 	// Execute query to find the payment order by ID with preloaded PaymentEventHistories
