@@ -243,8 +243,6 @@ func (u *paymentOrderUCase) GetActivePaymentOrdersOnBsc(ctx context.Context, lim
 
 func (u *paymentOrderUCase) GetPaymentOrderHistories(
 	ctx context.Context,
-	filterByIDType *constants.IDFilterType,
-	ids []string,
 	status *string,
 	page, size int,
 ) (dto.PaginationDTOResponse, error) {
@@ -253,7 +251,7 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 	offset := (page - 1) * size
 
 	// Fetch the orders with event histories from the repository
-	orders, err := u.paymentOrderRepository.GetPaymentOrderHistories(ctx, limit, offset, filterByIDType, ids, status)
+	orders, err := u.paymentOrderRepository.GetPaymentOrderHistories(ctx, limit, offset, status)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}
@@ -266,14 +264,13 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 			break
 		}
 		orderDTO := dto.PaymentOrderDTOResponse{
-			ID:             order.ID,
-			RequestID:      order.RequestID,
-			Network:        order.Network,
-			Amount:         order.Amount,
-			Transferred:    order.Transferred,
-			Status:         order.Status,
-			SucceededAt:    order.SucceededAt,
-			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+			ID:          order.ID,
+			RequestID:   order.RequestID,
+			Network:     order.Network,
+			Amount:      order.Amount,
+			Transferred: order.Transferred,
+			Status:      order.Status,
+			SucceededAt: order.SucceededAt,
 		}
 		orderHistoriesDTO = append(orderHistoriesDTO, orderDTO)
 	}
@@ -291,6 +288,24 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 		Size:     size,
 		Data:     orderHistoriesDTO,
 	}, nil
+}
+
+func (u *paymentOrderUCase) GetPaymentOrdersByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error) {
+	order, err := u.paymentOrderRepository.GetPaymentOrdersByID(ctx, id)
+	if err != nil {
+		return dto.PaymentOrderDTOResponse{}, err
+	}
+	orderDTO := dto.PaymentOrderDTOResponse{
+		ID:             order.ID,
+		RequestID:      order.RequestID,
+		Network:        order.Network,
+		Amount:         order.Amount,
+		Transferred:    order.Transferred,
+		Status:         order.Status,
+		SucceededAt:    order.SucceededAt,
+		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+	}
+	return orderDTO, nil
 }
 
 // Helper function to map PaymentEventHistory to PaymentHistoryDTO

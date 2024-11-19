@@ -117,11 +117,3 @@ const (
 	Bsc        NetworkType = "BSC"
 	AvaxCChain NetworkType = "AVAX C-Chain"
 )
-
-// IDFilterType defines the type for filtering by ID
-type IDFilterType string
-
-const (
-	FilterByRequestID IDFilterType = "request_id"
-	FilterByID        IDFilterType = "id"
-)

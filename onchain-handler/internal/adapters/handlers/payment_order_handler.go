@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -113,21 +112,19 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 	return nil
 }
 
-// GetPaymentOrderHistories retrieves payment orders by request IDs or IDs and optionally filters by status.
+// GetPaymentOrderHistories retrieves payment orders optionally filters by status.
 // @Summary Retrieve payment order histories
-// @Description This endpoint retrieves payment order histories based on IDs, request IDs, and an optional status filter.
+// @Description This endpoint retrieves payment order histories based on optional status filter.
 // @Tags payment-order
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param filter_by query string false "Filter by (request_id or id)"
-// @Param ids query []string false "List of IDs or request IDs to filter"
 // @Param status query string false "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
-// @Router /api/v1/payment-orders/histories [get]
+// @Router /api/v1/payment-orders [get]
 func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Parse pagination parameters
 	page, size, err := middleware.ParsePaginationParams(ctx)
@@ -137,28 +134,11 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Parse `filter_by` and `ids` query parameters
-	filterBy := ctx.Query("filter_by")
-	if filterBy != "" && filterBy != "request_id" && filterBy != "id" {
-		logger.GetLogger().Errorf("Invalid filter_by value: %s", filterBy)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter_by value, must be 'request_id' or 'id'"})
-		return
-	}
-
-	ids := parseQueryList(ctx.Query("ids"))
-
 	// Parse `status` query parameter
 	status := parseOptionalQuery(ctx.Query("status"))
 
-	// Determine ID filter type
-	var filterByIDType *constants.IDFilterType
-	if filterBy != "" {
-		filter := constants.IDFilterType(filterBy) // Convert string to IDFilterType
-		filterByIDType = &filter
-	}
-
 	// Call the use case to get payment order histories
-	response, err := h.ucase.GetPaymentOrderHistories(ctx, filterByIDType, ids, status, page, size)
+	response, err := h.ucase.GetPaymentOrderHistories(ctx, status, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -172,16 +152,41 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func parseQueryList(param string) []string {
-	if param == "" {
-		return nil
-	}
-	return strings.Split(param, ",")
-}
-
 func parseOptionalQuery(param string) *string {
 	if param == "" {
 		return nil
 	}
 	return &param
+}
+
+// GetPaymentOrderByID retrieves a payment order by its ID.
+// @Summary Retrieve payment order by ID
+// @Description This endpoint retrieves a payment order by its ID.
+// @Tags payment-order
+// @Accept json
+// @Produce json
+// @Param id path int true "Payment order ID"
+// @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
+// @Failure 400 {object} response.GeneralError "Invalid order ID"
+// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Router /api/v1/payment-orders/{id} [get]
+func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid order ID: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		return
+	}
+
+	response, err := h.ucase.GetPaymentOrdersByID(ctx, id)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to retrieve payment order: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve payment order",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

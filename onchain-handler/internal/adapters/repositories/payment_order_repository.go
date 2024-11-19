@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -236,24 +237,12 @@ func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 func (r *paymentOrderRepository) GetPaymentOrderHistories(
 	ctx context.Context,
 	limit, offset int,
-	filterByIDType *constants.IDFilterType,
-	ids []string,
 	status *string,
 ) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
 
 	// Start with pagination setup
 	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
-
-	// Apply filter for ID type and values if provided
-	if filterByIDType != nil && len(ids) > 0 {
-		switch *filterByIDType {
-		case constants.FilterByRequestID, constants.FilterByID:
-			query = query.Preload("PaymentEventHistories").Where(fmt.Sprintf("%s IN ?", *filterByIDType), ids)
-		default:
-			return nil, fmt.Errorf("invalid filterByIDType: %s", *filterByIDType)
-		}
-	}
 
 	// If a status filter is provided, apply it to the query
 	if status != nil {
@@ -266,4 +255,21 @@ func (r *paymentOrderRepository) GetPaymentOrderHistories(
 	}
 
 	return orders, nil
+}
+
+// GetPaymentOrdersByID retrieves a single payment order by its ID.
+func (r *paymentOrderRepository) GetPaymentOrdersByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error) {
+	var order domain.PaymentOrder
+
+	// Execute query to find the payment order by ID with preloaded PaymentEventHistories
+	if err := r.db.WithContext(ctx).
+		Preload("PaymentEventHistories").
+		First(&order, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("payment order with ID %d not found: %w", id, err)
+		}
+		return nil, fmt.Errorf("failed to retrieve payment order: %w", err)
+	}
+
+	return &order, nil
 }

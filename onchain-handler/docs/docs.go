@@ -16,6 +16,59 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/api/v1/payment-orders": {
+            "get": {
+                "description": "This endpoint retrieves payment order histories based on optional status filter.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment order histories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of payment order histories",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "This endpoint allows creating payment orders for users.",
                 "consumes": [
@@ -67,9 +120,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/payment-orders/histories": {
+        "/api/v1/payment-orders/{id}": {
             "get": {
-                "description": "This endpoint retrieves payment order histories based on IDs, request IDs, and an optional status filter.",
+                "description": "This endpoint retrieves a payment order by its ID.",
                 "consumes": [
                     "application/json"
                 ],
@@ -79,52 +132,25 @@ const docTemplate = `{
                 "tags": [
                     "payment-order"
                 ],
-                "summary": "Retrieve payment order histories",
+                "summary": "Retrieve payment order by ID",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Page number, default is 1",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page size, default is 10",
-                        "name": "size",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by (request_id or id)",
-                        "name": "filter_by",
-                        "in": "query"
-                    },
-                    {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        "collectionFormat": "csv",
-                        "description": "List of IDs or request IDs to filter",
-                        "name": "ids",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
-                        "name": "status",
-                        "in": "query"
+                        "description": "Payment order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successful retrieval of payment order histories",
+                        "description": "Successful retrieval of payment order",
                         "schema": {
-                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                            "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid parameters",
+                        "description": "Invalid order ID",
                         "schema": {
                             "$ref": "#/definitions/response.GeneralError"
                         }
@@ -390,6 +416,64 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.PaymentHistoryDTO": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "from_address": {
+                    "type": "string"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "to_address": {
+                    "type": "string"
+                },
+                "token_symbol": {
+                    "type": "string"
+                },
+                "transaction_hash": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentOrderDTOResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "event_histories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PaymentHistoryDTO"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "succeeded_at": {
+                    "type": "string"
+                },
+                "transferred": {
+                    "type": "string"
                 }
             }
         },
