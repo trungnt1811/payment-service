@@ -48,7 +48,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.GetLogger().Errorf("Invalid payload: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens", fmt.Errorf("invalid payload: %v", err))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens, invalid payload", fmt.Errorf("invalid payload: %v", err))
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 		if !common.IsHexAddress(payload.FromAddress) {
 			fromAddress, err := h.config.GetPoolAddress(payload.FromAddress)
 			if err != nil {
-				httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens", fmt.Errorf("invalid sender address: %s", payload.FromAddress))
+				httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens, invalid sender address", fmt.Errorf("invalid sender address: %s", payload.FromAddress))
 				return
 			}
 			req[index].FromAddress = fromAddress
@@ -67,7 +67,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 		if !common.IsHexAddress(payload.ToAddress) {
 			toAddress, err := h.config.GetPoolAddress(payload.ToAddress)
 			if err != nil {
-				httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens", fmt.Errorf("invalid recipient address: %s", payload.ToAddress))
+				httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens, invalid recipient address", fmt.Errorf("invalid recipient address: %s", payload.ToAddress))
 				return
 			}
 			req[index].ToAddress = toAddress
@@ -75,13 +75,13 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 
 		// Check if payload.Symbol is USDT
 		if payload.Symbol != constants.USDT {
-			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens", fmt.Errorf("invalid token symbol. Token symbol must be USDT"))
+			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens, invalid token symbol", fmt.Errorf("invalid token symbol: %s. Token symbol must be USDT", payload.Symbol))
 			return
 		}
 
 		// Check if payload.Network is Avax C-Chain
 		if payload.Network != string(constants.AvaxCChain) {
-			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens", fmt.Errorf("invalid network. Network must be Avax C-Chain"))
+			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens, invalid network", fmt.Errorf("invalid network: %s. Network must be Avax C-Chain", payload.Network))
 			return
 		}
 	}
@@ -116,7 +116,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid pagination parameters", err)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	startTime, err := time.Parse(time.RFC3339, startTimeStr)
 	if startTimeStr != "" && err != nil {
 		logger.GetLogger().Errorf("Invalid start time: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories", fmt.Errorf("invalid start time. Must be in RFC3339 format"))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid start time", fmt.Errorf("invalid start time. Must be in RFC3339 format"))
 		return
 	}
 
@@ -141,13 +141,13 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	endTime, err := time.Parse(time.RFC3339, endTimeStr)
 	if endTimeStr != "" && err != nil {
 		logger.GetLogger().Errorf("Invalid end time: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories", fmt.Errorf("invalid end time. Must be in RFC3339 format"))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid end time", fmt.Errorf("invalid end time. Must be in RFC3339 format"))
 		return
 	}
 
 	// Validate that start time is before end time
 	if !startTime.IsZero() && !endTime.IsZero() && startTime.After(endTime) {
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories", fmt.Errorf("start time must be before end time"))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, start time must be before end time", fmt.Errorf("start time must be before end time"))
 		return
 	}
 

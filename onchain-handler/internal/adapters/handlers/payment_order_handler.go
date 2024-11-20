@@ -48,7 +48,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.GetLogger().Errorf("Invalid payload: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create payment orders", fmt.Errorf("invalid payload: %v", err))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create payment orders, invalid payload", err)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	for _, order := range req {
 		if err := validatePaymentOrder(order); err != nil {
 			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
-			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create payment orders", fmt.Errorf("validation failed for request id %s: %v", order.RequestID, err))
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, validation failed for request id: %s", order.RequestID), err)
 			return
 		}
 	}
@@ -66,10 +66,10 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to create payment orders: %v", err)
 		if postgresql.IsUniqueViolation(err) {
-			httpresponse.Error(ctx, http.StatusPreconditionFailed, "Failed to create payment orders", fmt.Errorf("failed to create payment orders: %v", err))
+			httpresponse.Error(ctx, http.StatusPreconditionFailed, "Failed to create payment orders, duplicate key value violates unique constraint", err)
 			return
 		} else {
-			httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create payment orders", fmt.Errorf("failed to create payment orders: %v", err))
+			httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create payment orders", err)
 			return
 		}
 	}
@@ -128,7 +128,7 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order histories", fmt.Errorf("invalid pagination parameters: %v", err))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order histories, invalid pagination parameters", err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	response, err := h.ucase.GetPaymentOrderHistories(ctx, status, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order histories", fmt.Errorf("failed to retrieve payment order histories: %v", err))
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order histories", err)
 		return
 	}
 
@@ -169,14 +169,14 @@ func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid order ID: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order", fmt.Errorf("invalid order ID: %v", err))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order, invalid order ID", err)
 		return
 	}
 
 	response, err := h.ucase.GetPaymentOrderByID(ctx, id)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment order: %v", err)
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order", fmt.Errorf("failed to retrieve payment order: %v", err))
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order", err)
 		return
 	}
 

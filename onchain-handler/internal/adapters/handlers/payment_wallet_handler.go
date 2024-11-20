@@ -37,7 +37,7 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 	address := ctx.Param("address")
 	if !utils.IsValidEthAddress(address) {
 		logger.GetLogger().Errorf("Invalid order address: %v", address)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment wallet by address", fmt.Errorf("invalid address: %v", address))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment wallet, invalid address", fmt.Errorf("invalid address: %v", address))
 		return
 	}
 

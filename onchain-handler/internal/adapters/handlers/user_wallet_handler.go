@@ -49,7 +49,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 	// Parse and validate the request payload (list of user IDs)
 	if err := ctx.ShouldBindJSON(&userIDs); err != nil {
 		logger.GetLogger().Errorf("Invalid payload: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create user wallets", fmt.Errorf("invalid payload: %v", err))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create user wallets, invalid payload:", fmt.Errorf("invalid payload: %v", err))
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 	for _, userID := range userIDs {
 		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
 			logger.GetLogger().Errorf("Validation failed: User ID '%s' is not a valid integer", userID)
-			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create user wallets", fmt.Errorf("user IDs must be valid integers"))
+			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create user wallets, validation failed", fmt.Errorf("user ID '%s' is not a valid integer", userID))
 			return
 		}
 	}
@@ -72,7 +72,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		userID, err := strconv.ParseUint(userIDString, 10, 64)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to parse user ID '%s' as integer: %v", userIDString, err)
-			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create user wallets", fmt.Errorf("user IDs must be valid integers"))
+			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create user wallets, validation failed", fmt.Errorf("user ID '%s' is not a valid integer", userIDString))
 			return
 		}
 
@@ -80,7 +80,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 		account, _, err := crypto.GenerateAccount(mnemonic, passphrase, salt, constants.UserWallet, userID)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to generate account for user ID '%d': %v", userID, err)
-			httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create user wallets", fmt.Errorf("failed to generate account for user ID '%d': %v", userID, err))
+			httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create user wallets, failed to generate account", err)
 			return
 		}
 
@@ -124,7 +124,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve user wallets", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve user wallets, invalid pagination parameters", err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	for _, userID := range userIDs {
 		if _, err := strconv.ParseUint(userID, 10, 64); err != nil {
 			logger.GetLogger().Errorf("Invalid user ID: %v", userID)
-			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve user wallets", fmt.Errorf("invalid user ID: %v", userID))
+			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve user wallets, invalid user ID", fmt.Errorf("invalid user ID: %v", userID))
 			return
 		}
 	}
