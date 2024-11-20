@@ -197,7 +197,14 @@ func initializePaymentWallets(
 	config *conf.Configuration,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 ) {
-	err := payment.InitPaymentWallets(ctx, config, paymentWalletUCase)
+	err := payment.InitPaymentWallets(
+		ctx,
+		config.Wallet.Mnemonic,
+		config.Wallet.Passphrase,
+		config.Wallet.Salt,
+		config.PaymentGateway.InitWalletCount,
+		paymentWalletUCase,
+	)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Init payment wallets error: %v", err)
 	}

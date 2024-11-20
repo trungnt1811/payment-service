@@ -133,3 +133,14 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(ctx context.Cont
 	}
 	return wallets, nil
 }
+
+func (r *paymentWalletRepository) BatchReleaseWallets(ctx context.Context, walletIDs []uint64) error {
+	err := r.db.WithContext(ctx).Model(&domain.PaymentWallet{}).
+		Where("id IN ?", walletIDs).
+		Update("in_use", false).
+		Error
+	if err != nil {
+		return fmt.Errorf("failed to batch release wallets: %w", err)
+	}
+	return nil
+}

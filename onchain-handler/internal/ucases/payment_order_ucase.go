@@ -76,6 +76,9 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			}
 		}
 
+		// Track claimed wallet IDs to roll back if needed
+		var claimedWalletIDs []uint64
+
 		// Begin a new transaction
 		err = u.db.Transaction(func(tx *gorm.DB) error {
 			var orders []domain.PaymentOrder
@@ -87,6 +90,9 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 				if err != nil {
 					return fmt.Errorf("failed to claim available wallet: %w", err)
 				}
+
+				// Track claimed wallet ID for potential rollback
+				claimedWalletIDs = append(claimedWalletIDs, assignWallet.ID)
 
 				// Create the PaymentOrder model for the current payload
 				order := domain.PaymentOrder{
@@ -120,6 +126,11 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 		})
 		// Check if there was an error within the transaction
 		if err != nil {
+			// Rollback claimed wallets
+			rollbackErr := u.paymentWalletRepository.BatchReleaseWallets(ctx, claimedWalletIDs)
+			if rollbackErr != nil {
+				return nil, fmt.Errorf("transaction failed, and rollback also failed: %w", rollbackErr)
+			}
 			return nil, err
 		}
 	}

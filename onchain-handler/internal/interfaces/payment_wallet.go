@@ -15,6 +15,7 @@ type PaymentWalletRepository interface {
 	GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error)
 	GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error)
 	GetPaymentWalletsWithBalances(ctx context.Context) ([]domain.PaymentWallet, error)
+	BatchReleaseWallets(ctx context.Context, walletIDs []uint64) error
 }
 
 type PaymentWalletUCase interface {

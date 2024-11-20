@@ -2,8 +2,10 @@ package payment
 
 import (
 	"context"
+	"crypto/ecdsa"
 
-	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/ethereum/go-ethereum/accounts"
+
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -14,7 +16,8 @@ import (
 // Function to generate wallets and insert them into the database if none exist
 func InitPaymentWallets(
 	ctx context.Context,
-	config *conf.Configuration,
+	mnemonic, passphrase, salt string,
+	totalWallets uint,
 	walletUCase interfaces.PaymentWalletUCase,
 ) error {
 	// Check if wallets already exist
@@ -26,12 +29,11 @@ func InitPaymentWallets(
 	// Insert wallets if none exist
 	if !isExist {
 		var wallets []dto.PaymentWalletPayloadDTO
-		initWalletCount := config.PaymentGateway.InitWalletCount
-		for index := 1; index <= int(initWalletCount); index++ {
+		for index := 1; index <= int(totalWallets); index++ {
 			account, _, err := crypto.GenerateAccount(
-				config.Wallet.Mnemonic,
-				config.Wallet.Passphrase,
-				config.Wallet.Salt,
+				mnemonic,
+				passphrase,
+				salt,
 				constants.PaymentWallet,
 				uint64(index),
 			)
@@ -54,4 +56,8 @@ func InitPaymentWallets(
 	}
 
 	return nil
+}
+
+func RetriveReceivingWallet(mnemonic, passphrase, salt string) (*accounts.Account, *ecdsa.PrivateKey, error) {
+	return crypto.GenerateAccount(mnemonic, passphrase, salt, constants.ReceivingWallet, 0)
 }
