@@ -153,6 +153,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.GeneralError"
                         }
                     },
+                    "412": {
+                        "description": "Duplicate key value",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
