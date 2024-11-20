@@ -11,6 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/database/postgresql"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
@@ -64,8 +65,13 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	response, err := h.ucase.CreatePaymentOrders(ctx, req, h.config.GetExpiredOrderTime())
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to create payment orders: %v", err)
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create payment orders", fmt.Errorf("failed to create payment orders: %v", err))
-		return
+		if postgresql.IsUniqueViolation(err) {
+			httpresponse.Error(ctx, http.StatusPreconditionFailed, "Failed to create payment orders", fmt.Errorf("failed to create payment orders: %v", err))
+			return
+		} else {
+			httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to create payment orders", fmt.Errorf("failed to create payment orders: %v", err))
+			return
+		}
 	}
 
 	// Respond with success and response data

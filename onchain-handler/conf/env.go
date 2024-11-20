@@ -51,10 +51,11 @@ type AvaxNetworkConfiguration struct {
 }
 
 type BscNetworkConfiguration struct {
-	BscRpcUrl              string `mapstructure:"BSC_RPC_URL"`
-	BscChainID             uint32 `mapstructure:"BSC_CHAIN_ID"`
-	BscStartBlockListener  uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
-	BscUSDTContractAddress string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
+	BscRpcUrl                    string `mapstructure:"BSC_RPC_URL"`
+	BscChainID                   uint32 `mapstructure:"BSC_CHAIN_ID"`
+	BscStartBlockListener        uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
+	BscUSDTContractAddress       string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
+	BscBulkSenderContractAddress string `mapstructure:"BSC_BULK_SENDER_CONTRACT_ADDRESS"`
 }
 
 type WalletConfiguration struct {
