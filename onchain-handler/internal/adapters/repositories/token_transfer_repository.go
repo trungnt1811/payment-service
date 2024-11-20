@@ -38,7 +38,7 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 	var tokenTransfers []domain.TokenTransferHistory
 
 	// Start with pagination setup
-	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
+	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order("id ASC")
 
 	// Apply filter for request IDs if provided
 	if len(requestIDs) > 0 {

@@ -11,9 +11,9 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/middleware"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type paymentOrderHandler struct {
@@ -119,7 +119,7 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 // @Router /api/v1/payment-orders [get]
 func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
 	// Parse pagination parameters
-	page, size, err := middleware.ParsePaginationParams(ctx)
+	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order histories", fmt.Errorf("invalid pagination parameters: %v", err))

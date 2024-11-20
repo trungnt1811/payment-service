@@ -117,3 +117,19 @@ func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context,
 	}
 	return &wallet, nil
 }
+
+func (r *paymentWalletRepository) GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error) {
+	var wallets []domain.PaymentWallet
+	if err := r.db.WithContext(ctx).Find(&wallets).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch payment wallets: %w", err)
+	}
+	return wallets, nil
+}
+
+func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(ctx context.Context) ([]domain.PaymentWallet, error) {
+	var wallets []domain.PaymentWallet
+	if err := r.db.WithContext(ctx).Order("id ASC").Preload("PaymentWalletBalances").Find(&wallets).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch payment wallets with balances: %w", err)
+	}
+	return wallets, nil
+}

@@ -206,6 +206,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/payment-wallets/balances": {
+            "get": {
+                "description": "Retrieves all payment wallets with balances grouped by network and token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment_wallet"
+                ],
+                "summary": "Retrieves all payment wallets with balances.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PaymentWalletBalanceDTO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/token-transfer": {
             "post": {
                 "description": "This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.",
@@ -440,6 +472,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.NetworkBalanceDTO": {
+            "type": "object",
+            "properties": {
+                "network": {
+                    "type": "string"
+                },
+                "token_balances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TokenBalanceDTO"
+                    }
+                }
+            }
+        },
         "dto.PaginationDTOResponse": {
             "type": "object",
             "properties": {
@@ -536,6 +582,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PaymentWalletBalanceDTO": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "network_balances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.NetworkBalanceDTO"
+                    }
+                }
+            }
+        },
         "dto.PaymentWalletDTO": {
             "type": "object",
             "properties": {
@@ -547,6 +610,17 @@ const docTemplate = `{
                 },
                 "in_use": {
                     "type": "boolean"
+                }
+            }
+        },
+        "dto.TokenBalanceDTO": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
                 }
             }
         },

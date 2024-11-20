@@ -18,10 +18,10 @@ import (
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/converter"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 // expiredOrderCatchupWorker is a worker that processes expired orders.
@@ -265,7 +265,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 	transferEvent dto.TransferEventDTO,
 	tokenSymbol, contractAddress, txHash string,
 ) error {
-	transferEventValueInEth, err := converter.ConvertWeiToEth(transferEvent.Value.String())
+	transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
 		return err
@@ -300,13 +300,13 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		return false, nil
 	}
 	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
-	orderAmount, err := converter.ConvertFloatEthToWei(order.Amount)
+	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
 
-	transferredAmount, err := converter.ConvertFloatEthToWei(order.Transferred)
+	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert transferred amount to wei: %v", err)
 	}
@@ -349,7 +349,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth (Ether)
-	transferredAmountInEth, err := converter.ConvertWeiToEth(transferredAmount)
+	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}

@@ -48,7 +48,8 @@ func InitializePaymentEventHistoryUCase(db *gorm.DB) interfaces.PaymentEventHist
 
 func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.PaymentWalletUCase {
 	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
-	paymentWalletUCase := ucases.NewPaymentWalletUCase(paymentWalletRepository)
+	paymentWalletBalanceRepository := repositories.NewPaymentWalletBalanceRepository(db)
+	paymentWalletUCase := ucases.NewPaymentWalletUCase(paymentWalletRepository, paymentWalletBalanceRepository)
 	return paymentWalletUCase
 }
 
@@ -69,6 +70,6 @@ var tokenTransferUCaseSet = wire.NewSet(repositories.NewTokenTransferRepository,
 
 var paymentEventHistoryUCaseSet = wire.NewSet(repositories.NewPaymentEventHistoryRepository, ucases.NewPaymentEventHistoryUCase)
 
-var paymentWalletUCaseSet = wire.NewSet(repositories.NewPaymentWalletRepository, ucases.NewPaymentWalletUCase)
+var paymentWalletUCaseSet = wire.NewSet(repositories.NewPaymentWalletRepository, repositories.NewPaymentWalletBalanceRepository, ucases.NewPaymentWalletUCase)
 
 var userWalletUCaseSet = wire.NewSet(repositories.NewUserWalletRepository, ucases.NewUserWalletUCase)

@@ -206,3 +206,14 @@ func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) 
 	}
 	return "", fmt.Errorf("unknown token address: %s", tokenAddress)
 }
+
+func (config Configuration) GetNativeTokenSymbol(network constants.NetworkType) (string, error) {
+	switch network {
+	case constants.AvaxCChain:
+		return "AVAX", nil
+	case constants.Bsc:
+		return "BNB", nil
+	default:
+		return "", fmt.Errorf("unsupported network type: %s", network)
+	}
+}

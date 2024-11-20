@@ -44,4 +44,5 @@ func RegisterRoutes(
 	// SECTION: payment wallet
 	paymentWalletHander := handlers.NewPaymentWalletHandler(paymentWalletUCase)
 	appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
+	appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
 }

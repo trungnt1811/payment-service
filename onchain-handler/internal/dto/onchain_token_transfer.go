@@ -11,5 +11,5 @@ type TokenTransferHistoryDTO struct {
 	Fee             string `json:"fee"`
 	Symbol          string `json:"symbol"`
 	Status          bool   `json:"status"`
-	ErrorMessage    string `json:"error_message"`
+	ErrorMessage    string `json:"error_message,omitempty"`
 }

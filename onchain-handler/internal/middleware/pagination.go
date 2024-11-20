@@ -1,31 +1,23 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-)
 
-const (
-	DEFAULT_PAGE_TEXT    = "page"
-	DEFAULT_SIZE_TEXT    = "size"
-	DEFAULT_PAGE         = "1"
-	DEFAULT_PAGE_SIZE    = "10"
-	DEFAULT_MIN_PAGESIZE = 5
-	DEFAULT_MAX_PAGESIZE = 100
+	"github.com/genefriendway/onchain-handler/constants"
 )
 
 // Default Create a new pagination middleware with default values
 func DefaultPagination() gin.HandlerFunc {
 	return New(
-		DEFAULT_PAGE_TEXT,
-		DEFAULT_SIZE_TEXT,
-		DEFAULT_PAGE,
-		DEFAULT_PAGE_SIZE,
-		DEFAULT_MIN_PAGESIZE,
-		DEFAULT_MAX_PAGESIZE,
+		constants.DEFAULT_PAGE_TEXT,
+		constants.DEFAULT_SIZE_TEXT,
+		constants.DEFAULT_PAGE,
+		constants.DEFAULT_PAGE_SIZE,
+		constants.DEFAULT_MIN_PAGESIZE,
+		constants.DEFAULT_MAX_PAGESIZE,
 	)
 }
 
@@ -66,21 +58,4 @@ func New(pageText, sizeText, defaultPage, defaultPageSize string, minPageSize, m
 
 		c.Next()
 	}
-}
-
-func ParsePaginationParams(ctx *gin.Context) (int, int, error) {
-	page := ctx.DefaultQuery("page", DEFAULT_PAGE)
-	size := ctx.DefaultQuery("size", DEFAULT_PAGE_SIZE)
-
-	pageInt, err := strconv.Atoi(page)
-	if err != nil || pageInt < 1 {
-		return 0, 0, fmt.Errorf("invalid page number")
-	}
-
-	sizeInt, err := strconv.Atoi(size)
-	if err != nil || sizeInt < 1 {
-		return 0, 0, fmt.Errorf("invalid page size")
-	}
-
-	return pageInt, sizeInt, nil
 }

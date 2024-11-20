@@ -13,9 +13,9 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/middleware"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type tokenTransferHandler struct {
@@ -113,7 +113,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/token-transfer/histories [get]
 func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
-	page, size, err := middleware.ParsePaginationParams(ctx)
+	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories", err)

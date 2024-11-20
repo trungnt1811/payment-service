@@ -2,10 +2,20 @@ package constants
 
 import "time"
 
+// Pagination
+const (
+	DEFAULT_PAGE_TEXT    = "page"
+	DEFAULT_SIZE_TEXT    = "size"
+	DEFAULT_PAGE         = "1"
+	DEFAULT_PAGE_SIZE    = "10"
+	DEFAULT_MIN_PAGESIZE = 5
+	DEFAULT_MAX_PAGESIZE = 100
+)
+
 // Token decimals
 const (
-	TokenDecimalsMultiplier = 1e18
-	DecimalPlaces           = 18
+	NativeTokenDecimalsMultiplier = 1e18
+	NativeTokenDecimalPlaces      = 18 // for native token like ETH, BNB,... and AVAX
 )
 
 // Pool names
@@ -77,9 +87,10 @@ const (
 
 // Worker config
 const (
-	LatestBlockFetchingInterval = 5 * time.Second
-	ExpiredOrderCatchupInterval = 5 * time.Minute
-	OrderCleanInterval          = 15 * time.Minute
+	LatestBlockFetchInterval          = 5 * time.Second
+	ExpiredOrderCatchupInterval       = 5 * time.Minute
+	OrderCleanInterval                = 15 * time.Minute
+	PaymentWalletBalanceFetchInterval = 15 * time.Second
 )
 
 // Event
@@ -116,4 +127,10 @@ type NetworkType string
 const (
 	Bsc        NetworkType = "BSC"
 	AvaxCChain NetworkType = "AVAX C-Chain"
+)
+
+// SQL constants
+const (
+	SqlCase = "CASE"
+	SqlEnd  = " END"
 )

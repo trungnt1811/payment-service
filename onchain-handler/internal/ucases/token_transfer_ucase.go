@@ -95,7 +95,7 @@ func (u *tokenTransferUCase) convertToRecipientsAndAmounts(req []dto.TokenTransf
 		}
 
 		// Create a multiplier for 10^18
-		multiplier := new(big.Float).SetFloat64(float64(constants.TokenDecimalsMultiplier))
+		multiplier := new(big.Float).SetFloat64(float64(constants.NativeTokenDecimalsMultiplier))
 
 		// Multiply the token amount by the multiplier
 		tokenAmountInSmallestUnitFloat := new(big.Float).Mul(tokenAmount, multiplier)

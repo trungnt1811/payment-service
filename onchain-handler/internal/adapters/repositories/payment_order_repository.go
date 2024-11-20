@@ -110,11 +110,11 @@ func (r *paymentOrderRepository) BatchUpdateOrderStatuses(ctx context.Context, o
 	}
 
 	// Build the SQL CASE statement for updating different statuses based on order IDs
-	caseSQL := "CASE"
+	caseSQL := constants.SqlCase
 	for i, orderID := range orderIDs {
 		caseSQL += fmt.Sprintf(" WHEN id = %d THEN '%s'::order_status", orderID, newStatuses[i]) // Casting to order_status enum
 	}
-	caseSQL += " END"
+	caseSQL += constants.SqlEnd
 
 	// Perform the batch update using a single query with CASE and IN
 	result := r.db.WithContext(ctx).
@@ -242,7 +242,7 @@ func (r *paymentOrderRepository) GetPaymentOrderHistories(
 	var orders []domain.PaymentOrder
 
 	// Start with pagination setup
-	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
+	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order("id ASC")
 
 	// If a status filter is provided, apply it to the query
 	if status != nil {

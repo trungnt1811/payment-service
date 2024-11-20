@@ -19,9 +19,9 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/converter"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 // tokenTransferListener listens for token transfers and processes them using a queue of payment orders.
@@ -121,7 +121,7 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 		// Check if the transfer matches the order's wallet and token symbol
 		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Convert transfer event value from Wei to Eth
-			transferEventValueInEth, err := converter.ConvertWeiToEth(transferEvent.Value.String())
+			transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), constants.NativeTokenDecimalPlaces)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
@@ -187,13 +187,13 @@ func (listener *tokenTransferListener) isMatchingWalletAddress(eventToAddress, o
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
 func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent dto.TransferEventDTO, blockHeight uint64) error {
-	orderAmount, err := converter.ConvertFloatEthToWei(order.Amount)
+	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, listener.config.GetPaymentCovering())
 
-	transferredAmount, err := converter.ConvertFloatEthToWei(order.Transferred)
+	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		return fmt.Errorf("failed to convert transferred amount: %v", err)
 	}
@@ -235,7 +235,7 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth
-	transferredAmountInEth, err := converter.ConvertWeiToEth(transferredAmount)
+	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, constants.NativeTokenDecimalPlaces)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}

@@ -7,11 +7,12 @@ import (
 )
 
 type PaymentWallet struct {
-	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
-	Address   string    `json:"address"`
-	InUse     bool      `json:"in_use"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                    uint64                 `json:"id" gorm:"primaryKey;autoIncrement"`
+	Address               string                 `json:"address"`
+	InUse                 bool                   `json:"in_use"`
+	CreatedAt             time.Time              `json:"created_at"`
+	UpdatedAt             time.Time              `json:"updated_at"`
+	PaymentWalletBalances []PaymentWalletBalance `json:"payment_wallet_balance" gorm:"foreignKey:WalletID"`
 }
 
 func (m *PaymentWallet) TableName() string {

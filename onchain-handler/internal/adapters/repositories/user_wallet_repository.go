@@ -37,7 +37,7 @@ func (r *userWalletRepository) GetUserWallets(
 	var wallets []domain.UserWallet
 
 	// Start the query with pagination
-	query := r.db.WithContext(ctx).Limit(limit).Offset(offset)
+	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order("id ASC")
 
 	// Apply filter for user IDs if provided
 	if len(userIDs) > 0 {

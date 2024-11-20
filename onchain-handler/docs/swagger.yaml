@@ -1,4 +1,13 @@
 definitions:
+  dto.NetworkBalanceDTO:
+    properties:
+      network:
+        type: string
+      token_balances:
+        items:
+          $ref: '#/definitions/dto.TokenBalanceDTO'
+        type: array
+    type: object
   dto.PaginationDTOResponse:
     properties:
       data:
@@ -62,6 +71,17 @@ definitions:
       symbol:
         type: string
     type: object
+  dto.PaymentWalletBalanceDTO:
+    properties:
+      address:
+        type: string
+      id:
+        type: integer
+      network_balances:
+        items:
+          $ref: '#/definitions/dto.NetworkBalanceDTO'
+        type: array
+    type: object
   dto.PaymentWalletDTO:
     properties:
       address:
@@ -70,6 +90,13 @@ definitions:
         type: integer
       in_use:
         type: boolean
+    type: object
+  dto.TokenBalanceDTO:
+    properties:
+      amount:
+        type: string
+      symbol:
+        type: string
     type: object
   dto.TokenTransferPayloadDTO:
     properties:
@@ -235,6 +262,28 @@ paths:
           schema:
             $ref: '#/definitions/response.GeneralError'
       summary: Retrieves a payment wallet by its address.
+      tags:
+      - payment_wallet
+  /api/v1/payment-wallets/balances:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all payment wallets with balances grouped by network
+        and token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PaymentWalletBalanceDTO'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Retrieves all payment wallets with balances.
       tags:
       - payment_wallet
   /api/v1/token-transfer:

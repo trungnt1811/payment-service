@@ -17,10 +17,10 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/utils"
 	pkgcrypto "github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type client struct {
@@ -183,7 +183,7 @@ func (c *client) BulkTransfer(
 	gasPrice := auth.GasPrice
 	txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
 	// Convert txFee from wei to Eth (1 Eth = 10^18 wei)
-	weiInEth := big.NewFloat(constants.TokenDecimalsMultiplier)
+	weiInEth := big.NewFloat(constants.NativeTokenDecimalPlaces)
 	txFeeInEth = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInEth)
 
 	// Check the transaction status

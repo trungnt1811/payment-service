@@ -1,0 +1,135 @@
+package workers
+
+import (
+	"context"
+	"sync"
+	"time"
+
+	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
+)
+
+type paymentWalletBalanceWorker struct {
+	config               *conf.Configuration
+	paymentWalletUCase   interfaces.PaymentWalletUCase
+	network              constants.NetworkType
+	rpcURL               string
+	tokenContractAddress string
+	isRunning            bool
+	mu                   sync.Mutex
+}
+
+func NewPaymentWalletBalanceWorker(
+	config *conf.Configuration,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
+	network constants.NetworkType,
+	rpcURL string,
+	tokenContractAddress string,
+) interfaces.Worker {
+	return &paymentWalletBalanceWorker{
+		config:               config,
+		paymentWalletUCase:   paymentWalletUCase,
+		network:              network,
+		rpcURL:               rpcURL,
+		tokenContractAddress: tokenContractAddress,
+	}
+}
+
+func (w *paymentWalletBalanceWorker) Start(ctx context.Context) {
+	ticker := time.NewTicker(constants.PaymentWalletBalanceFetchInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			go w.run(ctx)
+		case <-ctx.Done():
+			logger.GetLogger().Info("Shutting down paymentWalletBalanceWorker")
+			return
+		}
+	}
+}
+
+func (w *paymentWalletBalanceWorker) run(ctx context.Context) {
+	w.mu.Lock()
+	if w.isRunning {
+		logger.GetLogger().Warn("Previous paymentWalletBalanceWorker run still in progress, skipping this cycle")
+		w.mu.Unlock()
+		return
+	}
+
+	// Mark as running
+	w.isRunning = true
+	w.mu.Unlock()
+
+	// Fetch wallets
+	wallets, err := w.paymentWalletUCase.GetPaymentWallets(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get payment wallets: %v", err)
+		return
+	}
+
+	var walletIDs []uint64
+	var addresses []string
+	for _, wallet := range wallets {
+		walletIDs = append(walletIDs, wallet.ID)
+		addresses = append(addresses, wallet.Address)
+	}
+
+	// Fetch token balances
+	mapAddressesTokenBalances, err := blockchain.GetTokenBalances(w.rpcURL, w.tokenContractAddress, addresses)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get USDT token (%s) balances on %s: %v", w.tokenContractAddress, w.network, err)
+		return
+	}
+
+	// Fetch native token balances
+	mapAddressesNativeTokenBalances, err := blockchain.GetNativeTokenBalances(w.rpcURL, addresses)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get native token balances on %s: %v", w.network, err)
+		return
+	}
+
+	var tokenBalances []string
+	var nativeTokenBalances []string
+	for index := range walletIDs {
+		tokenBalance := mapAddressesTokenBalances[addresses[index]]
+		tokenBalances = append(tokenBalances, tokenBalance)
+		nativeTokenBalance := mapAddressesNativeTokenBalances[addresses[index]]
+		nativeTokenBalances = append(nativeTokenBalances, nativeTokenBalance)
+	}
+
+	// Get token symbol by contract address
+	tokenSymbol, err := w.config.GetTokenSymbol(w.tokenContractAddress)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get token symbol: %v", err)
+		return
+	}
+	// Upsert balances in the database
+	err = w.paymentWalletUCase.UpsertPaymentWalletBalances(ctx, walletIDs, tokenBalances, w.network, tokenSymbol)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to batch upsert payment wallet balances: %v", err)
+		return
+	}
+
+	// Get native token symbol
+	nativeTokenSymbol, err := w.config.GetNativeTokenSymbol(w.network)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get native token symbol: %v", err)
+		return
+	}
+	// Upsert balances in the database
+	err = w.paymentWalletUCase.UpsertPaymentWalletBalances(ctx, walletIDs, nativeTokenBalances, w.network, nativeTokenSymbol)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to batch upsert payment wallet native token balances: %v", err)
+		return
+	}
+
+	// Mark as not running
+	w.mu.Lock()
+	w.isRunning = false
+	w.mu.Unlock()
+}

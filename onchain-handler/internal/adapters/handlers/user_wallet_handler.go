@@ -12,10 +12,10 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/middleware"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type userWalletHandler struct {
@@ -121,7 +121,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 // @Router /api/v1/user-wallets [get]
 func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Parse pagination parameters
-	page, size, err := middleware.ParsePaginationParams(ctx)
+	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve user wallets", err)

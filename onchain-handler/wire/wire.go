@@ -38,6 +38,7 @@ var paymentEventHistoryUCaseSet = wire.NewSet(
 
 var paymentWalletUCaseSet = wire.NewSet(
 	repositories.NewPaymentWalletRepository,
+	repositories.NewPaymentWalletBalanceRepository,
 	ucases.NewPaymentWalletUCase,
 )
 

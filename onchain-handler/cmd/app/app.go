@@ -85,9 +85,11 @@ func RunApp(config *conf.Configuration) {
 		cacheRepository,
 		ethClientAvax,
 		constants.AvaxCChain,
+		config.Blockchain.AvaxNetwork.AvaxRpcUrl,
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
 		blockstateUcase,
 		paymentOrderUCase,
+		paymentWalletUCase,
 		paymentEventHistoryUCase,
 	)
 
@@ -98,9 +100,11 @@ func RunApp(config *conf.Configuration) {
 		cacheRepository,
 		ethClientBsc,
 		constants.Bsc,
+		config.Blockchain.BscNetwork.BscRpcUrl,
 		config.Blockchain.BscNetwork.BscUSDTContractAddress,
 		blockstateUcase,
 		paymentOrderUCase,
+		paymentWalletUCase,
 		paymentEventHistoryUCase,
 	)
 
@@ -216,9 +220,10 @@ func startWorkers(
 	cacheRepository infrainterfaces.CacheRepository,
 	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
-	usdtContractAddress string,
+	rpcURL, usdtContractAddress string,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 ) {
 	latestBlockWorker := workers.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient, network)
@@ -234,6 +239,9 @@ func startWorkers(
 		network,
 	)
 	go expiredOrderCatchupWorker.Start(ctx)
+
+	paymentWalletBalanceWorker := workers.NewPaymentWalletBalanceWorker(config, paymentWalletUCase, network, rpcURL, usdtContractAddress)
+	go paymentWalletBalanceWorker.Start(ctx)
 }
 
 func startEventListeners(

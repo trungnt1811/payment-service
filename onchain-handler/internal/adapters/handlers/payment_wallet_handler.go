@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/utils"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type paymentWalletHandler struct {
@@ -47,4 +47,24 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": wallet})
+}
+
+// GetPaymentWalletsWithBalances retrieves all payment wallets with their balances.
+// @Summary Retrieves all payment wallets with balances.
+// @Description Retrieves all payment wallets with balances grouped by network and token.
+// @Tags payment_wallet
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.PaymentWalletBalanceDTO
+// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Router /api/v1/payment-wallets/balances [get]
+func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
+	wallets, err := h.ucase.GetPaymentWalletsWithBalances(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to retrieve payment wallets with balances: %v", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallets with balances", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": wallets})
 }
