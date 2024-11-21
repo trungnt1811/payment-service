@@ -563,14 +563,14 @@
         "dto.NetworkMetadataDTO": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "icon_base64": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
-                },
-                "network": {
-                    "type": "string"
                 }
             }
         },

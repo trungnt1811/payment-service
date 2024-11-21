@@ -21,7 +21,7 @@ func (m *NetworkMetadata) TableName() string {
 func (m *NetworkMetadata) ToDto() dto.NetworkMetadataDTO {
 	return dto.NetworkMetadataDTO{
 		ID:         m.ID,
-		Network:    m.Network,
+		Code:       m.Network,
 		IconBase64: m.IconBase64,
 	}
 }
