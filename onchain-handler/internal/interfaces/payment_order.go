@@ -38,8 +38,8 @@ type PaymentOrderUCase interface {
 	UpdatePaymentOrder(
 		ctx context.Context,
 		orderID uint64,
-		status, transferredAmount string,
-		blockHeight uint64,
+		blockHeight *uint64,
+		status, transferredAmount, network *string,
 	) error
 	BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error

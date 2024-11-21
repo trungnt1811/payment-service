@@ -16,6 +16,11 @@ type PaymentOrderPayloadDTO struct {
 	Network   string `json:"network"`
 }
 
+type PaymentOrderNetworkPayloadDTO struct {
+	ID      uint64 `json:"id"`
+	Network string `json:"network"`
+}
+
 type PaymentEventPayloadDTO struct {
 	PaymentOrderID  uint64 `json:"payment_order_id"`
 	Network         string `json:"network"`

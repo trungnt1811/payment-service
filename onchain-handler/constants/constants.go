@@ -44,11 +44,12 @@ const (
 
 // Payment orders status
 const (
-	Pending = "PENDING"
-	Success = "SUCCESS"
-	Partial = "PARTIAL"
-	Expired = "EXPIRED"
-	Failed  = "FAILED"
+	Pending    = "PENDING"
+	Processing = "PROCESSING"
+	Success    = "SUCCESS"
+	Partial    = "PARTIAL"
+	Expired    = "EXPIRED"
+	Failed     = "FAILED"
 )
 
 // ERC-20 transfer event ABI

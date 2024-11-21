@@ -60,6 +60,11 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, validation failed for request id: %s", order.RequestID), err)
 			return
 		}
+		if err := validateNetworkType(order.Network); err != nil {
+			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, unsupported network: %s", order.RequestID), err)
+			return
+		}
 	}
 
 	// Call the use case to create the payment orders
@@ -80,35 +85,6 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 		"success": true,
 		"data":    response,
 	})
-}
-
-// validatePaymentOrder performs validation checks on the payment order.
-func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
-	// Validate amount is a valid float
-	if _, err := strconv.ParseFloat(order.Amount, 64); err != nil {
-		return fmt.Errorf("invalid amount: %v", err)
-	}
-
-	// Validate symbol is USDT
-	validSymbols := map[string]bool{
-		constants.USDT: true,
-		// constants.LP:   true,
-	}
-	if !validSymbols[order.Symbol] {
-		return fmt.Errorf("invalid symbol: %s, must be USDT", order.Symbol)
-	}
-
-	// Validate network type is either BSC or AVAX C-Chain
-	validNetworks := map[constants.NetworkType]bool{
-		constants.Bsc:        true,
-		constants.AvaxCChain: true,
-	}
-	networkType := constants.NetworkType(order.Network)
-	if !validNetworks[networkType] {
-		return fmt.Errorf("invalid network type: %s, must be BSC or AVAX C-Chain", order.Network)
-	}
-
-	return nil
 }
 
 // GetPaymentOrderHistories retrieves payment orders optionally filters by status.
@@ -182,4 +158,78 @@ func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+// UpdatePaymentOrderNetwork updates the network of a payment order.
+// @Summary Update payment order network
+// @Description This endpoint allows updating the network of a payment order.
+// @Tags payment-order
+// @Accept json
+// @Produce json
+// @Param payload body dto.PaymentOrderNetworkPayloadDTO true "Payment order ID and network (AVAX C-Chain or BSC)."
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true}"
+// @Failure 400 {object} response.GeneralError "Invalid payload"
+// @Failure 400 {object} response.GeneralError "Unsupported network"
+// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Router /api/v1/payment-order/network [put]
+func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
+	var req dto.PaymentOrderNetworkPayloadDTO
+
+	// Parse and validate the request payload
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.GetLogger().Errorf("Invalid payload: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to update payment order network, invalid payload", err)
+		return
+	}
+
+	if err := validateNetworkType(req.Network); err != nil {
+		logger.GetLogger().Errorf("Unsupported network: %s", req.Network)
+		httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to update payment order network, unsupported network: %s", err))
+		return
+	}
+
+	// Call the use case to update the payment order network
+	if err := h.ucase.UpdatePaymentOrder(ctx, req.ID, nil, nil, nil, &req.Network); err != nil {
+		logger.GetLogger().Errorf("Failed to update payment order network: %v", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to update payment order network", err)
+		return
+	}
+
+	// Respond with success
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
+}
+
+// validatePaymentOrder performs validation checks on the payment order.
+func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
+	// Validate amount is a valid float
+	if _, err := strconv.ParseFloat(order.Amount, 64); err != nil {
+		return fmt.Errorf("invalid amount: %v", err)
+	}
+
+	// Validate symbol is USDT
+	validSymbols := map[string]bool{
+		constants.USDT: true,
+		// constants.LP:   true,
+	}
+	if !validSymbols[order.Symbol] {
+		return fmt.Errorf("invalid symbol: %s, must be USDT", order.Symbol)
+	}
+
+	return nil
+}
+
+func validateNetworkType(network string) error {
+	// Validate network type is either BSC or AVAX C-Chain
+	validNetworks := map[constants.NetworkType]bool{
+		constants.Bsc:        true,
+		constants.AvaxCChain: true,
+	}
+	networkType := constants.NetworkType(network)
+	if !validNetworks[networkType] {
+		return fmt.Errorf("invalid network type: %s, must be BSC or AVAX C-Chain", network)
+	}
+
+	return nil
 }

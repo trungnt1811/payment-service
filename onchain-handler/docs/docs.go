@@ -15,6 +15,53 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/payment-order/network": {
+            "put": {
+                "description": "This endpoint allows updating the network of a payment order.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Update payment order network",
+                "parameters": [
+                    {
+                        "description": "Payment order ID and network (AVAX C-Chain or BSC).",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentOrderNetworkPayloadDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response: {\\\"success\\\": true}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Unsupported network",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-order/{id}": {
             "get": {
                 "description": "This endpoint retrieves a payment order by its ID.",
@@ -567,6 +614,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "transferred": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentOrderNetworkPayloadDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "network": {
                     "type": "string"
                 }
             }

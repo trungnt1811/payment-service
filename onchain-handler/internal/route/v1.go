@@ -35,6 +35,7 @@ func RegisterRoutes(
 	appRouter.POST("/payment-orders", paymentOrderHandler.CreateOrders)
 	appRouter.GET("/payment-orders", paymentOrderHandler.GetPaymentOrderHistories)
 	appRouter.GET("/payment-order/:id", paymentOrderHandler.GetPaymentOrderByID)
+	appRouter.PUT("/payment-order/network", paymentOrderHandler.UpdatePaymentOrderNetwork)
 
 	// SECTION: user wallet
 	userWalletHander := handlers.NewUserWalletHandler(userWalletUCase, config)

@@ -238,7 +238,7 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	}
 
 	// Call the method to update the payment order
-	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, status, transferredAmountInEth, blockHeight)
+	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, &blockHeight, &status, &transferredAmountInEth, nil)
 }
 
 // dequeueOrders removes expired or successful orders from the queue and refills it to maintain the limit.

@@ -195,8 +195,8 @@ func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network
 func (u *paymentOrderUCase) UpdatePaymentOrder(
 	ctx context.Context,
 	orderID uint64,
-	status, transferredAmount string,
-	blockHeight uint64,
+	blockHeight *uint64,
+	status, transferredAmount, network *string,
 ) error {
 	// Retrieve the payment order from the repository
 	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
@@ -205,13 +205,28 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	}
 
 	// Update the fields of the payment order
-	order.Status = status
-	order.Transferred = transferredAmount
-	order.BlockHeight = blockHeight
+	if status != nil {
+		order.Status = *status
+		// Update the succeeded_at timestamp if the status is "Success"
+		if *status == constants.Success {
+			order.SucceededAt = time.Now().UTC()
+		}
+	}
 
-	// Update the succeeded_at timestamp if the status is "Success"
-	if status == constants.Success {
-		order.SucceededAt = time.Now().UTC()
+	if transferredAmount != nil {
+		order.Transferred = *transferredAmount
+	}
+
+	if network != nil {
+		if order.Status == constants.Pending {
+			order.Network = *network
+		} else {
+			return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
+		}
+	}
+
+	if blockHeight != nil {
+		order.BlockHeight = *blockHeight
 	}
 
 	// Persist the updated payment order to the database

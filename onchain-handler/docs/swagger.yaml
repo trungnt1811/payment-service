@@ -60,6 +60,13 @@ definitions:
       transferred:
         type: string
     type: object
+  dto.PaymentOrderNetworkPayloadDTO:
+    properties:
+      id:
+        type: integer
+      network:
+        type: string
+    type: object
   dto.PaymentOrderPayloadDTO:
     properties:
       amount:
@@ -163,6 +170,37 @@ paths:
           schema:
             $ref: '#/definitions/response.GeneralError'
       summary: Retrieve payment order by ID
+      tags:
+      - payment-order
+  /api/v1/payment-order/network:
+    put:
+      consumes:
+      - application/json
+      description: This endpoint allows updating the network of a payment order.
+      parameters:
+      - description: Payment order ID and network (AVAX C-Chain or BSC).
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PaymentOrderNetworkPayloadDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Success response: {\"success\": true}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Unsupported network
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Update payment order network
       tags:
       - payment-order
   /api/v1/payment-orders:
