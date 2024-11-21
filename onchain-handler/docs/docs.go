@@ -15,6 +15,38 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/metadata/networks": {
+            "get": {
+                "description": "Retrieves all networks metadata.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metadata"
+                ],
+                "summary": "Retrieves all networks metadata.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.NetworkMetadataDTO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-order/network": {
             "put": {
                 "description": "This endpoint allows updating the network of a payment order.",
@@ -187,8 +219,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"data\\\": []dto.CreatedPaymentOrderDTO}",
+                    "201": {
+                        "description": "Success created: {\\\"success\\\": true, \\\"data\\\": []dto.CreatedPaymentOrderDTO}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -225,7 +257,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment_wallet"
+                    "payment-wallet"
                 ],
                 "summary": "Retrieves a payment wallet by its address.",
                 "parameters": [
@@ -269,7 +301,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment_wallet"
+                    "payment-wallet"
                 ],
                 "summary": "Retrieves all payment wallets with balances.",
                 "responses": {
@@ -501,8 +533,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"data\\\": []dto.UserWalletPayloadDTO}",
+                    "201": {
+                        "description": "Success created: {\\\"success\\\": true, \\\"data\\\": []dto.UserWalletPayloadDTO}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -536,6 +568,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.TokenBalanceDTO"
                     }
+                }
+            }
+        },
+        "dto.NetworkMetadataDTO": {
+            "type": "object",
+            "properties": {
+                "icon_base64": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "network": {
+                    "type": "string"
                 }
             }
         },

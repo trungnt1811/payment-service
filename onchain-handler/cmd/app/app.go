@@ -64,6 +64,7 @@ func RunApp(config *conf.Configuration) {
 	userWalletUCase := wire.InitializeUserWalletUCase(db, config)
 	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	transferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
+	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db)
 
 	// Initialize AVAX C-Chain payment order queue
 	paymentOrderQueueOnAvax := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrdersOnAvax)
@@ -139,7 +140,7 @@ func RunApp(config *conf.Configuration) {
 	)
 
 	// Register routes
-	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, paymentWalletUCase)
+	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, paymentWalletUCase, networkMetadataUCase)
 
 	// Start server
 	startServer(r, config)

@@ -21,6 +21,7 @@ func RegisterRoutes(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	userWalletUCase interfaces.UserWalletUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
+	networkMetadataUCase interfaces.NetworkMetadataUCase,
 ) {
 	v1 := r.Group("/api/v1")
 	appRouter := v1.Group("")
@@ -46,4 +47,8 @@ func RegisterRoutes(
 	paymentWalletHander := handlers.NewPaymentWalletHandler(paymentWalletUCase)
 	appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
 	appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
+
+	// SECTION: metadata
+	metadataHandler := handlers.NewMetadataHandler(networkMetadataUCase)
+	appRouter.GET("/metadata/networks", metadataHandler.GetNetworksMetadata)
 }

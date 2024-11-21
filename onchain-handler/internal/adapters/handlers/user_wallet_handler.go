@@ -39,7 +39,7 @@ func NewUserWalletHandler(
 // @Accept json
 // @Produce json
 // @Param user_ids body []string true "List of user IDs"
-// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []dto.UserWalletPayloadDTO}"
+// @Success 201 {object} map[string]interface{} "Success created: {\"success\": true, \"data\": []dto.UserWalletPayloadDTO}"
 // @Failure 400 {object} response.GeneralError "Invalid payload"
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/user-wallets [post]
@@ -100,7 +100,7 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 	}
 
 	// Respond with success and response data
-	ctx.JSON(http.StatusOK, gin.H{
+	ctx.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"data":    payloads,
 	})

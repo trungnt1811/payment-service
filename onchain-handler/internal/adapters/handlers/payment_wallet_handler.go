@@ -25,7 +25,7 @@ func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase) *paymentWallet
 // GetPaymentWalletByAddress retrieves a payment wallet by its address.
 // @Summary Retrieves a payment wallet by its address.
 // @Description Retrieves a payment wallet by its address.
-// @Tags payment_wallet
+// @Tags payment-wallet
 // @Accept json
 // @Produce json
 // @Param address path string true "Address"
@@ -46,13 +46,13 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallet by address", err)
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"data": wallet})
+	ctx.JSON(http.StatusOK, wallet)
 }
 
 // GetPaymentWalletsWithBalances retrieves all payment wallets with their balances.
 // @Summary Retrieves all payment wallets with balances.
 // @Description Retrieves all payment wallets with balances grouped by network and token.
-// @Tags payment_wallet
+// @Tags payment-wallet
 // @Accept json
 // @Produce json
 // @Success 200 {array} dto.PaymentWalletBalanceDTO
@@ -66,5 +66,5 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": wallets})
+	ctx.JSON(http.StatusOK, wallets)
 }

@@ -38,7 +38,7 @@ func NewPaymentOrderHandler(
 // @Accept json
 // @Produce json
 // @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC)."
-// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}"
+// @Success 201 {object} map[string]interface{} "Success created: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}"
 // @Failure 400 {object} response.GeneralError "Invalid payload"
 // @Failure 412 {object} response.GeneralError "Duplicate key value"
 // @Failure 500 {object} response.GeneralError "Internal server error"
@@ -81,7 +81,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	}
 
 	// Respond with success and response data
-	ctx.JSON(http.StatusOK, gin.H{
+	ctx.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"data":    response,
 	})

@@ -47,6 +47,11 @@ var userWalletUCaseSet = wire.NewSet(
 	ucases.NewUserWalletUCase,
 )
 
+var networkMetadataUCaseSet = wire.NewSet(
+	repositories.NewNetworkMetadataRepository,
+	ucases.NewNetworkMetadataUCase,
+)
+
 // Init ucase
 func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 	wire.Build(blockStateUCaseSet)
@@ -75,5 +80,10 @@ func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) inter
 
 func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.UserWalletUCase {
 	wire.Build(userWalletUCaseSet)
+	return nil
+}
+
+func InitializeNetworkMetadataUCase(db *gorm.DB) interfaces.NetworkMetadataUCase {
+	wire.Build(networkMetadataUCaseSet)
 	return nil
 }
