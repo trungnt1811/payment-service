@@ -23,6 +23,7 @@ type PaymentOrderDTOResponse struct {
 	Amount         string              `json:"amount"`
 	Transferred    string              `json:"transferred"`
 	Status         string              `json:"status"`
-	SucceededAt    time.Time           `json:"succeeded_at,omitempty"`
+	SucceededAt    *time.Time          `json:"succeeded_at,omitempty"`
+	Expired        *uint64             `json:"expired,omitempty"`
 	EventHistories []PaymentHistoryDTO `json:"event_histories,omitempty"`
 }

@@ -147,6 +147,7 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 	for _, order := range orders {
 		orderDTO := order.ToCreatedPaymentOrderDTO()
 		orderDTO.PaymentAddress = order.Wallet.Address
+		orderDTO.Expired = uint64(order.ExpiredTime.Unix())
 
 		// Get private key from wallet id
 		_, privateKey, err := crypto.GenerateAccount(
@@ -287,7 +288,7 @@ func (u *paymentOrderUCase) GetActivePaymentOrdersOnBsc(ctx context.Context, lim
 	return orderDtos, nil
 }
 
-func (u *paymentOrderUCase) GetPaymentOrderHistories(
+func (u *paymentOrderUCase) GetPaymentOrders(
 	ctx context.Context,
 	status *string,
 	page, size int,
@@ -297,7 +298,7 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 	offset := (page - 1) * size
 
 	// Fetch the orders with event histories from the repository
-	orders, err := u.paymentOrderRepository.GetPaymentOrderHistories(ctx, limit, offset, status)
+	orders, err := u.paymentOrderRepository.GetPaymentOrders(ctx, limit, offset, status)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}
@@ -316,7 +317,9 @@ func (u *paymentOrderUCase) GetPaymentOrderHistories(
 			Amount:      order.Amount,
 			Transferred: order.Transferred,
 			Status:      order.Status,
-			SucceededAt: order.SucceededAt,
+		}
+		if order.Status == constants.Success {
+			orderDTO.SucceededAt = &order.SucceededAt
 		}
 		orderHistoriesDTO = append(orderHistoriesDTO, orderDTO)
 	}
@@ -348,8 +351,14 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 		Amount:         order.Amount,
 		Transferred:    order.Transferred,
 		Status:         order.Status,
-		SucceededAt:    order.SucceededAt,
 		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+	}
+	if order.Status == constants.Success {
+		orderDTO.SucceededAt = &order.SucceededAt
+	}
+	if order.Status != constants.Success && order.Status != constants.Failed {
+		expired := uint64(order.ExpiredTime.Unix())
+		orderDTO.Expired = &expired
 	}
 	return orderDTO, nil
 }

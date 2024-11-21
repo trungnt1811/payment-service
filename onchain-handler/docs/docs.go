@@ -140,7 +140,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-orders": {
             "get": {
-                "description": "This endpoint retrieves payment order histories based on optional status filter.",
+                "description": "This endpoint retrieves payment orders based on optional status filter.",
                 "consumes": [
                     "application/json"
                 ],
@@ -150,7 +150,7 @@ const docTemplate = `{
                 "tags": [
                     "payment-order"
                 ],
-                "summary": "Retrieve payment order histories",
+                "summary": "Retrieve payment orders",
                 "parameters": [
                     {
                         "type": "integer",
@@ -646,6 +646,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.PaymentHistoryDTO"
                     }
+                },
+                "expired": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "integer"

@@ -58,6 +58,8 @@ definitions:
         items:
           $ref: '#/definitions/dto.PaymentHistoryDTO'
         type: array
+      expired:
+        type: integer
       id:
         type: integer
       network:
@@ -239,8 +241,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: This endpoint retrieves payment order histories based on optional
-        status filter.
+      description: This endpoint retrieves payment orders based on optional status
+        filter.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -269,7 +271,7 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/response.GeneralError'
-      summary: Retrieve payment order histories
+      summary: Retrieve payment orders
       tags:
       - payment-order
     post:

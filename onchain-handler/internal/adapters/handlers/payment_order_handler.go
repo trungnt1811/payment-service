@@ -87,9 +87,9 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	})
 }
 
-// GetPaymentOrderHistories retrieves payment orders optionally filters by status.
-// @Summary Retrieve payment order histories
-// @Description This endpoint retrieves payment order histories based on optional status filter.
+// GetPaymentOrders retrieves payment orders optionally filters by status.
+// @Summary Retrieve payment orders
+// @Description This endpoint retrieves payment orders based on optional status filter.
 // @Tags payment-order
 // @Accept json
 // @Produce json
@@ -100,23 +100,23 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders [get]
-func (h *paymentOrderHandler) GetPaymentOrderHistories(ctx *gin.Context) {
+func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	// Parse pagination parameters
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order histories, invalid pagination parameters", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment orders, invalid pagination parameters", err)
 		return
 	}
 
 	// Parse `status` query parameter
 	status := parseOptionalQuery(ctx.Query("status"))
 
-	// Call the use case to get payment order histories
-	response, err := h.ucase.GetPaymentOrderHistories(ctx, status, page, size)
+	// Call the use case to get payment orders
+	response, err := h.ucase.GetPaymentOrders(ctx, status, page, size)
 	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve payment order histories: %v", err)
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order histories", err)
+		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment orders", err)
 		return
 	}
 

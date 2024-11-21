@@ -24,5 +24,6 @@ type CreatedPaymentOrderDTO struct {
 	Amount         string `json:"amount"`
 	Symbol         string `json:"symbol"`
 	Network        string `json:"network"`
+	Expired        uint64 `json:"expired"`
 	Signature      []byte `json:"signature"`
 }

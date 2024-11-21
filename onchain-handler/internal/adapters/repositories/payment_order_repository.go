@@ -218,8 +218,8 @@ func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 	return nil
 }
 
-// GetPaymentOrderHistories retrieves payment orders by request IDs and optionally filters by status.
-func (r *paymentOrderRepository) GetPaymentOrderHistories(
+// GetPaymentOrders retrieves payment orders by request IDs and optionally filters by status.
+func (r *paymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
 	status *string,
