@@ -574,7 +574,7 @@ const docTemplate = `{
         "dto.NetworkMetadataDTO": {
             "type": "object",
             "properties": {
-                "code": {
+                "alias": {
                     "type": "string"
                 },
                 "icon_base64": {
@@ -582,6 +582,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

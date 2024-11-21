@@ -10,12 +10,14 @@ definitions:
     type: object
   dto.NetworkMetadataDTO:
     properties:
-      code:
+      alias:
         type: string
       icon_base64:
         type: string
       id:
         type: integer
+      name:
+        type: string
     type: object
   dto.PaginationDTOResponse:
     properties:

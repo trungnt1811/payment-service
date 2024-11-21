@@ -563,7 +563,7 @@
         "dto.NetworkMetadataDTO": {
             "type": "object",
             "properties": {
-                "code": {
+                "alias": {
                     "type": "string"
                 },
                 "icon_base64": {
@@ -571,6 +571,9 @@
                 },
                 "id": {
                     "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
