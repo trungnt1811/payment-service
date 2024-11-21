@@ -54,50 +54,35 @@ func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 	return orders, nil
 }
 
-// UpdatePaymentOrder updates the status and transferred amount for a payment order,
-// and also updates the associated wallet's "in use" status within a transaction to ensure consistency.
 func (r *paymentOrderRepository) UpdatePaymentOrder(
 	ctx context.Context,
-	orderID uint64,
-	status, transferredAmount string,
-	walletStatus bool,
-	blockHeight uint64,
+	order *domain.PaymentOrder,
 ) error {
-	// Start a transaction to ensure consistency across both payment order and wallet updates.
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Define the fields to be updated for the payment order.
-		updateFields := map[string]interface{}{
-			"status":       status,
-			"transferred":  transferredAmount,
-			"block_height": blockHeight,
-		}
-
-		// If status is "Success", add the succeeded_at timestamp
-		if status == constants.Success {
-			updateFields["succeeded_at"] = time.Now().UTC()
-		}
-
-		// Update the payment order's status and transferred amount.
+		// Update only the modified fields in order
 		if err := tx.Model(&domain.PaymentOrder{}).
-			Where("id = ?", orderID).
-			Updates(updateFields).Error; err != nil {
-			return fmt.Errorf("failed to update payment order id %d: %w", orderID, err)
+			Where("id = ?", order.ID).
+			Updates(order).Error; err != nil {
+			return fmt.Errorf("failed to update payment order: %w", err)
 		}
 
 		// Fetch the payment order to get the associated wallet ID.
 		var paymentOrder domain.PaymentOrder
-		if err := tx.First(&paymentOrder, orderID).Error; err != nil {
-			return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
+		if err := tx.First(&paymentOrder, order.ID).Error; err != nil {
+			return fmt.Errorf("failed to retrieve payment order with id %d: %w", order.ID, err)
 		}
 
-		// Update the "in_use" status of the associated wallet.
+		walletStatus := true
+		if order.Status == constants.Success || order.Status == constants.Failed {
+			walletStatus = false
+		}
+		// Update only the modified fields in wallet
 		if err := tx.Model(&domain.PaymentWallet{}).
 			Where("id = ?", paymentOrder.WalletID).
 			Update("in_use", walletStatus).Error; err != nil {
 			return fmt.Errorf("failed to update wallet status for wallet id %d: %w", paymentOrder.WalletID, err)
 		}
 
-		// Return nil to commit the transaction.
 		return nil
 	})
 }

@@ -201,27 +201,18 @@ func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order 
 	// Calculate the total transferred amount by adding the new transfer event value.
 	totalTransferred := new(big.Int).Add(transferredAmount, transferEvent.Value)
 
-	// Tracks whether the associated wallet is still in use.
-	var inUse bool
-
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(listener.network), order.ID)
 
-		// Set to false as the wallet is no longer in use after full payment.
-		inUse = false
-
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), inUse, blockHeight)
+		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(listener.network), order.ID)
 
-		// Set to true as the wallet is still in use for further payments.
-		inUse = true
-
 		// Update the order status to 'Partial' and keep the wallet associated with the order.
-		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Partial, totalTransferred.String(), inUse, blockHeight)
+		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Partial, totalTransferred.String(), blockHeight)
 	}
 
 	return nil
@@ -231,7 +222,6 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	itemIndex int,
 	order dto.PaymentOrderDTO,
 	status, transferredAmount string,
-	walletStatus bool,
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth
@@ -248,7 +238,7 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	}
 
 	// Call the method to update the payment order
-	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, status, transferredAmountInEth, walletStatus, blockHeight)
+	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, status, transferredAmountInEth, blockHeight)
 }
 
 // dequeueOrders removes expired or successful orders from the queue and refills it to maintain the limit.

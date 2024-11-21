@@ -12,13 +12,7 @@ import (
 type PaymentOrderRepository interface {
 	CreatePaymentOrders(ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
 	GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]domain.PaymentOrder, error)
-	UpdatePaymentOrder(
-		ctx context.Context,
-		orderID uint64,
-		status, transferredAmount string,
-		walletStatus bool,
-		blockHeight uint64,
-	) error
+	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
 	BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
@@ -45,7 +39,6 @@ type PaymentOrderUCase interface {
 		ctx context.Context,
 		orderID uint64,
 		status, transferredAmount string,
-		walletStatus bool,
 		blockHeight uint64,
 	) error
 	BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error

@@ -196,10 +196,30 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	ctx context.Context,
 	orderID uint64,
 	status, transferredAmount string,
-	walletStatus bool,
 	blockHeight uint64,
 ) error {
-	return u.paymentOrderRepository.UpdatePaymentOrder(ctx, orderID, status, transferredAmount, walletStatus, blockHeight)
+	// Retrieve the payment order from the repository
+	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
+	}
+
+	// Update the fields of the payment order
+	order.Status = status
+	order.Transferred = transferredAmount
+	order.BlockHeight = blockHeight
+
+	// Update the succeeded_at timestamp if the status is "Success"
+	if status == constants.Success {
+		order.SucceededAt = time.Now().UTC()
+	}
+
+	// Persist the updated payment order to the database
+	if err := u.paymentOrderRepository.UpdatePaymentOrder(ctx, order); err != nil {
+		return fmt.Errorf("failed to update payment order with id %d: %w", orderID, err)
+	}
+
+	return nil
 }
 
 func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error {
