@@ -95,36 +95,68 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 	}
 }
 
-// parseAndProcessTransferEvent parses and processes a transfer event, checking if it matches any payment order in the queue.
-func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.Log) (interface{}, error) {
+func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog types.Log) (interface{}, error) {
 	// Retrieve the token symbol for the event's contract address
 	tokenSymbol, err := listener.config.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
 	}
 
+	// Unpack the transfer event
+	transferEvent, err := listener.unpackTransferEvent(vLog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
+	}
+
+	logger.GetLogger().Infof("Detected realtime transfer event on network %s : From: %s, To: %s, Value: %s", string(listener.network), transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
+
+	queueItems := listener.queue.GetItems()
+
+	// Process each payment order based on the transfer event
+	for _, order := range queueItems {
+		// Check if the transfer matches the order's wallet and token symbol
+		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
+			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
+			if err != nil {
+				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+				return nil, err
+			}
+		}
+	}
+
+	return transferEvent, nil
+}
+
+// parseAndProcessConfirmedTransferEvent parses and processes a confirmed transfer event, checking if it matches any payment order in the queue.
+func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLog types.Log) (interface{}, error) {
 	// Handle expired and successful orders before processing the event
 	listener.dequeueOrders()
+
+	// Retrieve the token symbol for the event's contract address
+	tokenSymbol, err := listener.config.GetTokenSymbol(vLog.Address.Hex())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
+	}
 
 	// Unpack the transfer event
 	transferEvent, err := listener.unpackTransferEvent(vLog)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
+		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
-	logger.GetLogger().Infof("Detected Transfer event on network %s : From: %s, To: %s, Value: %s", string(listener.network), transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
+	logger.GetLogger().Infof("Detected confirmed transfer event on network %s : From: %s, To: %s, Value: %s", string(listener.network), transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
 
 	queueItems := listener.queue.GetItems()
 
 	// Process each payment order based on the transfer event
 	for index, order := range queueItems {
 		// Check if the transfer matches the order's wallet and token symbol
-		if listener.isMatchingWalletAddress(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
+		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Convert transfer event value from Wei to Eth
 			transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), constants.NativeTokenDecimalPlaces)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
-				continue
+				return nil, err
 			}
 
 			// Prepare the payload for the payment event history
@@ -144,12 +176,13 @@ func (listener *tokenTransferListener) parseAndProcessTransferEvent(vLog types.L
 			// Create payment event history
 			if err := listener.paymentEventHistoryUCase.CreatePaymentEventHistory(listener.ctx, payloads); err != nil {
 				logger.GetLogger().Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
-				continue
+				return nil, err
 			}
 
 			// Process the payment for the order
 			if err := listener.processOrderPayment(index, order, transferEvent, vLog.BlockNumber); err != nil {
 				logger.GetLogger().Errorf("Failed to process payment on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+				return nil, err
 			}
 		}
 	}
@@ -178,10 +211,6 @@ func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (dto.
 	}
 
 	return transferEvent, nil
-}
-
-func (listener *tokenTransferListener) isMatchingWalletAddress(eventToAddress, orderWalletAddress string) bool {
-	return strings.EqualFold(eventToAddress, orderWalletAddress)
 }
 
 // processOrderPayment handles the payment for an order based on the transfer event details.
@@ -320,10 +349,14 @@ func (listener *tokenTransferListener) isOrderSucceeded(order dto.PaymentOrderDT
 	return order.Status == constants.Success
 }
 
-// Register registers the listener for token transfer events.
+// Register registers the listeners for token transfer events.
 func (listener *tokenTransferListener) Register(ctx context.Context) {
-	listener.baseEventListener.RegisterEventListener(
+	listener.baseEventListener.RegisterConfirmedEventListener(
 		listener.contractAddress,
-		listener.parseAndProcessTransferEvent,
+		listener.parseAndProcessConfirmedTransferEvent,
+	)
+	listener.baseEventListener.RegisterRealtimeEventListener(
+		listener.contractAddress,
+		listener.parseAndProcessRealtimeTransferEvent,
 	)
 }

@@ -9,22 +9,23 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 // baseEventListener represents the shared behavior of any blockchain event listener.
 type baseEventListener struct {
-	ethClient       pkginterfaces.Client
-	network         constants.NetworkType
-	eventChan       chan interface{}
-	blockStateUCase interfaces.BlockStateUCase
-	currentBlock    uint64
-	cacheRepo       infrainterfaces.CacheRepository
-	eventHandlers   map[common.Address]func(log types.Log) (interface{}, error) // Map to handle events per contract
+	ethClient              pkginterfaces.Client
+	network                constants.NetworkType
+	eventChan              chan interface{}
+	blockStateUCase        interfaces.BlockStateUCase
+	currentBlock           uint64
+	cacheRepo              infrainterfaces.CacheRepository
+	confirmedEventHandlers map[common.Address]interfaces.EventHandler
+	realtimeEventHandlers  map[common.Address]interfaces.EventHandler
 }
 
 // NewBaseEventListener initializes a base listener.
@@ -53,30 +54,48 @@ func NewBaseEventListener(
 	}
 
 	return &baseEventListener{
-		ethClient:       client,
-		network:         network,
-		cacheRepo:       cacheRepo,
-		eventChan:       eventChan,
-		blockStateUCase: blockStateUCase,
-		currentBlock:    currentBlock, // Store the final determined current block
-		eventHandlers:   make(map[common.Address]func(log types.Log) (interface{}, error)),
+		ethClient:              client,
+		network:                network,
+		cacheRepo:              cacheRepo,
+		eventChan:              eventChan,
+		blockStateUCase:        blockStateUCase,
+		currentBlock:           currentBlock, // Store the final determined current block
+		confirmedEventHandlers: make(map[common.Address]interfaces.EventHandler),
+		realtimeEventHandlers:  make(map[common.Address]interfaces.EventHandler),
 	}
 }
 
-// registerEventListener registers an event listener for a specific contract
-func (listener *baseEventListener) RegisterEventListener(contractAddress string, handler func(log types.Log) (interface{}, error)) {
+// RegisterConfirmedEventListener registers a confirmed event listener for a specific contract
+func (listener *baseEventListener) RegisterConfirmedEventListener(contractAddress string, handler interfaces.EventHandler) {
 	address := common.HexToAddress(contractAddress)
-	listener.eventHandlers[address] = handler
+	listener.confirmedEventHandlers[address] = handler
+}
+
+// RegisterRealtimeEventListener registers a realtime event listener for a specific contract
+func (listener *baseEventListener) RegisterRealtimeEventListener(contractAddress string, handler interfaces.EventHandler) {
+	address := common.HexToAddress(contractAddress)
+	listener.realtimeEventHandlers[address] = handler
 }
 
 // RunListener starts the listener and processes incoming events.
 func (listener *baseEventListener) RunListener(ctx context.Context) error {
+	// Extract contract addresses from EventHandlers map
+	var contractAddresses []common.Address
+	for address := range listener.confirmedEventHandlers {
+		contractAddresses = append(contractAddresses, address)
+	}
+
 	var wg sync.WaitGroup
-	wg.Add(2) // Two goroutines: listen and processEvents
+	wg.Add(3)
 
 	go func() {
 		defer wg.Done()
-		listener.listen(ctx)
+		listener.listenConfirmedEvents(ctx, contractAddresses)
+	}()
+
+	go func() {
+		defer wg.Done()
+		listener.listenRealtimeEvents(ctx, contractAddresses)
 	}()
 
 	go func() {
@@ -95,38 +114,101 @@ func (listener *baseEventListener) RunListener(ctx context.Context) error {
 	return nil
 }
 
-func (listener *baseEventListener) getLatestBlockFromCacheOrBlockchain(ctx context.Context) (uint64, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + string(listener.network)}
+// listenRealtimeEvents polls the blockchain for listening events from effectiveLatestBlock to latest block
+func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, contractAddresses []common.Address) {
+	logger.GetLogger().Infof("Starting to realtime events on network %s...", string(listener.network))
 
-	var latestBlock uint64
-	err := listener.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
-	if err == nil {
-		logger.GetLogger().Debugf("Retrieved %s latest block number from cache: %d", string(listener.network), latestBlock)
-		return latestBlock, nil
+	currentBlock := uint64(0)
+
+	// Continuously listen for new events.
+	for {
+		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
+		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
+			ctx,
+			string(listener.network),
+			listener.cacheRepo,
+			listener.ethClient,
+		)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
+			time.Sleep(constants.RetryDelay)
+			continue
+		}
+
+		// Calculate the effective latest block considering the confirmation depth.
+		effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
+		if effectiveLatestBlock <= 0 {
+			continue
+		}
+
+		if currentBlock > latestBlock {
+			logger.GetLogger().Debugf("No new blocks on network %s to process. Waiting for new blocks...", string(listener.network))
+			time.Sleep(constants.RetryDelay) // Wait before rechecking to prevent excessive polling
+			continue
+		}
+
+		// Process the blocks in chunks.
+		currentBlock = effectiveLatestBlock + 1
+		for chunkStart := currentBlock; chunkStart <= latestBlock; chunkStart += constants.DefaultBlockOffset {
+			chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
+			if chunkEnd > latestBlock {
+				chunkEnd = latestBlock
+			}
+
+			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", string(listener.network), chunkStart, chunkEnd)
+
+			var logs []types.Log
+			// Poll logs from the blockchain with retries in case of failure.
+			for retries := 0; retries < constants.MaxRetries; retries++ {
+				// Poll logs from the chunk of blocks.
+				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
+				if err != nil {
+					logger.GetLogger().Warnf("Failed to poll realtime logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
+					time.Sleep(constants.RetryDelay)
+					continue
+				}
+				break
+			}
+			if err != nil {
+				logger.GetLogger().Errorf("Max retries reached on network %s. Skipping block chunk %d to %d due to error: %v", string(listener.network), chunkStart, chunkEnd, err)
+				break // Exit the loop if we cannot fetch logs
+			}
+
+			// Apply each parseAndProcessFunc to the logs
+			for _, logEntry := range logs {
+				if eventHandler, exists := listener.realtimeEventHandlers[logEntry.Address]; exists {
+					_, err := eventHandler(logEntry)
+					if err != nil {
+						logger.GetLogger().Warnf("Failed to process realtime log entry on network %s: %v", string(listener.network), err)
+						continue
+					}
+				} else {
+					logger.GetLogger().Warnf("No realtime event handler for log address on network %s: %s", string(listener.network), logEntry.Address.Hex())
+				}
+			}
+
+			// Update the current block for the next iteration.
+			currentBlock = chunkEnd + 1
+		}
 	}
-
-	// If cache is empty, load from blockchain
-	latest, err := listener.ethClient.GetLatestBlockNumber(ctx)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
-		return 0, err
-	}
-
-	logger.GetLogger().Debugf("Retrieved latest block number from %s: %d", string(listener.network), latest.Uint64())
-	return latest.Uint64(), nil
 }
 
-// listen polls the blockchain for logs and parses them.
-func (listener *baseEventListener) listen(ctx context.Context) {
-	logger.GetLogger().Infof("Starting event listener on network %s...", string(listener.network))
+// listenConfirmedEvents polls the blockchain for logs and parses them.
+func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, contractAddresses []common.Address) {
+	logger.GetLogger().Infof("Start listening for confirmed transfer events on the network %s...", string(listener.network))
 
 	// Get the last processed block from the repository, defaulting to an offset if not found.
-	lastBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx, listener.network)
-	if err != nil || lastBlock == 0 {
+	lastProcessedBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx, listener.network)
+	if err != nil || lastProcessedBlock == 0 {
 		logger.GetLogger().Warnf("Failed to get last processed block on %s or it was zero: %v", string(listener.network), err)
 
 		// Try to retrieve the latest block from cache or blockchain
-		latestBlock, err := listener.getLatestBlockFromCacheOrBlockchain(ctx)
+		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
+			ctx,
+			string(listener.network),
+			listener.cacheRepo,
+			listener.ethClient,
+		)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
 			return
@@ -134,22 +216,27 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 		logger.GetLogger().Debugf("Retrieved latest block number from network %s: %d", string(listener.network), latestBlock)
 
 		if latestBlock > constants.DefaultBlockOffset {
-			lastBlock = latestBlock - constants.DefaultBlockOffset
+			lastProcessedBlock = latestBlock - constants.DefaultBlockOffset
 		} else {
-			lastBlock = 0
+			lastProcessedBlock = 0
 		}
 	}
 
 	// Initialize currentBlock based on the stored value
 	currentBlock := listener.currentBlock
 	if currentBlock == 0 {
-		currentBlock = lastBlock + 1
+		currentBlock = lastProcessedBlock + 1
 	}
 
-	// Continuously listen for new events.
+	// Continuously listen for new confirmed events.
 	for {
 		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
-		latestBlock, err := listener.getLatestBlockFromCacheOrBlockchain(ctx)
+		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
+			ctx,
+			string(listener.network),
+			listener.cacheRepo,
+			listener.ethClient,
+		)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
 			time.Sleep(constants.RetryDelay)
@@ -159,23 +246,16 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 		// Calculate the effective latest block considering the confirmation depth.
 		effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
 		if currentBlock > effectiveLatestBlock {
-			logger.GetLogger().Debugf("No new confirmed blocks on network %s to process. Waiting for new blocks...", string(listener.network))
 			time.Sleep(constants.RetryDelay) // Wait before rechecking to prevent excessive polling
 			continue
 		}
 
-		logger.GetLogger().Debugf("Listening for events starting at block on network %s: %d", string(listener.network), currentBlock)
+		logger.GetLogger().Debugf("Listening for confirmed events starting at block on network %s: %d", string(listener.network), currentBlock)
 
 		// Determine the end block while respecting ApiMaxBlocksPerRequest and the effective latest block.
 		endBlock := currentBlock + constants.ApiMaxBlocksPerRequest/8
 		if endBlock > effectiveLatestBlock {
 			endBlock = effectiveLatestBlock
-		}
-
-		// Extract contract addresses from EventHandlers map
-		var contractAddresses []common.Address
-		for address := range listener.eventHandlers {
-			contractAddresses = append(contractAddresses, address)
 		}
 
 		// Process the blocks in chunks.
@@ -193,7 +273,7 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 				// Poll logs from the chunk of blocks.
 				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
-					logger.GetLogger().Warnf("Failed to poll logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
+					logger.GetLogger().Warnf("Failed to poll confirmed logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
 					time.Sleep(constants.RetryDelay)
 					continue
 				}
@@ -206,28 +286,22 @@ func (listener *baseEventListener) listen(ctx context.Context) {
 
 			// Apply each parseAndProcessFunc to the logs
 			for _, logEntry := range logs {
-				if eventHandler, exists := listener.eventHandlers[logEntry.Address]; exists {
+				if eventHandler, exists := listener.confirmedEventHandlers[logEntry.Address]; exists {
 					processedEvent, err := eventHandler(logEntry)
 					if err != nil {
-						logger.GetLogger().Warnf("Failed to process log entry on network %s: %v", string(listener.network), err)
+						logger.GetLogger().Warnf("Failed to process confirmed log entry on network %s: %v", string(listener.network), err)
 						continue
 					}
 
 					// Send the processed event to the channel
 					listener.eventChan <- processedEvent
 				} else {
-					logger.GetLogger().Warnf("No event handler for log address on network %s: %s", string(listener.network), logEntry.Address.Hex())
+					logger.GetLogger().Warnf("No confirmed event handler for log address on network %s: %s", string(listener.network), logEntry.Address.Hex())
 				}
 			}
 
 			// Update the current block for the next iteration.
 			currentBlock = chunkEnd + 1
-		}
-
-		// Save the last processed block to cache
-		cacheKey := &caching.Keyer{Raw: constants.LastProcessedBlockCacheKey + string(listener.network)}
-		if err := listener.cacheRepo.SaveItem(cacheKey, latestBlock, constants.LastProcessedBlockCacheTime); err != nil {
-			logger.GetLogger().Errorf("Failed to update last processed block on network %s to cache: %v", string(listener.network), err)
 		}
 
 		// Update the last processed block in the repository.

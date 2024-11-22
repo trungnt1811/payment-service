@@ -61,8 +61,8 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 			return
 		}
 		if err := utils.ValidateNetworkType(order.Network); err != nil {
-			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
-			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, unsupported network: %s", order.RequestID), err)
+			logger.GetLogger().Errorf("Validation failed for network id %s: %v", order.Network, err)
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, unsupported network: %s", order.Network), err)
 			return
 		}
 	}

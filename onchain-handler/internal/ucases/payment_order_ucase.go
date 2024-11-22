@@ -239,6 +239,10 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	return nil
 }
 
+func (u *paymentOrderUCase) UpdateOrderStatus(ctx context.Context, orderID uint64, newStatus string) error {
+	return u.paymentOrderRepository.UpdateOrderStatus(ctx, orderID, newStatus)
+}
+
 func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error {
 	var orderIDs []uint64
 	var newStatuses []string
@@ -317,6 +321,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 			RequestID:   order.RequestID,
 			Network:     order.Network,
 			Amount:      order.Amount,
+			Symbol:      order.Symbol,
 			Transferred: order.Transferred,
 			Status:      order.Status,
 		}

@@ -72,7 +72,7 @@ const (
 
 // Queue config
 const (
-	DequeueInterval = 15 * time.Second
+	DequeueInterval = 5 * time.Second
 	MaxQueueLimit   = 10000 // Upper bound for queue size
 	MinQueueLimit   = 100   // Minimum size to avoid shrinking too much
 	ShrinkThreshold = 0.5   // Shrink when less than 50% of the queue is used
@@ -88,10 +88,10 @@ const (
 
 // Worker config
 const (
-	LatestBlockFetchInterval          = 5 * time.Second
+	LatestBlockFetchInterval          = 3 * time.Second
 	ExpiredOrderCatchupInterval       = 5 * time.Minute
-	OrderCleanInterval                = 15 * time.Minute
-	PaymentWalletBalanceFetchInterval = 15 * time.Second
+	OrderCleanInterval                = 7 * time.Minute
+	PaymentWalletBalanceFetchInterval = 10 * time.Second
 )
 
 // Event
@@ -106,7 +106,7 @@ const (
 
 // Block confirmations
 const (
-	ConfirmationDepth = 30
+	ConfirmationDepth = 24
 )
 
 // Wallet type

@@ -14,10 +14,10 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
@@ -121,7 +121,12 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	minBlockHeight := expiredOrders[0].BlockHeight
 
 	// Define the maximum block we should query up to
-	latestBlock, err := w.getLatestBlockFromCacheOrBlockchain(ctx)
+	latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
+		ctx,
+		string(w.network),
+		w.cacheRepo,
+		w.ethClient,
+	)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve latest block number on network %s: %v", string(w.network), err)
 		return
@@ -231,7 +236,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 	// Iterate over all expired orders to find a matching wallet address
 	for index, order := range orders {
 		// Check if the event's "To" address matches the order's wallet address
-		if order.Status != constants.Success && w.isMatchingWalletAddress(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
+		if order.Status != constants.Success && strings.EqualFold(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Found a matching order, now process the payment for that order
 			logger.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), string(w.network), order.ID)
 
@@ -359,10 +364,6 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	return nil
 }
 
-func (w *expiredOrderCatchupWorker) isMatchingWalletAddress(eventToAddress, orderWallet string) bool {
-	return strings.EqualFold(eventToAddress, orderWallet)
-}
-
 func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (dto.TransferEventDTO, error) {
 	var transferEvent dto.TransferEventDTO
 
@@ -384,25 +385,4 @@ func (w *expiredOrderCatchupWorker) unpackTransferEvent(vLog types.Log) (dto.Tra
 	}
 
 	return transferEvent, nil
-}
-
-func (w *expiredOrderCatchupWorker) getLatestBlockFromCacheOrBlockchain(ctx context.Context) (uint64, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + string(w.network)}
-
-	var latestBlock uint64
-	err := w.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
-	if err == nil {
-		logger.GetLogger().Debugf("Retrieved latest block number on network %s from cache: %d", string(w.network), latestBlock)
-		return latestBlock, nil
-	}
-
-	// If cache is empty, load from blockchain
-	latest, err := w.ethClient.GetLatestBlockNumber(ctx)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve the latest block number on network %s from blockchain: %v", string(w.network), err)
-		return 0, err
-	}
-
-	logger.GetLogger().Debugf("Retrieved latest block number from %s: %d", string(w.network), latest.Uint64())
-	return latest.Uint64(), nil
 }

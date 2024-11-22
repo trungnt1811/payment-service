@@ -6,9 +6,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// EventHandler is a type for event handler functions.
+type EventHandler func(log types.Log) (interface{}, error)
+
 type BaseEventListener interface {
 	RunListener(ctx context.Context) error
-	RegisterEventListener(contractAddress string, handler func(log types.Log) (interface{}, error))
+	RegisterConfirmedEventListener(contractAddress string, handler EventHandler)
+	RegisterRealtimeEventListener(contractAddress string, handler EventHandler)
 }
 
 type EventListener interface {

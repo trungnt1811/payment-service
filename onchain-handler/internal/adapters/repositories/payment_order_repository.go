@@ -43,7 +43,7 @@ func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 		Offset(offset).
 		Where("payment_order.network = ? AND payment_order.status IN (?) AND payment_order.expired_time > ?",
 			network,
-			[]string{constants.Pending, constants.Partial},
+			[]string{constants.Pending, constants.Processing, constants.Partial},
 			currentTime,
 		).
 		Order("payment_order.expired_time ASC"). // Order results by expiration time.
@@ -85,6 +85,24 @@ func (r *paymentOrderRepository) UpdatePaymentOrder(
 
 		return nil
 	})
+}
+
+// UpdateOrderStatus updates the status of a payment order by its ID.
+func (r *paymentOrderRepository) UpdateOrderStatus(ctx context.Context, orderID uint64, newStatus string) error {
+	result := r.db.WithContext(ctx).
+		Model(&domain.PaymentOrder{}).
+		Where("id = ?", orderID).
+		Update("status", newStatus)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update order status: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no order found with the provided ID")
+	}
+
+	return nil
 }
 
 // BatchUpdateOrderStatuses updates the statuses of multiple payment orders by their OrderIDs.
