@@ -261,6 +261,7 @@ func (r *paymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uin
 
 	// Execute query to find the payment order by ID with preloaded PaymentEventHistories
 	if err := r.db.WithContext(ctx).
+		Preload("Wallet").
 		Preload("PaymentEventHistories").
 		First(&order, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

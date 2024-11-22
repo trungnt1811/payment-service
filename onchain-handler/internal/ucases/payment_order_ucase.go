@@ -353,14 +353,12 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 		Amount:         order.Amount,
 		Transferred:    order.Transferred,
 		Status:         order.Status,
+		WalletAddress:  order.Wallet.Address,
+		Expired:        uint64(order.ExpiredTime.Unix()),
 		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
 	}
 	if order.Status == constants.Success {
 		orderDTO.SucceededAt = &order.SucceededAt
-	}
-	if order.Status != constants.Success && order.Status != constants.Failed {
-		expired := uint64(order.ExpiredTime.Unix())
-		orderDTO.Expired = &expired
 	}
 	return orderDTO, nil
 }

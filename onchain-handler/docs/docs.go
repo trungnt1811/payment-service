@@ -673,6 +673,9 @@ const docTemplate = `{
                 },
                 "transferred": {
                     "type": "string"
+                },
+                "wallet_address": {
+                    "type": "string"
                 }
             }
         },

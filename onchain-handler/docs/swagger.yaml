@@ -72,6 +72,8 @@ definitions:
         type: string
       transferred:
         type: string
+      wallet_address:
+        type: string
     type: object
   dto.PaymentOrderNetworkPayloadDTO:
     properties:
