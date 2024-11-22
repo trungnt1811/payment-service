@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -61,7 +60,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, validation failed for request id: %s", order.RequestID), err)
 			return
 		}
-		if err := validateNetworkType(order.Network); err != nil {
+		if err := utils.ValidateNetworkType(order.Network); err != nil {
 			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
 			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, unsupported network: %s", order.RequestID), err)
 			return
@@ -112,11 +111,11 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	}
 
 	// Parse optional query parameters
-	status := parseOptionalQuery(ctx.Query("status"))
+	status := utils.ParseOptionalQuery(ctx.Query("status"))
 
 	// Parse and validate the `sort` parameter
 	sort := ctx.Query("sort")
-	orderBy, orderDirection, err := parseSortParameter(sort)
+	orderBy, orderDirection, err := utils.ParseSortParameter(sort)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid sort parameter: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid sort parameter", err)
@@ -186,7 +185,7 @@ func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
 		return
 	}
 
-	if err := validateNetworkType(req.Network); err != nil {
+	if err := utils.ValidateNetworkType(req.Network); err != nil {
 		logger.GetLogger().Errorf("Unsupported network: %s", req.Network)
 		httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to update payment order network, unsupported network: %s", err))
 		return
@@ -222,53 +221,4 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 	}
 
 	return nil
-}
-
-func validateNetworkType(network string) error {
-	// Validate network type is either BSC or AVAX C-Chain
-	validNetworks := map[constants.NetworkType]bool{
-		constants.Bsc:        true,
-		constants.AvaxCChain: true,
-	}
-	networkType := constants.NetworkType(network)
-	if !validNetworks[networkType] {
-		return fmt.Errorf("invalid network type: %s, must be BSC or AVAX C-Chain", network)
-	}
-
-	return nil
-}
-
-func parseOptionalQuery(param string) *string {
-	if param == "" {
-		return nil
-	}
-	return &param
-}
-
-func parseSortParameter(sort string) (*string, constants.OrderDirection, error) {
-	if sort == "" {
-		// Default sorting
-		defaultField := "id"
-		return &defaultField, constants.Asc, nil
-	}
-
-	// Find the last underscore in the input, which separates field and direction
-	lastUnderscore := strings.LastIndex(sort, "_")
-	if lastUnderscore == -1 {
-		return nil, "", fmt.Errorf("invalid format, expected field_direction (e.g., id_asc)")
-	}
-
-	// Extract the field name and direction
-	orderBy := sort[:lastUnderscore]                           // Field is everything before the last underscore
-	orderDirection := strings.ToUpper(sort[lastUnderscore+1:]) // Direction is everything after the last underscore
-
-	// Validate the direction
-	switch orderDirection {
-	case "ASC":
-		return &orderBy, constants.Asc, nil
-	case "DESC":
-		return &orderBy, constants.Desc, nil
-	default:
-		return nil, "", fmt.Errorf("invalid direction, expected ASC or DESC")
-	}
 }
