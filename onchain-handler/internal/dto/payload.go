@@ -10,10 +10,11 @@ type TokenTransferPayloadDTO struct {
 }
 
 type PaymentOrderPayloadDTO struct {
-	RequestID string `json:"request_id"`
-	Amount    string `json:"amount"`
-	Symbol    string `json:"symbol"`
-	Network   string `json:"network"`
+	RequestID  string `json:"request_id"`
+	Amount     string `json:"amount"`
+	Symbol     string `json:"symbol"`
+	Network    string `json:"network"`
+	WebhookURL string `json:"webhook_url"`
 }
 
 type PaymentOrderNetworkPayloadDTO struct {

@@ -701,6 +701,9 @@ const docTemplate = `{
                 },
                 "symbol": {
                     "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
                 }
             }
         },

@@ -103,6 +103,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 					RequestID:   payload.RequestID,
 					Symbol:      payload.Symbol,
 					Network:     payload.Network,
+					WebhookURL:  payload.WebhookURL,
 					BlockHeight: latestBlock,       // Use the latest block height
 					Status:      constants.Pending, // Set order status to pending
 					ExpiredTime: time.Now().UTC().Add(expiredOrderTime),

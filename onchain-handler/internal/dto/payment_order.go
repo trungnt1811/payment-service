@@ -13,6 +13,7 @@ type PaymentOrderDTO struct {
 	Symbol         string           `json:"symbol"`
 	Network        string           `json:"network"`
 	Status         string           `json:"status"`
+	WebhookURL     string           `json:"webhook_url"`
 	SucceededAt    time.Time        `json:"succeeded_at,omitempty"`
 	ExpiredTime    time.Time        `json:"expired_time"`
 }

@@ -17,6 +17,7 @@ type PaymentOrder struct {
 	Symbol                string                `json:"symbol"`
 	Network               string                `json:"network"`
 	Status                string                `json:"status"`
+	WebhookURL            string                `json:"webhook_url"`
 	SucceededAt           time.Time             `json:"succeeded_at"`
 	ExpiredTime           time.Time             `json:"expired_time"`
 	CreatedAt             time.Time             `json:"created_at"`
@@ -40,6 +41,7 @@ func (m *PaymentOrder) ToDto() dto.PaymentOrderDTO {
 		Symbol:         m.Symbol,
 		Network:        m.Network,
 		Status:         m.Status,
+		WebhookURL:     m.WebhookURL,
 		ExpiredTime:    m.ExpiredTime,
 	}
 }

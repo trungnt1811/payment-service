@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS payment_order (
     symbol VARCHAR(10) NOT NULL,
     network VARCHAR(20) NOT NULL,
     status order_status NOT NULL DEFAULT 'PENDING',
+    webhook_url VARCHAR(255) NOT NULL,
     succeeded_at TIMESTAMP WITH TIME ZONE,
     expired_time TIMESTAMP WITH TIME ZONE NOT NULL, 
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
