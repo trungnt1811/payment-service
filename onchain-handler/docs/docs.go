@@ -671,6 +671,9 @@ const docTemplate = `{
                 "succeeded_at": {
                     "type": "string"
                 },
+                "symbol": {
+                    "type": "string"
+                },
                 "transferred": {
                     "type": "string"
                 },

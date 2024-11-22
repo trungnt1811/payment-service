@@ -353,6 +353,7 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 		Amount:         order.Amount,
 		Transferred:    order.Transferred,
 		Status:         order.Status,
+		Symbol:         order.Symbol,
 		WalletAddress:  &order.Wallet.Address,
 		Expired:        uint64(order.ExpiredTime.Unix()),
 		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
