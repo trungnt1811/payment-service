@@ -140,7 +140,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-orders": {
             "get": {
-                "description": "This endpoint retrieves payment orders based on optional status filter.",
+                "description": "This endpoint retrieves payment orders based on optional status filter and sorting options.",
                 "consumes": [
                     "application/json"
                 ],
@@ -166,8 +166,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
+                        "description": "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting parameter in the format ` + "`" + `field_direction` + "`" + ` (e.g., id_asc, created_at_desc)",
+                        "name": "sort",
                         "in": "query"
                     }
                 ],

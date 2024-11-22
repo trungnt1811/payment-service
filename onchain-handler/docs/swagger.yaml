@@ -242,7 +242,7 @@ paths:
       consumes:
       - application/json
       description: This endpoint retrieves payment orders based on optional status
-        filter.
+        filter and sorting options.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -252,9 +252,15 @@ paths:
         in: query
         name: size
         type: integer
-      - description: Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)
+      - description: Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED,
+          FAILED)
         in: query
         name: status
+        type: string
+      - description: Sorting parameter in the format `field_direction` (e.g., id_asc,
+          created_at_desc)
+        in: query
+        name: sort
         type: string
       produces:
       - application/json

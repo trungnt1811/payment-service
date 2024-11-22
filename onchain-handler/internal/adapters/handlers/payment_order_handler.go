@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -87,15 +88,16 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	})
 }
 
-// GetPaymentOrders retrieves payment orders optionally filters by status.
+// GetPaymentOrders retrieves payment orders optionally filtered by status and sorted using the `sort` query parameter.
 // @Summary Retrieve payment orders
-// @Description This endpoint retrieves payment orders based on optional status filter.
+// @Description This endpoint retrieves payment orders based on optional status filter and sorting options.
 // @Tags payment-order
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param status query string false "Status filter (e.g., PENDING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
+// @Param status query string false "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
+// @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
@@ -109,11 +111,20 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 		return
 	}
 
-	// Parse `status` query parameter
+	// Parse optional query parameters
 	status := parseOptionalQuery(ctx.Query("status"))
 
+	// Parse and validate the `sort` parameter
+	sort := ctx.Query("sort")
+	orderBy, orderDirection, err := parseSortParameter(sort)
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid sort parameter: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid sort parameter", err)
+		return
+	}
+
 	// Call the use case to get payment orders
-	response, err := h.ucase.GetPaymentOrders(ctx, status, page, size)
+	response, err := h.ucase.GetPaymentOrders(ctx, status, orderBy, orderDirection, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment orders", err)
@@ -122,13 +133,6 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 
 	// Return the response
 	ctx.JSON(http.StatusOK, response)
-}
-
-func parseOptionalQuery(param string) *string {
-	if param == "" {
-		return nil
-	}
-	return &param
 }
 
 // GetPaymentOrderByID retrieves a payment order by its ID.
@@ -232,4 +236,39 @@ func validateNetworkType(network string) error {
 	}
 
 	return nil
+}
+
+func parseOptionalQuery(param string) *string {
+	if param == "" {
+		return nil
+	}
+	return &param
+}
+
+func parseSortParameter(sort string) (*string, constants.OrderDirection, error) {
+	if sort == "" {
+		// Default sorting
+		defaultField := "id"
+		return &defaultField, constants.Asc, nil
+	}
+
+	// Find the last underscore in the input, which separates field and direction
+	lastUnderscore := strings.LastIndex(sort, "_")
+	if lastUnderscore == -1 {
+		return nil, "", fmt.Errorf("invalid format, expected field_direction (e.g., id_asc)")
+	}
+
+	// Extract the field name and direction
+	orderBy := sort[:lastUnderscore]                           // Field is everything before the last underscore
+	orderDirection := strings.ToUpper(sort[lastUnderscore+1:]) // Direction is everything after the last underscore
+
+	// Validate the direction
+	switch orderDirection {
+	case "ASC":
+		return &orderBy, constants.Asc, nil
+	case "DESC":
+		return &orderBy, constants.Desc, nil
+	default:
+		return nil, "", fmt.Errorf("invalid direction, expected ASC or DESC")
+	}
 }

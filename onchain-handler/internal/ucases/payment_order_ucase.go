@@ -290,7 +290,8 @@ func (u *paymentOrderUCase) GetActivePaymentOrdersOnBsc(ctx context.Context, lim
 
 func (u *paymentOrderUCase) GetPaymentOrders(
 	ctx context.Context,
-	status *string,
+	status, orderBy *string,
+	orderDirection constants.OrderDirection,
 	page, size int,
 ) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
@@ -298,7 +299,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 	offset := (page - 1) * size
 
 	// Fetch the orders with event histories from the repository
-	orders, err := u.paymentOrderRepository.GetPaymentOrders(ctx, limit, offset, status)
+	orders, err := u.paymentOrderRepository.GetPaymentOrders(ctx, limit, offset, status, orderBy, orderDirection)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}

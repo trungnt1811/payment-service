@@ -222,12 +222,25 @@ func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 func (r *paymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
-	status *string,
+	status, orderBy *string,
+	orderDirection constants.OrderDirection,
 ) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
 
-	// Start with pagination setup
-	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order("id ASC")
+	orderColumn := "id" // Default values for ordering
+	if orderBy != nil && *orderBy != "" {
+		orderColumn = *orderBy
+	}
+
+	orderDir := string(constants.Asc) // Default direction
+	if orderDirection == constants.Desc {
+		orderDir = string(constants.Desc)
+	}
+
+	query := r.db.WithContext(ctx).
+		Limit(limit).
+		Offset(offset).
+		Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
 
 	// If a status filter is provided, apply it to the query
 	if status != nil {
