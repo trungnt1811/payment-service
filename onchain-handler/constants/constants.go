@@ -36,7 +36,7 @@ const (
 // Global cache key
 const (
 	LatestBlockCacheKey  = "latest_block_"
-	LatestBlockCacheTime = 5 * time.Minute
+	LatestBlockCacheTime = 5 * time.Second
 
 	LastProcessedBlockCacheKey  = "last_processed_block_"
 	LastProcessedBlockCacheTime = 5 * time.Minute

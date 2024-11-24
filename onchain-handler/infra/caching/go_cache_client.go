@@ -24,6 +24,8 @@ func NewGoCacheClient() interfaces.CacheClient {
 }
 
 // Set adds an item to the cache with a specified expiration time
+// If the duration is 0 (DefaultExpiration), the cache's default expiration time is used.
+// If it is -1 (NoExpiration), the item never expires.
 func (c *goCacheClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	c.cache.Set(key, value, expiration)
 	return nil

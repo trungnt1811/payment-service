@@ -16,7 +16,6 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/conf/database"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
@@ -30,6 +29,7 @@ import (
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
+	"github.com/genefriendway/onchain-handler/pkg/providers"
 	"github.com/genefriendway/onchain-handler/wire"
 )
 
@@ -55,16 +55,16 @@ func RunApp(config *conf.Configuration) {
 	defer ethClientBsc.Close()
 
 	// Initialize caching
-	cacheRepository := initializeCache(ctx)
+	cacheRepository := providers.ProvideCacheRepository(ctx)
 
 	// Initialize use cases and queue
 	blockstateUcase := wire.InitializeBlockStateUCase(db)
-	paymentEventHistoryUCase := wire.InitializePaymentEventHistoryUCase(db)
+	paymentEventHistoryUCase := wire.InitializePaymentEventHistoryUCase(db, cacheRepository, config)
 	paymentWalletUCase := wire.InitializePaymentWalletUCase(db, config)
 	userWalletUCase := wire.InitializeUserWalletUCase(db, config)
 	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	transferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
-	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db)
+	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
 
 	// Initialize AVAX C-Chain payment order queue
 	paymentOrderQueueOnAvax := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrdersOnAvax)
@@ -186,11 +186,6 @@ func initializeRouter() *gin.Engine {
 	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(gin.Recovery())
 	return r
-}
-
-func initializeCache(ctx context.Context) infrainterfaces.CacheRepository {
-	cacheClient := caching.NewGoCacheClient()
-	return caching.NewCachingRepository(ctx, cacheClient)
 }
 
 func initializePaymentWallets(

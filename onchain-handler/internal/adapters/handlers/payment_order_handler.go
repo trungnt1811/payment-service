@@ -61,7 +61,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 			return
 		}
 		if err := utils.ValidateNetworkType(order.Network); err != nil {
-			logger.GetLogger().Errorf("Validation failed for network id %s: %v", order.Network, err)
+			logger.GetLogger().Errorf("Validation failed for network alias %s: %v", order.Network, err)
 			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, unsupported network: %s", order.Network), err)
 			return
 		}

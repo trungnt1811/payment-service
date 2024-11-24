@@ -8,7 +8,10 @@ import (
 )
 
 type PaymentEventHistoryRepository interface {
-	CreatePaymentEventHistory(ctx context.Context, paymentEvents []domain.PaymentEventHistory) error
+	CreatePaymentEventHistory(
+		ctx context.Context,
+		paymentEvents []domain.PaymentEventHistory,
+	) ([]domain.PaymentEventHistory, error)
 }
 
 type PaymentEventHistoryUCase interface {

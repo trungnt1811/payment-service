@@ -38,5 +38,6 @@ func (u *paymentEventHistoryUCase) CreatePaymentEventHistory(
 		}
 		eventHistories = append(eventHistories, eventHistory)
 	}
-	return u.paymentEventHistoryRepository.CreatePaymentEventHistory(ctx, eventHistories)
+	_, err := u.paymentEventHistoryRepository.CreatePaymentEventHistory(ctx, eventHistories)
+	return err
 }

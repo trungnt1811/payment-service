@@ -18,7 +18,7 @@ type PaymentOrderRepository interface {
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) error
-	UpdateActiveOrdersToExpired(ctx context.Context) error
+	UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error)
 	GetPaymentOrders(
 		ctx context.Context,
 		limit, offset int,

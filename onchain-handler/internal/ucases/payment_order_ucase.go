@@ -178,7 +178,8 @@ func (u *paymentOrderUCase) UpdateExpiredOrdersToFailed(ctx context.Context) err
 }
 
 func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) error {
-	return u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
+	_, err := u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
+	return err
 }
 
 func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTO, error) {

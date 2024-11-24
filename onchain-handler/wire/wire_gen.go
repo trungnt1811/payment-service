@@ -28,9 +28,10 @@ func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 
 func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
 	paymentOrderRepository := repositories.NewPaymentOrderRepository(db)
+	interfacesPaymentOrderRepository := repositories.NewPaymentOrderCacheRepository(paymentOrderRepository, cacheRepo, config)
 	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
 	blockStateRepository := repositories.NewBlockstateRepository(db)
-	paymentOrderUCase := ucases.NewPaymentOrderUCase(db, paymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
+	paymentOrderUCase := ucases.NewPaymentOrderUCase(db, interfacesPaymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
 	return paymentOrderUCase
 }
 
@@ -40,9 +41,10 @@ func InitializeTokenTransferUCase(db *gorm.DB, ethClient interfaces3.Client, con
 	return tokenTransferUCase
 }
 
-func InitializePaymentEventHistoryUCase(db *gorm.DB) interfaces.PaymentEventHistoryUCase {
+func InitializePaymentEventHistoryUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepository, config *conf.Configuration) interfaces.PaymentEventHistoryUCase {
 	paymentEventHistoryRepository := repositories.NewPaymentEventHistoryRepository(db)
-	paymentEventHistoryUCase := ucases.NewPaymentEventHistoryUCase(paymentEventHistoryRepository)
+	interfacesPaymentEventHistoryRepository := repositories.NewPaymentEventHistoryCacheRepository(paymentEventHistoryRepository, cacheRepo, config)
+	paymentEventHistoryUCase := ucases.NewPaymentEventHistoryUCase(interfacesPaymentEventHistoryRepository)
 	return paymentEventHistoryUCase
 }
 
@@ -59,9 +61,10 @@ func InitializeUserWalletUCase(db *gorm.DB, config *conf.Configuration) interfac
 	return userWalletUCase
 }
 
-func InitializeNetworkMetadataUCase(db *gorm.DB) interfaces.NetworkMetadataUCase {
+func InitializeNetworkMetadataUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepository) interfaces.NetworkMetadataUCase {
 	networkMetadataRepository := repositories.NewNetworkMetadataRepository(db)
-	networkMetadataUCase := ucases.NewNetworkMetadataUCase(networkMetadataRepository)
+	interfacesNetworkMetadataRepository := repositories.NewNetworkMetadataCacheRepository(networkMetadataRepository, cacheRepo)
+	networkMetadataUCase := ucases.NewNetworkMetadataUCase(interfacesNetworkMetadataRepository)
 	return networkMetadataUCase
 }
 
@@ -70,14 +73,14 @@ func InitializeNetworkMetadataUCase(db *gorm.DB) interfaces.NetworkMetadataUCase
 // UCase set
 var blockStateUCaseSet = wire.NewSet(repositories.NewBlockstateRepository, ucases.NewBlockStateUCase)
 
-var paymentOrderUCaseSet = wire.NewSet(repositories.NewPaymentOrderRepository, repositories.NewPaymentWalletRepository, repositories.NewBlockstateRepository, ucases.NewPaymentOrderUCase)
+var paymentOrderUCaseSet = wire.NewSet(repositories.NewPaymentOrderRepository, repositories.NewPaymentOrderCacheRepository, repositories.NewPaymentWalletRepository, repositories.NewBlockstateRepository, ucases.NewPaymentOrderUCase)
 
 var tokenTransferUCaseSet = wire.NewSet(repositories.NewTokenTransferRepository, ucases.NewTokenTransferUCase)
 
-var paymentEventHistoryUCaseSet = wire.NewSet(repositories.NewPaymentEventHistoryRepository, ucases.NewPaymentEventHistoryUCase)
+var paymentEventHistoryUCaseSet = wire.NewSet(repositories.NewPaymentEventHistoryRepository, repositories.NewPaymentEventHistoryCacheRepository, ucases.NewPaymentEventHistoryUCase)
 
 var paymentWalletUCaseSet = wire.NewSet(repositories.NewPaymentWalletRepository, repositories.NewPaymentWalletBalanceRepository, ucases.NewPaymentWalletUCase)
 
 var userWalletUCaseSet = wire.NewSet(repositories.NewUserWalletRepository, ucases.NewUserWalletUCase)
 
-var networkMetadataUCaseSet = wire.NewSet(repositories.NewNetworkMetadataRepository, ucases.NewNetworkMetadataUCase)
+var networkMetadataUCaseSet = wire.NewSet(repositories.NewNetworkMetadataRepository, repositories.NewNetworkMetadataCacheRepository, ucases.NewNetworkMetadataUCase)
