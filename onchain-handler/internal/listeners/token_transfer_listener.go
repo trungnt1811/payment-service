@@ -121,13 +121,19 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	queueItems := listener.queue.GetItems()
 
 	// Process each payment order based on the transfer event
-	for _, order := range queueItems {
+	for index, order := range queueItems {
 		// Check if the transfer matches the order's wallet and token symbol
 		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
+			}
+			order.Status = constants.Processing
+			order.BlockHeight = vLog.BlockNumber
+			if err := listener.queue.ReplaceItemAtIndex(index, order); err != nil {
+				logger.GetLogger().Errorf("Failed to update order in queue on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+				return nil, fmt.Errorf("failed to update order in queue: %w", err)
 			}
 		}
 	}
@@ -258,8 +264,14 @@ func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order 
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(listener.network), order.ID)
 
-		// Update the order status to 'Partial' and keep the wallet associated with the order.
-		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Partial, totalTransferred.String(), blockHeight)
+		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
+		status := constants.Partial
+		if blockHeight < order.BlockHeight {
+			status = constants.Processing
+		}
+
+		// Update the order status and keep the wallet associated with the order.
+		return listener.updatePaymentOrderStatus(itemIndex, order, status, totalTransferred.String(), blockHeight)
 	}
 
 	return nil
