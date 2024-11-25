@@ -356,7 +356,7 @@ func sendWebhookForProcessedPaymentOrder(event dto.PaymentOrderDTOResponse) erro
 		return fmt.Errorf("failed to marshal event: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", event.WebhookURL, bytes.NewBuffer(payload))
+	req, err := http.NewRequest(http.MethodPost, event.WebhookURL, bytes.NewBuffer(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
