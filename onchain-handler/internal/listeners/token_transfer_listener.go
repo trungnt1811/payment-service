@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/genefriendway/onchain-handler/conf"
@@ -111,7 +110,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	}
 
 	// Unpack the transfer event
-	transferEvent, err := listener.unpackTransferEvent(vLog)
+	transferEvent, err := blockchain.UnpackTransferEvent(vLog, listener.parsedABI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
@@ -153,7 +152,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	}
 
 	// Unpack the transfer event
-	transferEvent, err := listener.unpackTransferEvent(vLog)
+	transferEvent, err := blockchain.UnpackTransferEvent(vLog, listener.parsedABI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
@@ -214,32 +213,9 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	return processedOrder, nil
 }
 
-func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (dto.TransferEventDTO, error) {
-	var transferEvent dto.TransferEventDTO
-
-	// Ensure the number of topics matches the expected event (Transfer has 3 topics: event signature, from, to)
-	if len(vLog.Topics) != 3 {
-		return transferEvent, fmt.Errorf("invalid number of topics in log")
-	}
-
-	// The first topic is the event signature, so we skip it.
-	// The second topic is the "from" address, and the third is the "to" address.
-	transferEvent.From = common.HexToAddress(vLog.Topics[1].Hex())
-	transferEvent.To = common.HexToAddress(vLog.Topics[2].Hex())
-
-	// Unpack the value (the non-indexed parameter) from the data field
-	err := listener.parsedABI.UnpackIntoInterface(&transferEvent, constants.TransferEventName, vLog.Data)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to unpack transfer event: %v", err)
-		return transferEvent, err
-	}
-
-	return transferEvent, nil
-}
-
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
-func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent dto.TransferEventDTO, blockHeight uint64) error {
+func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent blockchain.TransferEvent, blockHeight uint64) error {
 	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, listener.tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
