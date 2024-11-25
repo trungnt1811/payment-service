@@ -323,6 +323,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 			Network:     order.Network,
 			Amount:      order.Amount,
 			Symbol:      order.Symbol,
+			WebhookURL:  order.WebhookURL,
 			Transferred: order.Transferred,
 			Status:      order.Status,
 		}

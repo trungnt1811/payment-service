@@ -7,7 +7,7 @@ import (
 )
 
 // ConvertFloatTokenToSmallestUnit converts a float string amount in Eth (or any token) into its equivalent in Wei (or smallest unit) (big.Int).
-func ConvertFloatTokenToSmallestUnit(amount string, decimals int) (*big.Int, error) {
+func ConvertFloatTokenToSmallestUnit(amount string, decimals uint8) (*big.Int, error) {
 	// Split the amount into integer and fractional parts.
 	parts := strings.Split(amount, ".")
 	if len(parts) > 2 {
@@ -33,12 +33,12 @@ func ConvertFloatTokenToSmallestUnit(amount string, decimals int) (*big.Int, err
 	fractionPart := parts[1]
 
 	// Check if the fractional part exceeds the allowed decimal places.
-	if len(fractionPart) > decimals {
+	if len(fractionPart) > int(decimals) {
 		return nil, fmt.Errorf("fractional part exceeds %d decimal places", decimals)
 	}
 
 	// Pad the fractional part to the required decimal places by appending zeros.
-	fractionPartPadded := fractionPart + strings.Repeat("0", decimals-len(fractionPart))
+	fractionPartPadded := fractionPart + strings.Repeat("0", int(decimals)-len(fractionPart))
 
 	// Convert the fractional part to big.Int.
 	fracPart := new(big.Int)
@@ -55,7 +55,7 @@ func ConvertFloatTokenToSmallestUnit(amount string, decimals int) (*big.Int, err
 }
 
 // ConvertSmallestUnitToFloatToken converts a smallest unit (e.g., Wei) into its float representation (e.g., Ether).
-func ConvertSmallestUnitToFloatToken(amount string, decimals int) (string, error) {
+func ConvertSmallestUnitToFloatToken(amount string, decimals uint8) (string, error) {
 	// Parse the input amount as a big.Int.
 	weiAmount := new(big.Int)
 	_, ok := weiAmount.SetString(amount, 10)
@@ -73,7 +73,7 @@ func ConvertSmallestUnitToFloatToken(amount string, decimals int) (string, error
 	ethFloat := new(big.Float).Quo(weiFloat, divisor)
 
 	// Convert the result to a string with full precision (up to decimals places).
-	ethValue := ethFloat.Text('f', decimals)
+	ethValue := ethFloat.Text('f', int(decimals))
 
 	return ethValue, nil
 }

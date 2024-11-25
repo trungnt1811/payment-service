@@ -40,6 +40,8 @@ const (
 
 	LastProcessedBlockCacheKey  = "last_processed_block_"
 	LastProcessedBlockCacheTime = 5 * time.Minute
+
+	TokenDecimals = "token_decimals_"
 )
 
 // Payment orders status

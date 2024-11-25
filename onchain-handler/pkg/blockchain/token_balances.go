@@ -53,7 +53,7 @@ func sendBatchRequestWithRetry(rpcURL string, reqBody []byte) (*http.Response, e
 }
 
 // GetTokenBalances sends a batch request for ERC-20 balances using `eth_call`, splitting into batches if necessary.
-func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[string]string, error) {
+func GetTokenBalances(rpcURL, tokenContractAddress string, tokenDecimals uint8, addresses []string) (map[string]string, error) {
 	// Validate the URL
 	if err := validateURL(rpcURL); err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 				Method:  "eth_call",
 				Params: []interface{}{
 					map[string]interface{}{
-						"to":   tokenAddress,
+						"to":   tokenContractAddress,
 						"data": data,
 					},
 					"latest",
@@ -116,7 +116,7 @@ func GetTokenBalances(rpcURL, tokenAddress string, addresses []string) (map[stri
 			}
 			balance := new(big.Int)
 			balance.SetString(response.Result[2:], 16)
-			balanceInEth, err := utils.ConvertSmallestUnitToFloatToken(balance.String(), constants.NativeTokenDecimalPlaces)
+			balanceInEth, err := utils.ConvertSmallestUnitToFloatToken(balance.String(), tokenDecimals)
 			if err != nil {
 				return nil, fmt.Errorf("error converting balance to token amount: %v", err)
 			}

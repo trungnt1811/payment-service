@@ -24,6 +24,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/workers"
+	pkgblockchain "github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
@@ -56,6 +57,10 @@ func RunApp(config *conf.Configuration) {
 
 	// Initialize caching
 	cacheRepository := providers.ProvideCacheRepository(ctx)
+
+	// Persist token decimals to cache
+	persistTokenDecimalsToCache(ctx, ethClientAvax, config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress, constants.AvaxCChain, cacheRepository)
+	persistTokenDecimalsToCache(ctx, ethClientBsc, config.Blockchain.BscNetwork.BscUSDTContractAddress, constants.Bsc, cacheRepository)
 
 	// Initialize use cases and queue
 	blockstateUcase := wire.InitializeBlockStateUCase(db)
@@ -150,7 +155,6 @@ func RunApp(config *conf.Configuration) {
 }
 
 // Helper Functions
-
 func initializeLoggerAndMode(config *conf.Configuration) {
 	// config logger config. Can be replaced with any logger config
 	// Create a logger with default configuration
@@ -217,6 +221,25 @@ func initializePaymentOrderQueue(
 	return paymentOrderQueue
 }
 
+func persistTokenDecimalsToCache(
+	ctx context.Context,
+	ethClient pkginterfaces.Client,
+	tokenContractAddress string,
+	network constants.NetworkType,
+	cacheRepo infrainterfaces.CacheRepository,
+) {
+	_, err := pkgblockchain.FetchTokenDecimals(
+		ctx,
+		ethClient,
+		tokenContractAddress,
+		string(network),
+		cacheRepo,
+	)
+	if err != nil {
+		pkglogger.GetLogger().Fatalf("Failed to persist token decimals to cache: %v", err)
+	}
+}
+
 func startWorkers(
 	ctx context.Context,
 	config *conf.Configuration,
@@ -243,7 +266,9 @@ func startWorkers(
 	)
 	go expiredOrderCatchupWorker.Start(ctx)
 
-	paymentWalletBalanceWorker := workers.NewPaymentWalletBalanceWorker(config, paymentWalletUCase, network, rpcURL, usdtContractAddress)
+	paymentWalletBalanceWorker := workers.NewPaymentWalletBalanceWorker(
+		config, paymentWalletUCase, cacheRepository, network, rpcURL, usdtContractAddress,
+	)
 	go paymentWalletBalanceWorker.Start(ctx)
 }
 

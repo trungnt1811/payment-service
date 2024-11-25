@@ -20,19 +20,19 @@ func GetLatestBlockFromCacheOrBlockchain(
 ) (uint64, error) {
 	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network}
 
-	var latestBlock uint64
-	err := cacheRepo.RetrieveItem(cacheKey, &latestBlock)
+	var cachedLatestBlock uint64
+	err := cacheRepo.RetrieveItem(cacheKey, &cachedLatestBlock)
 	if err == nil {
-		logger.GetLogger().Debugf("Retrieved %s latest block number from cache: %d", network, latestBlock)
-		return latestBlock, nil
+		logger.GetLogger().Debugf("Retrieved %s latest block number from cache: %d", network, cachedLatestBlock)
+		return cachedLatestBlock, nil
 	}
 
 	// If not found in cache, get the latest block from the blockchain
-	latest, err := ethClient.GetLatestBlockNumber(ctx)
+	latestBlock, err := ethClient.GetLatestBlockNumber(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get latest block from blockchain: %w", err)
 	}
 
-	logger.GetLogger().Debugf("Retrieved latest block number from %s: %d", network, latest.Uint64())
-	return latest.Uint64(), nil
+	logger.GetLogger().Debugf("Retrieved latest block number from %s: %d", network, latestBlock.Uint64())
+	return latestBlock.Uint64(), nil
 }

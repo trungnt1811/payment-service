@@ -194,6 +194,23 @@ func (c *client) BulkTransfer(
 	return &txHash, &tokenSymbol, txFeeInEth, nil
 }
 
+// GetTokenDecimals retrieves the decimal precision of an ERC20 token by its contract address
+func (c *client) GetTokenDecimals(ctx context.Context, tokenContractAddress string) (uint8, error) {
+	// Instantiate the ERC20 token contract
+	token, err := erc20token.NewErc20token(common.HexToAddress(tokenContractAddress), c.client)
+	if err != nil {
+		return 0, fmt.Errorf("failed to instantiate ERC20 token contract at address %s: %w", tokenContractAddress, err)
+	}
+
+	// Call the Decimals method to get the token's decimal precision
+	decimals, err := token.Decimals(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get token decimals for contract %s: %w", tokenContractAddress, err)
+	}
+
+	return decimals, nil
+}
+
 // getAuth creates a new keyed transactor for signing transactions with the given private key and network chain ID
 func (c *client) getAuth(
 	ctx context.Context,

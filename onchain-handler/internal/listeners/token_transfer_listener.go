@@ -19,6 +19,7 @@ import (
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
@@ -33,7 +34,8 @@ type tokenTransferListener struct {
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
 	network                  constants.NetworkType
-	contractAddress          string
+	tokenContractAddress     string
+	tokenDecimals            uint8
 	parsedABI                abi.ABI
 	queue                    *queue.Queue[dto.PaymentOrderDTO]
 	mu                       sync.Mutex // Mutex for ticker synchronization
@@ -48,12 +50,17 @@ func NewTokenTransferListener(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	network constants.NetworkType,
-	contractAddress string,
+	tokenContractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) (interfaces.EventListener, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
+	}
+
+	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, string(network), cacheRepo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token decimals: %w", err)
 	}
 
 	listener := &tokenTransferListener{
@@ -64,7 +71,8 @@ func NewTokenTransferListener(
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
 		network:                  network,
-		contractAddress:          contractAddress,
+		tokenContractAddress:     tokenContractAddress,
+		tokenDecimals:            decimals,
 		queue:                    orderQueue,
 		parsedABI:                parsedABI,
 	}
@@ -155,7 +163,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 		// Check if the transfer matches the order's wallet and token symbol
 		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			// Convert transfer event value from Wei to Eth
-			transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), constants.NativeTokenDecimalPlaces)
+			transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), listener.tokenDecimals)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
@@ -226,13 +234,13 @@ func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (dto.
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
 func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent dto.TransferEventDTO, blockHeight uint64) error {
-	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, constants.NativeTokenDecimalPlaces)
+	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, listener.tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, listener.config.GetPaymentCovering())
 
-	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, constants.NativeTokenDecimalPlaces)
+	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, listener.tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert transferred amount: %v", err)
 	}
@@ -264,7 +272,7 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth
-	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, constants.NativeTokenDecimalPlaces)
+	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, listener.tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}
@@ -362,11 +370,11 @@ func (listener *tokenTransferListener) isOrderSucceeded(order dto.PaymentOrderDT
 // Register registers the listeners for token transfer events.
 func (listener *tokenTransferListener) Register(ctx context.Context) {
 	listener.baseEventListener.RegisterConfirmedEventListener(
-		listener.contractAddress,
+		listener.tokenContractAddress,
 		listener.parseAndProcessConfirmedTransferEvent,
 	)
 	listener.baseEventListener.RegisterRealtimeEventListener(
-		listener.contractAddress,
+		listener.tokenContractAddress,
 		listener.parseAndProcessRealtimeTransferEvent,
 	)
 }

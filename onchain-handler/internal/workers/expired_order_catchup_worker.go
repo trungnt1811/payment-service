@@ -30,7 +30,8 @@ type expiredOrderCatchupWorker struct {
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
 	cacheRepo                infrainterfaces.CacheRepository
-	contractAddress          string
+	tokenContractAddress     string
+	tokenDecimals            uint8
 	parsedABI                abi.ABI
 	ethClient                pkginterfaces.Client
 	network                  constants.NetworkType
@@ -44,7 +45,7 @@ func NewExpiredOrderCatchupWorker(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	cacheRepo infrainterfaces.CacheRepository,
-	contractAddress string,
+	tokenContractAddress string,
 	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 ) interfaces.Worker {
@@ -53,12 +54,20 @@ func NewExpiredOrderCatchupWorker(
 		logger.GetLogger().Infof("failed to parse ERC20 ABI: %v", err)
 		return nil
 	}
+
+	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, string(network), cacheRepo)
+	if err != nil {
+		logger.GetLogger().Errorf("failed to get token decimals: %v", err)
+		return nil
+	}
+
 	return &expiredOrderCatchupWorker{
 		config:                   config,
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
 		cacheRepo:                cacheRepo,
-		contractAddress:          contractAddress,
+		tokenContractAddress:     tokenContractAddress,
+		tokenDecimals:            decimals,
 		parsedABI:                parsedABI,
 		ethClient:                ethClient,
 		network:                  network,
@@ -186,7 +195,7 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 	}
 
 	// Process logs in chunks of DefaultBlockOffset
-	address := common.HexToAddress(w.contractAddress)
+	address := common.HexToAddress(w.tokenContractAddress)
 	for chunkStart := startBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
 		chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
 		if chunkEnd > endBlock {
@@ -270,7 +279,7 @@ func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 	transferEvent dto.TransferEventDTO,
 	tokenSymbol, contractAddress, txHash string,
 ) error {
-	transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), constants.NativeTokenDecimalPlaces)
+	transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), w.tokenDecimals)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
 		return err
@@ -305,13 +314,13 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		return false, nil
 	}
 	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
-	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, constants.NativeTokenDecimalPlaces)
+	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, w.tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
 
-	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, constants.NativeTokenDecimalPlaces)
+	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, w.tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert transferred amount to wei: %v", err)
 	}
@@ -344,7 +353,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	blockHeight uint64,
 ) error {
 	// Convert transferredAmount from Wei to Eth (Ether)
-	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, constants.NativeTokenDecimalPlaces)
+	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, w.tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}

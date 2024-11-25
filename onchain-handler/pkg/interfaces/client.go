@@ -23,5 +23,6 @@ type Client interface {
 		recipients []string,
 		amounts []*big.Int,
 	) (*string, *string, *big.Float, error)
+	GetTokenDecimals(ctx context.Context, tokenContractAddress string) (uint8, error)
 	Close()
 }

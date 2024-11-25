@@ -7,6 +7,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
@@ -15,6 +16,7 @@ import (
 type paymentWalletBalanceWorker struct {
 	config               *conf.Configuration
 	paymentWalletUCase   interfaces.PaymentWalletUCase
+	cacheRepo            infrainterfaces.CacheRepository
 	network              constants.NetworkType
 	rpcURL               string
 	tokenContractAddress string
@@ -25,6 +27,7 @@ type paymentWalletBalanceWorker struct {
 func NewPaymentWalletBalanceWorker(
 	config *conf.Configuration,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
+	cacheRepo infrainterfaces.CacheRepository,
 	network constants.NetworkType,
 	rpcURL string,
 	tokenContractAddress string,
@@ -35,6 +38,7 @@ func NewPaymentWalletBalanceWorker(
 		network:              network,
 		rpcURL:               rpcURL,
 		tokenContractAddress: tokenContractAddress,
+		cacheRepo:            cacheRepo,
 	}
 }
 
@@ -79,8 +83,15 @@ func (w *paymentWalletBalanceWorker) run(ctx context.Context) {
 		addresses = append(addresses, wallet.Address)
 	}
 
+	// Get token decimals
+	decimals, err := blockchain.GetTokenDecimalsFromCache(w.tokenContractAddress, string(w.network), w.cacheRepo)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get token decimals: %v", err)
+		return
+	}
+
 	// Fetch token balances
-	mapAddressesTokenBalances, err := blockchain.GetTokenBalances(w.rpcURL, w.tokenContractAddress, addresses)
+	mapAddressesTokenBalances, err := blockchain.GetTokenBalances(w.rpcURL, w.tokenContractAddress, decimals, addresses)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to get USDT token (%s) balances on %s: %v", w.tokenContractAddress, w.network, err)
 		return
