@@ -679,6 +679,9 @@ const docTemplate = `{
                 },
                 "wallet_address": {
                     "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
                 }
             }
         },

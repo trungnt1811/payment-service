@@ -148,6 +148,8 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 
 	queueItems := listener.queue.GetItems()
 
+	var processedOrder dto.PaymentOrderDTOResponse
+
 	// Process each payment order based on the transfer event
 	for index, order := range queueItems {
 		// Check if the transfer matches the order's wallet and token symbol
@@ -184,10 +186,18 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 				logger.GetLogger().Errorf("Failed to process payment on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
 			}
+
+			// Get the processed order
+			processedOrder, err = listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
+			if err != nil {
+				logger.GetLogger().Errorf("Failed to get the processed order by ID %d, error: %v", order.ID, err)
+				return nil, err
+			}
+			break
 		}
 	}
 
-	return transferEvent, nil
+	return processedOrder, nil
 }
 
 func (listener *tokenTransferListener) unpackTransferEvent(vLog types.Log) (dto.TransferEventDTO, error) {

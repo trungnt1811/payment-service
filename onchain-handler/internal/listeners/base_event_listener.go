@@ -1,7 +1,12 @@
 package listeners
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"sync"
 	"time"
 
@@ -10,6 +15,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
@@ -316,11 +322,55 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 	for {
 		select {
 		case event := <-listener.eventChan:
-			logger.GetLogger().Debugf("Processed event on network %s: %+v", string(listener.network), event)
+			// Use a type switch to determine the event type
+			switch ev := event.(type) {
+			case dto.PaymentOrderDTOResponse:
+				// Log the event
+				logger.GetLogger().Debugf("Processing PaymentOrderDTOResponse on network %s: %v", string(listener.network), ev)
+
+				// Use a separate goroutine for webhook sending
+				go func(ev dto.PaymentOrderDTOResponse) {
+					if err := sendWebhookForProcessedPaymentOrder(ev); err != nil {
+						logger.GetLogger().Errorf("Failed to send webhook for PaymentOrderDTOResponse on network %s: %v", string(listener.network), err)
+					} else {
+						logger.GetLogger().Infof("Successfully sent webhook for PaymentOrderDTOResponse on network %s", string(listener.network))
+					}
+				}(ev)
+
+			default:
+				// Handle unknown or unsupported event types
+				logger.GetLogger().Warnf("Unsupported event type received on network %s: %v", string(listener.network), event)
+			}
 
 		case <-ctx.Done():
 			logger.GetLogger().Infof("Stopping event processing on network %s...", string(listener.network))
 			return
 		}
 	}
+}
+
+func sendWebhookForProcessedPaymentOrder(event dto.PaymentOrderDTOResponse) error {
+	client := http.Client{Timeout: 3 * time.Second}
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", event.WebhookURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send webhook: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
 }

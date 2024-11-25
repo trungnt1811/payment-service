@@ -106,7 +106,7 @@ const (
 
 // Block confirmations
 const (
-	ConfirmationDepth = 24
+	ConfirmationDepth = 20
 )
 
 // Wallet type
