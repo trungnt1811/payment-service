@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"gorm.io/gorm"
 
@@ -57,11 +56,10 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalances(
 			} else {
 				// Step 3: If record does not exist, insert it
 				if err := tx.Create(&domain.PaymentWalletBalance{
-					WalletID:  walletID,
-					Network:   network,
-					Symbol:    symbol,
-					Balance:   newBalances[i],
-					UpdatedAt: time.Now(),
+					WalletID: walletID,
+					Network:  network,
+					Symbol:   symbol,
+					Balance:  newBalances[i],
 				}).Error; err != nil {
 					return fmt.Errorf("failed to insert wallet balance: %w", err)
 				}
