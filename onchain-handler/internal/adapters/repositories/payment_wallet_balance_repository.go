@@ -3,11 +3,11 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
@@ -34,26 +34,40 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalances(
 		return fmt.Errorf("the number of wallet IDs and balances must be the same")
 	}
 
-	// Build the upsert query with placeholders for batch insertion
-	values := []string{}
-	args := []interface{}{}
-	for i, walletID := range walletIDs {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)", i*5+1, i*5+2, i*5+3, i*5+4, i*5+5))
-		args = append(args, walletID, network, symbol, newBalances[i], time.Now())
-	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Loop through each wallet and either insert or update
+		for i, walletID := range walletIDs {
+			var existingCount int64
+			// Step 1: Check if the record exists
+			if err := tx.Table("payment_wallet_balance").
+				Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
+				Count(&existingCount).Error; err != nil {
+				return fmt.Errorf("failed to check for existing record: %w", err)
+			}
 
-	query := `
-		INSERT INTO payment_wallet_balance (wallet_id, network, symbol, balance, updated_at)
-		VALUES ` + strings.Join(values, ",") + `
-		ON CONFLICT (wallet_id, network, symbol)
-		DO UPDATE SET 
-			balance = EXCLUDED.balance;
-	`
+			if existingCount > 0 {
+				// Step 2: If record exists, update it
+				if err := tx.Model(&domain.PaymentWalletBalance{}).
+					Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
+					Updates(map[string]interface{}{
+						"balance": newBalances[i],
+					}).Error; err != nil {
+					return fmt.Errorf("failed to update wallet balance: %w", err)
+				}
+			} else {
+				// Step 3: If record does not exist, insert it
+				if err := tx.Create(&domain.PaymentWalletBalance{
+					WalletID:  walletID,
+					Network:   network,
+					Symbol:    symbol,
+					Balance:   newBalances[i],
+					UpdatedAt: time.Now(),
+				}).Error; err != nil {
+					return fmt.Errorf("failed to insert wallet balance: %w", err)
+				}
+			}
+		}
 
-	// Execute the query
-	if err := r.db.WithContext(ctx).Exec(query, args...).Error; err != nil {
-		return fmt.Errorf("failed to upsert wallet balances: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
