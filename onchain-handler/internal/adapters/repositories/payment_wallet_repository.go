@@ -126,11 +126,40 @@ func (r *paymentWalletRepository) GetPaymentWallets(ctx context.Context) ([]doma
 	return wallets, nil
 }
 
-func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(ctx context.Context) ([]domain.PaymentWallet, error) {
+func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *string) ([]domain.PaymentWallet, error) {
 	var wallets []domain.PaymentWallet
-	if err := r.db.WithContext(ctx).Order("id ASC").Preload("PaymentWalletBalances").Find(&wallets).Error; err != nil {
+
+	// Build the base query
+	query := r.db.WithContext(ctx).
+		Order("id ASC").
+		Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
+			// Apply filters to the balances
+			if nonZeroOnly {
+				db = db.Where("balance > ?", "0")
+			}
+			if network != nil {
+				db = db.Where("network = ?", *network)
+			}
+			return db
+		})
+
+	// Apply join and filtering to ensure wallets with no balances are excluded
+	query = query.Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
+		Group("payment_wallet.id")
+
+	if nonZeroOnly {
+		query = query.Having("SUM(CASE WHEN payment_wallet_balance.balance > 0 THEN 1 ELSE 0 END) > 0")
+	}
+
+	if network != nil {
+		query = query.Where("payment_wallet_balance.network = ?", *network)
+	}
+
+	// Execute the query
+	if err := query.Find(&wallets).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch payment wallets with balances: %w", err)
 	}
+
 	return wallets, nil
 }
 

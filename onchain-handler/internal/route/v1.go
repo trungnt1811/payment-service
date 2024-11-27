@@ -17,7 +17,7 @@ func RegisterRoutes(
 	r *gin.Engine,
 	config *conf.Configuration,
 	db *gorm.DB,
-	transferUCase interfaces.TokenTransferUCase,
+	tokenTransferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	userWalletUCase interfaces.UserWalletUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
@@ -27,7 +27,7 @@ func RegisterRoutes(
 	appRouter := v1.Group("")
 
 	// SECTION: tokens transfer
-	transferHandler := handlers.NewTokenTransferHandler(transferUCase, config)
+	transferHandler := handlers.NewTokenTransferHandler(tokenTransferUCase, config)
 	appRouter.POST("/token-transfer", transferHandler.Transfer)
 	appRouter.GET("/token-transfer/histories", transferHandler.GetTokenTransferHistories)
 

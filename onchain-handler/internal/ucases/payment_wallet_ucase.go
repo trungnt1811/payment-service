@@ -71,9 +71,18 @@ func (u *paymentWalletUCase) GetPaymentWallets(ctx context.Context) ([]dto.Payme
 	return dtos, nil
 }
 
-func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context) ([]dto.PaymentWalletBalanceDTO, error) {
+func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error) {
+	// Convert `network` to `*string` if it's not nil
+	var parsedNetwork *string
+	if network != nil {
+		networkStr := string(*network)
+		parsedNetwork = &networkStr
+	} else {
+		parsedNetwork = nil
+	}
+
 	// Fetch wallets with balances from the repository
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx)
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, nonZeroOnly, parsedNetwork)
 	if err != nil {
 		return nil, err
 	}

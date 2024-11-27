@@ -5,9 +5,11 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -235,8 +237,7 @@ func (c *client) getAuth(
 
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
-	// auth.GasLimit = uint64(300000) // Set the gas limit (adjust as needed)
-	auth.GasPrice = gasPrice // Set the gas price
+	auth.GasPrice = gasPrice   // Set the gas price
 
 	return auth, nil
 }
@@ -253,4 +254,146 @@ func (c *client) getNonceWithRetry(ctx context.Context, poolAddress string) (uin
 		time.Sleep(constants.RetryDelay) // Backoff before retrying
 	}
 	return 0, fmt.Errorf("failed to retrieve nonce after %d retries: %w", constants.MaxRetries, err)
+}
+
+func (c *client) EstimateGasERC20(
+	tokenAddress common.Address,
+	fromAddress common.Address,
+	toAddress common.Address,
+	amount *big.Int,
+) (uint64, error) {
+	parsedABI, err := abi.JSON(strings.NewReader(erc20token.Erc20tokenMetaData.ABI))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse ERC-20 ABI: %w", err)
+	}
+
+	// Encode the 'transfer' function call with parameters
+	data, err := parsedABI.Pack("transfer", toAddress, amount)
+	if err != nil {
+		return 0, fmt.Errorf("failed to pack transfer data: %w", err)
+	}
+
+	// Estimate gas by simulating the transaction
+	gasLimit, err := c.client.EstimateGas(context.Background(), ethereum.CallMsg{
+		From:  fromAddress,
+		To:    &tokenAddress,
+		Value: big.NewInt(0), // ERC-20 transfers don't send native tokens
+		Data:  data,          // Encoded transfer data
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to estimate gas: %w", err)
+	}
+
+	return gasLimit, nil
+}
+
+// TransferToken transfers ERC-20 tokens from one address to another
+func (c *client) TransferToken(
+	ctx context.Context,
+	chainID uint64,
+	tokenContractAddress, fromPrivateKeyHex, toAddressHex string,
+	amount *big.Int,
+) (common.Hash, uint64, *big.Int, error) {
+	// Parse private key
+	fromPrivateKey, err := crypto.HexToECDSA(fromPrivateKeyHex)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("invalid private key: %w", err)
+	}
+
+	// Parse addresses
+	toAddress := common.HexToAddress(toAddressHex)
+	tokenAddress := common.HexToAddress(tokenContractAddress)
+
+	// Get an authorized transactor
+	auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID))
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to get authorized transactor: %w", err)
+	}
+
+	// Load the ERC-20 token contract
+	token, err := erc20token.NewErc20token(tokenAddress, c.client)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to load token contract: %w", err)
+	}
+
+	// Send the transfer transaction
+	tx, err := token.Transfer(auth, toAddress, amount)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to send transaction: %w", err)
+	}
+
+	// Wait for the transaction to be mined
+	receipt, err := bind.WaitMined(ctx, c.client, tx)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to wait for transaction to be mined: %w", err)
+	}
+
+	// Calculate transaction fee (gas used * gas price)
+	gasPrice := auth.GasPrice
+	gasUsed := receipt.GasUsed
+
+	// Return transaction hash, gas used, and gas price
+	return tx.Hash(), gasUsed, gasPrice, nil
+}
+
+// TransferNativeToken transfers native tokens from one address to another
+func (c *client) TransferNativeToken(
+	ctx context.Context,
+	chainID uint64,
+	fromPrivateKeyHex, toAddressHex string,
+	amount *big.Int,
+) (common.Hash, uint64, *big.Int, error) {
+	fromPrivateKey, err := crypto.HexToECDSA(fromPrivateKeyHex)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("invalid private key: %w", err)
+	}
+	toAddress := common.HexToAddress(toAddressHex)
+
+	// Get an authorized transactor
+	auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID))
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to get authorized transactor: %w", err)
+	}
+
+	// Estimate gas for the transaction
+	estimatedGas, err := c.client.EstimateGas(ctx, ethereum.CallMsg{
+		To:    &toAddress,
+		From:  auth.From,
+		Value: amount,
+	})
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to estimate gas: %w", err)
+	}
+
+	// Get the gas price
+	gasPrice, err := c.client.SuggestGasPrice(ctx)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to get gas price: %w", err)
+	}
+
+	// Create and sign the transaction
+	tx := types.NewTransaction(
+		auth.Nonce.Uint64(),
+		toAddress,
+		amount,
+		estimatedGas,
+		gasPrice,
+		nil,
+	)
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(new(big.Int).SetUint64(chainID)), fromPrivateKey)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to sign transaction: %w", err)
+	}
+
+	// Send the transaction
+	err = c.client.SendTransaction(ctx, signedTx)
+	if err != nil {
+		return common.Hash{}, 0, nil, fmt.Errorf("failed to send transaction: %w", err)
+	}
+
+	return signedTx.Hash(), estimatedGas, gasPrice, nil
+}
+
+func (c *client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	return c.client.SuggestGasPrice(ctx)
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -136,4 +137,12 @@ func PrivateKeyFromHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
 		return nil, fmt.Errorf("failed to convert private key from hex: %w", err)
 	}
 	return privateKey, nil
+}
+
+// Convert *ecdsa.PrivateKey to a hexadecimal string with error handling
+func PrivateKeyToHex(privateKey *ecdsa.PrivateKey) (string, error) {
+	if privateKey == nil {
+		return "", fmt.Errorf("private key is nil")
+	}
+	return hex.EncodeToString(privateKey.D.Bytes()), nil
 }

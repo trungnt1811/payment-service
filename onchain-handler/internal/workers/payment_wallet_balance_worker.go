@@ -5,39 +5,39 @@ import (
 	"sync"
 	"time"
 
-	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type paymentWalletBalanceWorker struct {
-	config               *conf.Configuration
 	paymentWalletUCase   interfaces.PaymentWalletUCase
 	cacheRepo            infrainterfaces.CacheRepository
 	network              constants.NetworkType
 	rpcURL               string
 	tokenContractAddress string
+	tokenSymbol          string
 	isRunning            bool
 	mu                   sync.Mutex
 }
 
 func NewPaymentWalletBalanceWorker(
-	config *conf.Configuration,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	cacheRepo infrainterfaces.CacheRepository,
 	network constants.NetworkType,
 	rpcURL string,
 	tokenContractAddress string,
+	tokenSymbol string,
 ) interfaces.Worker {
 	return &paymentWalletBalanceWorker{
-		config:               config,
 		paymentWalletUCase:   paymentWalletUCase,
 		network:              network,
 		rpcURL:               rpcURL,
 		tokenContractAddress: tokenContractAddress,
+		tokenSymbol:          tokenSymbol,
 		cacheRepo:            cacheRepo,
 	}
 }
@@ -113,21 +113,15 @@ func (w *paymentWalletBalanceWorker) run(ctx context.Context) {
 		nativeTokenBalances = append(nativeTokenBalances, nativeTokenBalance)
 	}
 
-	// Get token symbol by contract address
-	tokenSymbol, err := w.config.GetTokenSymbol(w.tokenContractAddress)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to get token symbol: %v", err)
-		return
-	}
 	// Upsert balances in the database
-	err = w.paymentWalletUCase.UpsertPaymentWalletBalances(ctx, walletIDs, tokenBalances, w.network, tokenSymbol)
+	err = w.paymentWalletUCase.UpsertPaymentWalletBalances(ctx, walletIDs, tokenBalances, w.network, w.tokenSymbol)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to batch upsert payment wallet balances: %v", err)
 		return
 	}
 
 	// Get native token symbol
-	nativeTokenSymbol, err := w.config.GetNativeTokenSymbol(w.network)
+	nativeTokenSymbol, err := utils.GetNativeTokenSymbol(w.network)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to get native token symbol: %v", err)
 		return

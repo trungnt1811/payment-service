@@ -24,5 +24,24 @@ type Client interface {
 		amounts []*big.Int,
 	) (*string, *string, *big.Float, error)
 	GetTokenDecimals(ctx context.Context, tokenContractAddress string) (uint8, error)
+	EstimateGasERC20(
+		tokenAddress common.Address,
+		fromAddress common.Address,
+		toAddress common.Address,
+		amount *big.Int,
+	) (uint64, error)
+	TransferToken(
+		ctx context.Context,
+		chainID uint64,
+		tokenContractAddress, fromPrivateKeyHex, toAddressHex string,
+		amount *big.Int,
+	) (common.Hash, uint64, *big.Int, error)
+	TransferNativeToken(
+		ctx context.Context,
+		chainID uint64,
+		fromPrivateKeyHex, toAddressHex string,
+		amount *big.Int,
+	) (common.Hash, uint64, *big.Int, error)
+	SuggestGasPrice(ctx context.Context) (*big.Int, error)
 	Close()
 }

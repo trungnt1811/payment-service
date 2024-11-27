@@ -183,3 +183,26 @@ func TestPrivateKeyFromHex(t *testing.T) {
 		require.Nil(t, privateKey)
 	})
 }
+
+func TestPrivateKeyToHex(t *testing.T) {
+	t.Run("Valid private key", func(t *testing.T) {
+		privateKey, err := crypto.GenerateKey()
+		require.NoError(t, err)
+
+		hexString, err := PrivateKeyToHex(privateKey)
+		require.NoError(t, err)
+		require.NotEmpty(t, hexString)
+
+		// Convert back to private key to verify
+		decodedKey, err := crypto.HexToECDSA(hexString)
+		require.NoError(t, err)
+		require.Equal(t, privateKey.D, decodedKey.D)
+	})
+
+	t.Run("Nil private key", func(t *testing.T) {
+		hexString, err := PrivateKeyToHex(nil)
+		require.Error(t, err)
+		require.Empty(t, hexString)
+		require.EqualError(t, err, "private key is nil")
+	})
+}

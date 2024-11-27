@@ -26,9 +26,11 @@ type DatabaseConfiguration struct {
 }
 
 type PaymentGatewayConfiguration struct {
-	InitWalletCount  uint   `mapstructure:"INIT_WALLET_COUNT"`
-	ExpiredOrderTime uint   `mapstructure:"EXPIRED_ORDER_TIME"`
-	PaymentCovering  string `mapstructure:"PAYMENT_COVERING"`
+	InitWalletCount        uint   `mapstructure:"INIT_WALLET_COUNT"`
+	ExpiredOrderTime       uint   `mapstructure:"EXPIRED_ORDER_TIME"`
+	PaymentCovering        string `mapstructure:"PAYMENT_COVERING"`
+	MasterWalletAddress    string `mapstructure:"MASTER_WALLET_ADDRESS"`
+	PrivateKeyMasterWallet string `mapstructure:"PRIVATE_KEY_MASTER_WALLET"`
 }
 
 type BlockchainConfiguration struct {
@@ -36,9 +38,7 @@ type BlockchainConfiguration struct {
 	BscNetwork       BscNetworkConfiguration       `mapstructure:",squash"`
 	LPTreasuryPool   LPTreasuryPoolConfiguration   `mapstructure:",squash"`
 	USDTTreasuryPool USDTTreasuryPoolConfiguration `mapstructure:",squash"`
-	LPCommunityPool  LPCommunityPoolConfiguration  `mapstructure:",squash"`
 	LPRevenuePool    LPRevenuePoolConfiguration    `mapstructure:",squash"`
-	LPStakingPool    LPStakingPoolConfiguration    `mapstructure:",squash"`
 }
 
 type AvaxNetworkConfiguration struct {
@@ -74,19 +74,9 @@ type USDTTreasuryPoolConfiguration struct {
 	PrivateKeyUSDTTreasury string `mapstructure:"PRIVATE_KEY_USDT_TREASURY"`
 }
 
-type LPCommunityPoolConfiguration struct {
-	LPCommunityAddress    string `mapstructure:"LP_COMMUNITY_ADDRESS"`
-	PrivateKeyLPCommunity string `mapstructure:"PRIVATE_KEY_LP_COMMUNITY"`
-}
-
 type LPRevenuePoolConfiguration struct {
 	LPRevenueAddress    string `mapstructure:"LP_REVENUE_ADDRESS"`
 	PrivateKeyLPRevenue string `mapstructure:"PRIVATE_KEY_LP_REVENUE"`
-}
-
-type LPStakingPoolConfiguration struct {
-	LPStakingAddress    string `mapstructure:"LP_STAKING_ADDRESS"`
-	PrivateKeyLPStaking string `mapstructure:"PRIVATE_KEY_LP_STAKING"`
 }
 
 type Configuration struct {
@@ -147,15 +137,9 @@ func (config Configuration) GetPoolPrivateKey(poolAddress string) (string, error
 	// LP Treasury pool
 	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
 		return config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, nil
-	// LP Community pool
-	case config.Blockchain.LPCommunityPool.LPCommunityAddress:
-		return config.Blockchain.LPCommunityPool.PrivateKeyLPCommunity, nil
 	// LP Revenue pool
 	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
 		return config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, nil
-	// LP Staking pool
-	case config.Blockchain.LPStakingPool.LPStakingAddress:
-		return config.Blockchain.LPStakingPool.PrivateKeyLPStaking, nil
 	// USDT Treasury pool
 	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
 		return config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury, nil
@@ -166,10 +150,6 @@ func (config Configuration) GetPoolPrivateKey(poolAddress string) (string, error
 
 func (config Configuration) GetPoolAddress(poolName string) (string, error) {
 	switch poolName {
-	case constants.LPCommunity:
-		return config.Blockchain.LPCommunityPool.LPCommunityAddress, nil
-	case constants.LPStaking:
-		return config.Blockchain.LPStakingPool.LPStakingAddress, nil
 	case constants.LPRevenue:
 		return config.Blockchain.LPRevenuePool.LPRevenueAddress, nil
 	case constants.LPTreasury:
@@ -206,15 +186,4 @@ func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) 
 		return symbol, nil
 	}
 	return "", fmt.Errorf("unknown token address: %s", tokenAddress)
-}
-
-func (config Configuration) GetNativeTokenSymbol(network constants.NetworkType) (string, error) {
-	switch network {
-	case constants.AvaxCChain:
-		return "AVAX", nil
-	case constants.Bsc:
-		return "BNB", nil
-	default:
-		return "", fmt.Errorf("unsupported network type: %s", network)
-	}
 }

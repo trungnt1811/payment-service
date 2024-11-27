@@ -14,7 +14,7 @@ type PaymentWalletRepository interface {
 	ClaimFirstAvailableWallet(ctx context.Context) (*domain.PaymentWallet, error)
 	GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error)
 	GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error)
-	GetPaymentWalletsWithBalances(ctx context.Context) ([]domain.PaymentWallet, error)
+	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *string) ([]domain.PaymentWallet, error)
 	BatchReleaseWallets(ctx context.Context, walletIDs []uint64) error
 }
 
@@ -30,5 +30,5 @@ type PaymentWalletUCase interface {
 		symbol string,
 	) error
 	GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error)
-	GetPaymentWalletsWithBalances(ctx context.Context) ([]dto.PaymentWalletBalanceDTO, error)
+	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error)
 }

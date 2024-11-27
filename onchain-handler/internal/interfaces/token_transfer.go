@@ -19,6 +19,7 @@ type TokenTransferRepository interface {
 }
 
 type TokenTransferUCase interface {
+	CreateTokenTransferHistories(ctx context.Context, payloads []dto.TokenTransferHistoryDTO) error
 	TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) ([]dto.TokenTransferResultDTOResponse, error)
 	GetTokenTransferHistories(
 		ctx context.Context,

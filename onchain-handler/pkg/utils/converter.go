@@ -2,8 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
+
+	"github.com/genefriendway/onchain-handler/constants"
 )
 
 // ConvertFloatTokenToSmallestUnit converts a float string amount in Eth (or any token) into its equivalent in Wei (or smallest unit) (big.Int).
@@ -76,4 +79,14 @@ func ConvertSmallestUnitToFloatToken(amount string, decimals uint8) (string, err
 	ethValue := ethFloat.Text('f', int(decimals))
 
 	return ethValue, nil
+}
+
+// CalculateFee calculates the fee in ETH given the gas used and gas price in Wei.
+func CalculateFee(gasUsed uint64, gasPrice *big.Int) string {
+	fee := new(big.Float).Mul(
+		new(big.Float).SetInt64(int64(gasUsed)),
+		new(big.Float).SetInt(gasPrice),
+	)
+	eth := new(big.Float).Quo(fee, big.NewFloat(math.Pow10(constants.NativeTokenDecimalPlaces))) // Convert wei to ETH
+	return eth.Text('f', 6)                                                                      // Return as string with 6 decimal places
 }

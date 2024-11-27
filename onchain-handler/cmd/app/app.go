@@ -68,7 +68,7 @@ func RunApp(config *conf.Configuration) {
 	paymentWalletUCase := wire.InitializePaymentWalletUCase(db, config)
 	userWalletUCase := wire.InitializeUserWalletUCase(db, config)
 	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
-	transferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
+	tokenTransferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
 	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
 
 	// Initialize AVAX C-Chain payment order queue
@@ -85,15 +85,18 @@ func RunApp(config *conf.Configuration) {
 	go releaseWalletWorker.Start(ctx)
 
 	// Start AVAX workers
+
 	startWorkers(
 		ctx,
 		config,
 		cacheRepository,
 		ethClientAvax,
 		constants.AvaxCChain,
+		uint64(config.Blockchain.AvaxNetwork.AvaxChainID),
 		config.Blockchain.AvaxNetwork.AvaxRpcUrl,
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
 		blockstateUcase,
+		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
 		paymentEventHistoryUCase,
@@ -106,9 +109,11 @@ func RunApp(config *conf.Configuration) {
 		cacheRepository,
 		ethClientBsc,
 		constants.Bsc,
+		uint64(config.Blockchain.BscNetwork.BscChainID),
 		config.Blockchain.BscNetwork.BscRpcUrl,
 		config.Blockchain.BscNetwork.BscUSDTContractAddress,
 		blockstateUcase,
+		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
 		paymentEventHistoryUCase,
@@ -145,7 +150,7 @@ func RunApp(config *conf.Configuration) {
 	)
 
 	// Register routes
-	routev1.RegisterRoutes(ctx, r, config, db, transferUCase, paymentOrderUCase, userWalletUCase, paymentWalletUCase, networkMetadataUCase)
+	routev1.RegisterRoutes(ctx, r, config, db, tokenTransferUCase, paymentOrderUCase, userWalletUCase, paymentWalletUCase, networkMetadataUCase)
 
 	// Start server
 	startServer(r, config)
@@ -246,8 +251,10 @@ func startWorkers(
 	cacheRepository infrainterfaces.CacheRepository,
 	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
+	chainID uint64,
 	rpcURL, usdtContractAddress string,
 	blockstateUcase interfaces.BlockStateUCase,
+	tokenTransferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
@@ -266,10 +273,33 @@ func startWorkers(
 	)
 	go expiredOrderCatchupWorker.Start(ctx)
 
+	// Start payment wallet balance worker
+	tokenSymbol, err := config.GetTokenSymbol(usdtContractAddress)
+	if err != nil {
+		pkglogger.GetLogger().Fatalf("Failed to get token symbol: %v", err)
+	}
 	paymentWalletBalanceWorker := workers.NewPaymentWalletBalanceWorker(
-		config, paymentWalletUCase, cacheRepository, network, rpcURL, usdtContractAddress,
+		paymentWalletUCase, cacheRepository, network, rpcURL, usdtContractAddress, tokenSymbol,
 	)
 	go paymentWalletBalanceWorker.Start(ctx)
+
+	// Start payment wallet withdraw worker
+	paymentWalletWithdrawWorker := workers.NewPaymentWalletWithdrawWorker(
+		ctx,
+		ethClient,
+		network,
+		chainID,
+		cacheRepository,
+		tokenTransferUCase,
+		paymentWalletUCase,
+		usdtContractAddress,
+		config.PaymentGateway.MasterWalletAddress,
+		config.PaymentGateway.PrivateKeyMasterWallet,
+		config.Wallet.Mnemonic,
+		config.Wallet.Passphrase,
+		config.Wallet.Salt,
+	)
+	go paymentWalletWithdrawWorker.Start(ctx)
 }
 
 func startEventListeners(

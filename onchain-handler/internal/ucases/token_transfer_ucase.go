@@ -289,3 +289,25 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 		Data:     listTokenTransfersDTO,
 	}, nil
 }
+
+func (s *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, payloads []dto.TokenTransferHistoryDTO) error {
+	var models []domain.TokenTransferHistory
+
+	for _, payload := range payloads {
+		models = append(models, domain.TokenTransferHistory{
+			ID:              payload.ID,
+			RequestID:       payload.RequestID,
+			Network:         payload.Network,
+			TransactionHash: payload.TransactionHash,
+			FromAddress:     payload.FromAddress,
+			ToAddress:       payload.ToAddress,
+			TokenAmount:     payload.TokenAmount,
+			Fee:             payload.Fee,
+			Symbol:          payload.Symbol,
+			Status:          payload.Status,
+			ErrorMessage:    payload.ErrorMessage,
+		})
+	}
+
+	return s.tokenTransferRepository.CreateTokenTransferHistories(ctx, models)
+}

@@ -59,7 +59,7 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/balances [get]
 func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
-	wallets, err := h.ucase.GetPaymentWalletsWithBalances(ctx)
+	wallets, err := h.ucase.GetPaymentWalletsWithBalances(ctx, false, nil)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment wallets with balances: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallets with balances", err)
