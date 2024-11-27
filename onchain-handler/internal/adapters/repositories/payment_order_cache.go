@@ -132,6 +132,9 @@ func mergePaymentOrderFields(dst, src *domain.PaymentOrder) {
 	if src.Transferred != "" {
 		dst.Transferred = src.Transferred
 	}
+	if src.Network != "" {
+		dst.Network = src.Network
+	}
 }
 
 func (c *paymentOrderCache) UpdateOrderStatus(
