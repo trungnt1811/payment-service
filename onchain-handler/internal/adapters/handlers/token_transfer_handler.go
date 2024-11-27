@@ -111,7 +111,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
-// @Router /api/v1/token-transfer/histories [get]
+// @Router /api/v1/token-transfers [get]
 func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {

@@ -381,7 +381,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/token-transfer/histories": {
+        "/api/v1/token-transfers": {
             "get": {
                 "description": "This endpoint fetches a paginated list of token transfer histories filtered by request IDs and time range.",
                 "consumes": [

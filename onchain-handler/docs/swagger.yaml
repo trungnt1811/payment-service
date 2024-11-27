@@ -413,7 +413,7 @@ paths:
       summary: Distribute tokens to recipients
       tags:
       - token-transfer
-  /api/v1/token-transfer/histories:
+  /api/v1/token-transfers:
     get:
       consumes:
       - application/json
