@@ -54,6 +54,13 @@ const (
 	Failed     = "FAILED"
 )
 
+// Token transfer type
+const (
+	Transfer = "TRANSFER"
+	Withdraw = "WITHDRAW"
+	Deposit  = "DEPOSIT"
+)
+
 // ERC-20 transfer event ABI
 const (
 	Erc20TransferEventABI = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`

@@ -306,6 +306,7 @@ func (s *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, p
 			Symbol:          payload.Symbol,
 			Status:          payload.Status,
 			ErrorMessage:    payload.ErrorMessage,
+			Type:            payload.Type,
 		})
 	}
 

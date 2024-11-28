@@ -1,5 +1,7 @@
 SET TIMEZONE TO 'UTC';
 
+CREATE TYPE transfer_type AS ENUM('TRANSFER', 'WITHDRAW', 'DEPOSIT');
+
 CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     id SERIAL PRIMARY KEY,  -- SERIAL takes care of auto-increment
     request_id VARCHAR(255) NOT NULL,
@@ -11,6 +13,7 @@ CREATE TABLE IF NOT EXISTS onchain_token_transfer (
     fee NUMERIC(30, 18) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
     status BOOLEAN NOT NULL DEFAULT FALSE,
+    type transfer_type NOT NULL DEFAULT 'TRANSFER',
     error_message TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
