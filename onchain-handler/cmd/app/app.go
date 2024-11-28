@@ -85,7 +85,6 @@ func RunApp(config *conf.Configuration) {
 	go releaseWalletWorker.Start(ctx)
 
 	// Start AVAX workers
-
 	startWorkers(
 		ctx,
 		config,
