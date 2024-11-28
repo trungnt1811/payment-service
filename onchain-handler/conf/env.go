@@ -120,6 +120,15 @@ func init() {
 	if err := viper.Unmarshal(&configuration); err != nil {
 		log.Fatal().Err(err).Msgf("Error unmarshalling configuration %v", err)
 	}
+
+	// Override configuration with environment variables
+	configuration.PaymentGateway.PrivateKeyMasterWallet = os.Getenv("PRIVATE_KEY_MASTER_WALLET")
+	configuration.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury = os.Getenv("PRIVATE_KEY_LP_TREASURY")
+	configuration.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury = os.Getenv("PRIVATE_KEY_USDT_TREASURY")
+	configuration.Blockchain.LPRevenuePool.PrivateKeyLPRevenue = os.Getenv("PRIVATE_KEY_LP_REVENUE")
+	configuration.Wallet.Mnemonic = os.Getenv("MNEMONIC")
+	configuration.Wallet.Passphrase = os.Getenv("PASSPHRASE")
+	configuration.Wallet.Salt = os.Getenv("SALT")
 	log.Info().Msg("Configuration loaded successfully")
 }
 
