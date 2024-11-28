@@ -73,12 +73,21 @@ func NewPaymentWalletWithdrawWorker(
 }
 
 func (w *paymentWalletWithdrawWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(constants.PaymentWalletWihdrawInterval)
-	defer ticker.Stop()
-
 	for {
+		// Calculate the duration until the next scheduled time (e.g., midnight)
+		now := time.Now()
+		nextRun := time.Date(
+			now.Year(), now.Month(), now.Day()+1, // Next day
+			0, 0, 0, 0, // 00:00:00
+			now.Location(),
+		)
+		sleepDuration := time.Until(nextRun)
+
+		logger.GetLogger().Infof("Next payment wallet withdrawal scheduled at: %s", nextRun)
+
+		// Sleep until the next scheduled time or exit early if the context is canceled
 		select {
-		case <-ticker.C:
+		case <-time.After(sleepDuration):
 			go w.run(ctx)
 		case <-ctx.Done():
 			logger.GetLogger().Info("Shutting down paymentWalletWithdrawWorker")

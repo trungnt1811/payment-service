@@ -101,7 +101,6 @@ const (
 	ExpiredOrderCatchupInterval       = 5 * time.Minute
 	OrderCleanInterval                = 7 * time.Minute
 	PaymentWalletBalanceFetchInterval = 10 * time.Second
-	PaymentWalletWihdrawInterval      = 24 * time.Hour
 )
 
 // Event
