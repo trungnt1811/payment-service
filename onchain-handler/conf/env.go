@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -93,47 +92,34 @@ type Configuration struct {
 
 var configuration Configuration
 
-func bindEnv(key string) {
-	if err := viper.BindEnv(key); err != nil {
-		log.Fatal().Msgf("Failed to bind environment variable for key '%s': %v", key, err)
-	}
-}
-
 func init() {
 	envFile := os.Getenv("ENV_FILE")
 	if envFile == "" {
 		envFile = ".env"
 	}
 
-	// Load environment variables from the `.env` file if it exists
-	viper.SetConfigFile(envFile)
-	err := viper.ReadInConfig() // Attempt to read `.env` file
-	if err != nil {
-		log.Err(err).Msg("Error reading .env file")
-	}
-
-	// Allow environment variables to override .env settings
+	viper.SetConfigFile("./.env")
 	viper.AutomaticEnv()
 
-	// Replace dots in Viper keys with underscores for env variable compatibility
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	bindEnv("PRIVATE_KEY_LP_TREASURY")
-	bindEnv("PRIVATE_KEY_USDT_TREASURY")
-	bindEnv("PRIVATE_KEY_LP_REVENUE")
-	bindEnv("PRIVATE_KEY_MASTER_WALLET")
-	bindEnv("MNEMONIC")
-	bindEnv("PASSPHRASE")
-	bindEnv("SALT")
-
-	// Set default values
+	// Set defaults for critical configurations
 	viper.SetDefault("APP_PORT", 8080)
 	viper.SetDefault("EXPIRED_ORDER_TIME", 15)
 
-	// Unmarshal the configuration into the struct
-	if err := viper.Unmarshal(&configuration); err != nil {
-		log.Fatal().Msg("Unable to decode config into struct")
+	if err := viper.ReadInConfig(); err != nil {
+		viper.SetConfigFile(fmt.Sprintf("../%s", envFile))
+		if err := viper.ReadInConfig(); err != nil {
+			log.Logger.Printf("Error reading config file \"%s\", %v", envFile, err)
+		}
 	}
 
+	err := viper.Unmarshal(&configuration)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("Error reading config file %v", err)
+	}
+
+	if err := viper.Unmarshal(&configuration); err != nil {
+		log.Fatal().Err(err).Msgf("Error unmarshalling configuration %v", err)
+	}
 	log.Info().Msg("Configuration loaded successfully")
 }
 

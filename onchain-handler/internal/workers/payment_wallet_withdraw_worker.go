@@ -136,6 +136,10 @@ func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
 
 	addressWalletMap := w.mapWallets(wallets, nativeTokenSymbol, decimals)
 	for address, walletInfo := range addressWalletMap {
+		if walletInfo.TokenAmount == nil {
+			logger.GetLogger().Warnf("Skipping withdrawal for wallet %s due to nil token amount", address)
+			continue
+		}
 		if err := w.processWallet(ctx, address, nativeTokenSymbol, walletInfo, decimals); err != nil {
 			logger.GetLogger().Errorf("Failed to process wallet %s: %v", address, err)
 		}
@@ -173,11 +177,6 @@ func (w *paymentWalletWithdrawWorker) mapWallets(wallets []dto.PaymentWalletBala
 func (w *paymentWalletWithdrawWorker) processWallet(
 	ctx context.Context, address, nativeTokenSymbol string, walletInfo walletInfo, decimals uint8,
 ) error {
-	if walletInfo.TokenAmount == nil {
-		logger.GetLogger().Warnf("Skipping withdrawal for wallet %s due to nil token amount", address)
-		return nil
-	}
-
 	account, privateKey, err := crypto.GenerateAccount(w.mnemonic, w.passphrase, w.salt, constants.PaymentWallet, walletInfo.ID)
 	if err != nil || account.Address.Hex() != address {
 		return fmt.Errorf("account generation or address mismatch: %v", err)
