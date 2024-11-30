@@ -20,8 +20,6 @@ const (
 
 // Pool names
 const (
-	LPCommunity  = "LP_Community"
-	LPStaking    = "LP_Staking"
 	LPRevenue    = "LP_Revenue"
 	LPTreasury   = "LP_Treasury"
 	USDTTreasury = "USDT_Treasury"
