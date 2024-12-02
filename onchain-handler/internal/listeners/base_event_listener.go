@@ -354,7 +354,7 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 }
 
 func sendWebhookForProcessedPaymentOrder(event dto.PaymentOrderDTOResponse) error {
-	client := http.Client{Timeout: 3 * time.Second}
+	client := http.Client{Timeout: 5 * time.Second}
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %v", err)
@@ -372,7 +372,7 @@ func sendWebhookForProcessedPaymentOrder(event dto.PaymentOrderDTOResponse) erro
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, string(body))
 	}
