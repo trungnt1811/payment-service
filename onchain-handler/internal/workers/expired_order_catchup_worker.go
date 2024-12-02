@@ -244,32 +244,59 @@ func (w *expiredOrderCatchupWorker) processLog(
 
 	// Iterate over all expired orders to find a matching wallet address
 	for index, order := range orders {
-		// Check if the event's "To" address matches the order's wallet address
-		if order.Status != constants.Success && strings.EqualFold(transferEvent.To.Hex(), order.Wallet.Address) && strings.EqualFold(order.Symbol, tokenSymbol) {
-			// Found a matching order, now process the payment for that order
-			logger.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), string(w.network), order.ID)
-
-			// Call processOrderPayment to handle the order update logic based on the transfer event
-			isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
-			if err != nil {
-				return fmt.Errorf("failed to process order payment for order ID %d on network %s: %w", order.ID, string(w.network), err)
-			}
-
-			if isUpdated {
-				if err := w.createPaymentEventHistory(ctx, order, transferEvent, tokenSymbol, vLog.Address.Hex(), vLog.TxHash.Hex()); err != nil {
-					return fmt.Errorf("failed to create payment event history for order ID %d on network %s: %w", order.ID, string(w.network), err)
-				}
-				logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
-			}
-
-			logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
-			return nil // Stop once we've processed the matching order
+		// Check if the order matches the transfer event based on the wallet address and token symbol
+		if !w.isMatchingOrder(order, transferEvent, tokenSymbol) {
+			continue
 		}
+		// Found a matching order, now process the payment for that order
+		logger.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), string(w.network), order.ID)
+
+		// Call processOrderPayment to handle the order update logic based on the transfer event
+		isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
+		if err != nil {
+			return fmt.Errorf("failed to process order payment for order ID %d on network %s: %w", order.ID, string(w.network), err)
+		}
+
+		if !isUpdated {
+			continue
+		}
+
+		// Create payment event history for the order
+		if err := w.createPaymentEventHistory(ctx, order, transferEvent, tokenSymbol, vLog.Address.Hex(), vLog.TxHash.Hex()); err != nil {
+			return fmt.Errorf("failed to create payment event history for order ID %d on network %s: %w", order.ID, string(w.network), err)
+		}
+		logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
+
+		// Get the payment order by ID to send the webhook
+		paymentOrderDTO, err := w.paymentOrderUCase.GetPaymentOrderByID(ctx, order.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get payment order by ID %d on network %s: %w", order.ID, string(w.network), err)
+		}
+
+		// Send webhook if webhook URL is present
+		if paymentOrderDTO.WebhookURL != "" {
+			// Use a separate goroutine for webhook sending
+			go func() {
+				if err := utils.SendWebhook(paymentOrderDTO, paymentOrderDTO.WebhookURL); err != nil {
+					logger.GetLogger().Errorf("Failed to send webhook for order ID %d on network %s: %v", order.ID, string(w.network), err)
+				}
+			}()
+		}
+
+		logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
+		return nil // Stop once we've processed the matching order
 	}
 
 	// No matching order found for this log entry
 	logger.GetLogger().Warnf("No matching expired order found for transfer to address: %s on network %s", transferEvent.To.Hex(), string(w.network))
 	return nil
+}
+
+// isMatchingOrder checks if the order matches the transfer event based on the wallet address and token symbol
+func (w *expiredOrderCatchupWorker) isMatchingOrder(order dto.PaymentOrderDTO, transferEvent blockchain.TransferEvent, tokenSymbol string) bool {
+	return order.Status != constants.Success &&
+		strings.EqualFold(transferEvent.To.Hex(), order.Wallet.Address) &&
+		strings.EqualFold(order.Symbol, tokenSymbol)
 }
 
 // createPaymentEventHistory constructs and stores the payment event history
@@ -333,13 +360,13 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(w.network), order.ID)
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return true, w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), blockHeight)
+		return w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(w.network), order.ID)
 
 		// Update the order tranferred and keep the wallet associated with the order.
-		return true, w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight)
+		return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight)
 	}
 
 	return false, nil
@@ -351,11 +378,11 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	order *dto.PaymentOrderDTO,
 	status, transferredAmount string,
 	blockHeight uint64,
-) error {
+) (bool, error) {
 	// Convert transferredAmount from Wei to Eth (Ether)
 	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, w.tokenDecimals)
 	if err != nil {
-		return fmt.Errorf("updatePaymentOrderStatus error: %v", err)
+		return false, fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}
 
 	// Update item in list
@@ -365,10 +392,10 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	// Save the updated order to the repository
 	err = w.paymentOrderUCase.UpdatePaymentOrder(ctx, order.ID, &blockHeight, &status, &transferredAmountInEth, nil)
 	if err != nil {
-		return fmt.Errorf("failed to update payment order status for order ID %d: %w", order.ID, err)
+		return false, fmt.Errorf("failed to update payment order status for order ID %d: %w", order.ID, err)
 	}
 
 	logger.GetLogger().Infof("Order ID %d on network %s updated to status %s with transferred amount: %s", order.ID, string(w.network), status, transferredAmount)
 	w.processedOrderIDs[order.ID] = struct{}{}
-	return nil
+	return true, nil
 }

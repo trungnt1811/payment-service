@@ -122,7 +122,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	// Process each payment order based on the transfer event
 	for _, order := range queueItems {
 		// Check if the transfer matches the order's wallet and token symbol
-		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
+		if listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
 			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
@@ -160,48 +160,51 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	// Process each payment order based on the transfer event
 	for index, order := range queueItems {
 		// Check if the transfer matches the order's wallet and token symbol
-		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
-			// Convert transfer event value from Wei to Eth
-			transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), listener.tokenDecimals)
-			if err != nil {
-				logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
-				return nil, err
-			}
+		if !listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
+			continue
+		}
 
-			// Prepare the payload for the payment event history
-			payloads := []dto.PaymentEventPayloadDTO{
-				{
-					PaymentOrderID:  order.ID,
-					TransactionHash: vLog.TxHash.Hex(),
-					FromAddress:     transferEvent.From.Hex(),
-					ToAddress:       transferEvent.To.Hex(),
-					ContractAddress: vLog.Address.Hex(),
-					TokenSymbol:     tokenSymbol,
-					Amount:          transferEventValueInEth,
-					Network:         string(listener.network),
-				},
-			}
+		transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), listener.tokenDecimals)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
+			return nil, err
+		}
 
+		// Prepare the payload for the payment event history
+		payloads := []dto.PaymentEventPayloadDTO{
+			{
+				PaymentOrderID:  order.ID,
+				TransactionHash: vLog.TxHash.Hex(),
+				FromAddress:     transferEvent.From.Hex(),
+				ToAddress:       transferEvent.To.Hex(),
+				ContractAddress: vLog.Address.Hex(),
+				TokenSymbol:     tokenSymbol,
+				Amount:          transferEventValueInEth,
+				Network:         string(listener.network),
+			},
+		}
+
+		// Process the payment for the order
+		isUpdated, err := listener.processOrderPayment(index, order, transferEvent, vLog.BlockNumber)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to process payment on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+			return nil, err
+		}
+		if isUpdated {
 			// Create payment event history
 			if err := listener.paymentEventHistoryUCase.CreatePaymentEventHistory(listener.ctx, payloads); err != nil {
 				logger.GetLogger().Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
 			}
-
-			// Process the payment for the order
-			if err := listener.processOrderPayment(index, order, transferEvent, vLog.BlockNumber); err != nil {
-				logger.GetLogger().Errorf("Failed to process payment on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
-				return nil, err
-			}
-
-			// Get the processed order
-			processedOrder, err = listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
-			if err != nil {
-				logger.GetLogger().Errorf("Failed to get the processed order by ID %d, error: %v", order.ID, err)
-				return nil, err
-			}
-			break
 		}
+
+		// Get the processed order
+		processedOrder, err = listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to get the processed order by ID %d, error: %v", order.ID, err)
+			return nil, err
+		}
+		break
 	}
 
 	return processedOrder, nil
@@ -209,16 +212,18 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
-func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order dto.PaymentOrderDTO, transferEvent blockchain.TransferEvent, blockHeight uint64) error {
+func (listener *tokenTransferListener) processOrderPayment(
+	itemIndex int, order dto.PaymentOrderDTO, transferEvent blockchain.TransferEvent, blockHeight uint64,
+) (bool, error) {
 	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, listener.tokenDecimals)
 	if err != nil {
-		return fmt.Errorf("failed to convert order amount: %v", err)
+		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, listener.config.GetPaymentCovering())
 
 	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, listener.tokenDecimals)
 	if err != nil {
-		return fmt.Errorf("failed to convert transferred amount: %v", err)
+		return false, fmt.Errorf("failed to convert transferred amount: %v", err)
 	}
 
 	// Calculate the total transferred amount by adding the new transfer event value.
@@ -229,7 +234,7 @@ func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order 
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(listener.network), order.ID)
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), blockHeight)
+		return true, listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(listener.network), order.ID)
@@ -241,10 +246,10 @@ func (listener *tokenTransferListener) processOrderPayment(itemIndex int, order 
 		}
 
 		// Update the order status and keep the wallet associated with the order.
-		return listener.updatePaymentOrderStatus(itemIndex, order, status, totalTransferred.String(), blockHeight)
+		return true, listener.updatePaymentOrderStatus(itemIndex, order, status, totalTransferred.String(), blockHeight)
 	}
 
-	return nil
+	return false, nil
 }
 
 func (listener *tokenTransferListener) updatePaymentOrderStatus(
@@ -347,6 +352,13 @@ func (listener *tokenTransferListener) isOrderExpired(order dto.PaymentOrderDTO)
 
 func (listener *tokenTransferListener) isOrderSucceeded(order dto.PaymentOrderDTO) bool {
 	return order.Status == constants.Success
+}
+
+func (listener *tokenTransferListener) isMatchOrderToEvent(
+	order dto.PaymentOrderDTO, transferEvent blockchain.TransferEvent, tokenSymbol string,
+) bool {
+	return strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) &&
+		strings.EqualFold(order.Symbol, tokenSymbol)
 }
 
 // Register registers the listeners for token transfer events.

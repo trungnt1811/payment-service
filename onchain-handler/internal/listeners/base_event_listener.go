@@ -1,12 +1,7 @@
 package listeners
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"sync"
 	"time"
 
@@ -20,6 +15,7 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 // baseEventListener represents the shared behavior of any blockchain event listener.
@@ -334,7 +330,7 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 				}
 				// Use a separate goroutine for webhook sending
 				go func(ev dto.PaymentOrderDTOResponse) {
-					if err := sendWebhookForProcessedPaymentOrder(ev); err != nil {
+					if err := utils.SendWebhook(ev, ev.WebhookURL); err != nil {
 						logger.GetLogger().Errorf("Failed to send webhook for PaymentOrderDTOResponse on network %s: %v", string(listener.network), err)
 					} else {
 						logger.GetLogger().Infof("Successfully sent webhook for PaymentOrderDTOResponse on network %s", string(listener.network))
@@ -351,30 +347,4 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 			return
 		}
 	}
-}
-
-func sendWebhookForProcessedPaymentOrder(event dto.PaymentOrderDTOResponse) error {
-	client := http.Client{Timeout: 5 * time.Second}
-	payload, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event: %v", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, event.WebhookURL, bytes.NewBuffer(payload))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send webhook: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, string(body))
-	}
-	return nil
 }
