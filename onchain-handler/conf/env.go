@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -92,6 +93,49 @@ type Configuration struct {
 
 var configuration Configuration
 
+var defaultConfigurations = map[string]any{
+	"REDIS_ADDRESS":                     "localhost:6379",
+	"REDIS_TTL":                         "60",
+	"APP_PORT":                          "8080",
+	"ENV_FILE":                          ".env",
+	"DB_USER":                           "",
+	"DB_PASSWORD":                       "",
+	"DB_HOST":                           "",
+	"DB_PORT":                           "",
+	"DB_NAME":                           "",
+	"INIT_WALLET_COUNT":                 10,
+	"EXPIRED_ORDER_TIME":                15,
+	"PAYMENT_COVERING":                  1.2,
+	"MASTER_WALLET_ADDRESS":             "",
+	"PRIVATE_KEY_MASTER_WALLET":         "",
+	"AVAX_RPC_URL":                      "",
+	"AVAX_CHAIN_ID":                     0,
+	"AVAX_START_BLOCK_LISTENER":         0,
+	"AVAX_USDT_CONTRACT_ADDRESS":        "",
+	"AVAX_LIFE_POINT_CONTRACT_ADDRESS":  "",
+	"AVAX_BULK_SENDER_CONTRACT_ADDRESS": "",
+	"BSC_RPC_URL":                       "",
+	"BSC_CHAIN_ID":                      0,
+	"BSC_START_BLOCK_LISTENER":          0,
+	"BSC_USDT_CONTRACT_ADDRESS":         "",
+	"BSC_BULK_SENDER_CONTRACT_ADDRESS":  "",
+	"MNEMONIC":                          "",
+	"PASSPHRASE":                        "",
+	"SALT":                              "",
+	"LP_TREASURY_ADDRESS":               "",
+	"PRIVATE_KEY_LP_TREASURY":           "",
+	"USDT_TREASURY_ADDRESS":             "",
+	"PRIVATE_KEY_USDT_TREASURY":         "",
+	"LP_REVENUE_ADDRESS":                "",
+	"PRIVATE_KEY_LP_REVENUE":            "",
+}
+
+func loadDefaultConfigs() {
+	for configKey, configValue := range defaultConfigurations {
+		viper.SetDefault(configKey, configValue)
+	}
+}
+
 func init() {
 	envFile := os.Getenv("ENV_FILE")
 	if envFile == "" {
@@ -101,9 +145,10 @@ func init() {
 	viper.SetConfigFile("./.env")
 	viper.AutomaticEnv()
 
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
 	// Set defaults for critical configurations
-	viper.SetDefault("APP_PORT", 8080)
-	viper.SetDefault("EXPIRED_ORDER_TIME", 15)
+	loadDefaultConfigs()
 
 	if err := viper.ReadInConfig(); err != nil {
 		viper.SetConfigFile(fmt.Sprintf("../%s", envFile))
@@ -121,14 +166,6 @@ func init() {
 		log.Fatal().Err(err).Msgf("Error unmarshalling configuration %v", err)
 	}
 
-	// Override configuration with environment variables
-	configuration.PaymentGateway.PrivateKeyMasterWallet = os.Getenv("PRIVATE_KEY_MASTER_WALLET")
-	configuration.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury = os.Getenv("PRIVATE_KEY_LP_TREASURY")
-	configuration.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury = os.Getenv("PRIVATE_KEY_USDT_TREASURY")
-	configuration.Blockchain.LPRevenuePool.PrivateKeyLPRevenue = os.Getenv("PRIVATE_KEY_LP_REVENUE")
-	configuration.Wallet.Mnemonic = os.Getenv("MNEMONIC")
-	configuration.Wallet.Passphrase = os.Getenv("PASSPHRASE")
-	configuration.Wallet.Salt = os.Getenv("SALT")
 	log.Info().Msg("Configuration loaded successfully")
 }
 

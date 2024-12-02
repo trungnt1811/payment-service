@@ -1,0 +1,111 @@
+name: cli
+help: xLIFE.bot CLI application
+version: 0.0.0
+
+environment_variables:
+  - name: ecr_url
+    help: ECR URL
+
+commands:
+  - name: backup
+    help: Backup-related operations
+    commands:
+      - name: clean
+        help: Remove older backup zip archives (chronologically order). Be cautious if the archive directory also contains other kind of zip archive
+        flags:
+          - long: --directory
+            short: -d
+            arg: directory
+            help: Output directory
+            default: "${root_directory}/backups"
+          - long: --keep
+            short: -k
+            arg: keep
+            help: Maximum amount of backups to be kept
+            default: "5"
+      - name: create
+        help: Create a new backup (reserving all files except older backup archives)
+        dependencies:
+          - zip
+        flags:
+          - long: --directory
+            short: -d
+            arg: directory
+            help: Output directory
+            default: "${root_directory}/backups"
+          - long: --filename
+            short: -f
+            arg: filename
+            help: Output filename. If not specify, will use pattern life-ai.life-point.backup.YYYYmmdd-HHMMSS to generate
+      - name: pack
+        help: Create deployment package (excluding source code & env files)
+        dependencies:
+          - zip
+        flags:
+          - long: --directory
+            short: -d
+            arg: directory
+            help: Output directory
+            default: "${root_directory}/archives"
+          - long: --filename
+            short: -f
+            arg: filename
+            help: Output filename. If not specify, will use pattern life-ai.life-point.deployment.YYYYmmdd-HHMMSS to generate
+          - long: --include-env
+            help: "Also include .env file. Default: no"
+  - name: ecr
+    help: ECR-related operations
+    commands:
+      - name: login
+        help: Login to the ECR service
+        dependencies:
+          - aws
+          - docker
+        args:
+          - name: url
+            help: URL of the ECR service
+            default: 741499881865.dkr.ecr.ap-southeast-1.amazonaws.com
+        flags:
+          - long: --profile
+            short: -p
+            arg: profile
+            help: AWS profile
+            default: ""
+
+  - name: service
+    help: Service-related operations
+    commands:
+      - name: init
+        help: Initialize required resources
+      - name: build
+        help: Build the services
+        args:
+          - name: services
+            help: Service names, separate by comma
+            default: ""
+      - name: cleanup
+        help: Clear the docker cache
+      - name: update
+        help: Update the services
+        args:
+          - name: services
+            help: Service names, separate by comma
+            default: ""
+      - name: start
+        help: Start the services
+        args:
+          - name: services
+            help: Service names, separate by comma
+            default: ""
+      - name: stat
+        help: Retrieve status of the services
+      - name: stop
+        help: Stop the services
+        args:
+          - name: services
+            help: Service names, separate by comma
+            default: ""
+  - name: deploy
+    help: Deploy the stack
+    dependencies:
+      - docker compose

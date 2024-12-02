@@ -1,0 +1,147 @@
+x-logging-defaults: &logging-defaults
+  logging:
+    driver: ${LOGGING_DRIVER}
+    options:
+      max-size: ${LOGGING_OPTIONS_MAX_SIZE}
+      max-file: ${LOGGING_OPTIONS_MAX_FILE}
+
+x-restart-policy: &restart-policy
+  restart: ${RESTART_POLICY}
+
+services:
+  nginx-proxy:
+    <<: [ *logging-defaults, *restart-policy ]
+    container_name: ${CONTAINER_NAME_PREFIX}-nginx-proxy
+    build:
+      context: ./services/nginx-proxy
+      args:
+        - IMAGE_REPOSITORY=${NGINX_PROXY_IMAGE_REPOSITORY}
+        - IMAGE_TAG=${NGINX_PROXY_IMAGE_TAG}
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "${DATA_PATH_HOST}/nginx-data/conf.d:/etc/nginx/conf.d"
+      - "${DATA_PATH_HOST}/nginx-data/vhost.d:/etc/nginx/vhost.d"
+      - "${DATA_PATH_HOST}/nginx-data/html:/usr/share/nginx/html"
+      - "${DATA_PATH_HOST}/nginx-data/certs:/etc/nginx/certs:ro"
+      - "${DATA_PATH_HOST}/nginx-data/htpasswd:/etc/nginx/htpasswd:ro"
+      - "/var/run/docker.sock:/tmp/docker.sock:ro"
+      - "./services/nginx-proxy/conf.d/cache_expirations.conf:/etc/nginx/conf.d/cache_expirations.conf:ro"
+      - "./services/nginx-proxy/conf.d/compression.conf:/etc/nginx/conf.d/compression.conf:ro"
+      - "./services/nginx-proxy/conf.d/custom.conf:/etc/nginx/conf.d/custom.conf:ro"
+    networks:
+      - nginx-proxy
+  nginx-letsencrypt:
+    <<: [ *logging-defaults, *restart-policy ]
+    container_name: ${CONTAINER_NAME_PREFIX}-nginx-letsencrypt
+    build:
+      context: ./services/nginx-letsencrypt
+      args:
+        - IMAGE_REPOSITORY=${NGINX_LETSENCRYPT_IMAGE_REPOSITORY}
+        - IMAGE_TAG=${NGINX_LETSENCRYPT_IMAGE_TAG}
+    restart: always
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - "${DATA_PATH_HOST}/nginx-data/conf.d:/etc/nginx/conf.d"
+      - "${DATA_PATH_HOST}/nginx-data/vhost.d:/etc/nginx/vhost.d"
+      - "${DATA_PATH_HOST}/nginx-data/html:/usr/share/nginx/html"
+      - "${DATA_PATH_HOST}/nginx-data/certs:/etc/nginx/certs:rw"
+      - "${DATA_PATH_HOST}/nginx-data/htpasswd:/etc/nginx/htpasswd:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "${DATA_PATH_HOST}/nginx-data/acme.sh:/etc/acme.sh"
+    environment:
+      - DEBUG=1
+      - ACME_CA_URI=${ACME_CA_URI}
+      - ZEROSSL_API_KEY=${ZEROSSL_API_KEY}
+      - ACME_EMAIL=${ACME_EMAIL}
+  app:
+    build:
+      context: ./services/nginx-proxy
+      args:
+        IMAGE_REPOSITORY: ${ONCHAIN_HANDLER_IMAGE_REPOSITORY}
+        IMAGE_TAG: ${ONCHAIN_HANDLER_IMAGE_TAG}
+    ports:
+      - "8080:8080"
+    environment:
+      VIRTUAL_HOST: ${ONCHAIN_HANDLER_URL}
+      VIRTUAL_PORT: ${ONCHAIN_HANDLER_PORT}
+      LETSENCRYPT_HOST: ${ONCHAIN_HANDLER_URL}
+
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+
+      BSC_RPC_URL: ${BSC_RPC_URL}
+      BSC_CHAIN_ID: ${BSC_CHAIN_ID}
+      BSC_START_BLOCK_LISTENER: ${BSC_START_BLOCK_LISTENER}
+      BSC_USDT_CONTRACT_ADDRESS: ${BSC_USDT_CONTRACT_ADDRESS}
+
+      AVAX_RPC_URL: ${AVAX_RPC_URL}
+      AVAX_CHAIN_ID: ${AVAX_CHAIN_ID}
+      AVAX_START_BLOCK_LISTENER: ${AVAX_START_BLOCK_LISTENER}
+      AVAX_USDT_CONTRACT_ADDRESS: ${AVAX_USDT_CONTRACT_ADDRESS}
+      AVAX_LIFE_POINT_CONTRACT_ADDRESS: ${AVAX_LIFE_POINT_CONTRACT_ADDRESS}
+      AVAX_BULK_SENDER_CONTRACT_ADDRESS: ${AVAX_BULK_SENDER_CONTRACT_ADDRESS}
+
+      LP_TREASURY_ADDRESS: ${LP_TREASURY_ADDRESS}
+      USDT_TREASURY_ADDRESS: ${USDT_TREASURY_ADDRESS}
+      LP_REVENUE_ADDRESS: ${LP_REVENUE_ADDRESS}
+
+      INIT_WALLET_COUNT: ${INIT_WALLET_COUNT}
+      EXPIRED_ORDER_TIME: ${EXPIRED_ORDER_TIME}
+      PAYMENT_COVERING: ${PAYMENT_COVERING}
+      MASTER_WALLET_ADDRESS: ${MASTER_WALLET_ADDRESS}
+
+      PRIVATE_KEY_LP_TREASURY: ${PRIVATE_KEY_LP_TREASURY}
+      PRIVATE_KEY_USDT_TREASURY: ${PRIVATE_KEY_USDT_TREASURY}
+      PRIVATE_KEY_LP_REVENUE: ${PRIVATE_KEY_LP_REVENUE}
+      PRIVATE_KEY_MASTER_WALLET: ${PRIVATE_KEY_MASTER_WALLET}
+      MNEMONIC: ${MNEMONIC}
+      PASSPHRASE: ${PASSPHRASE}
+      SALT: ${SALT}
+    depends_on:
+      db:
+        condition: service_healthy  # Wait for the db service to become healthy
+    networks:
+      - onchain-handler-network
+      - nginx-proxy
+
+  db:
+    build:
+      context: ./services/nginx-proxy
+      args:
+        IMAGE_REPOSITORY: ${POSTGRES_IMAGE_REPOSITORY}
+        IMAGE_TAG: ${POSTGRES_IMAGE_TAG}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Persistent volume for PostgreSQL data
+      - ./services/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d  # Mount SQL scripts to initdb.d directory
+    ports:
+      - "5432:5432"
+    networks:
+      - onchain-handler-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  onchain-handler-network:
+  nginx-proxy:
+    name: nginx-proxy
+    external: true
