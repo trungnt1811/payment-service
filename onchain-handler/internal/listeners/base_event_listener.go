@@ -327,7 +327,11 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 			case dto.PaymentOrderDTOResponse:
 				// Log the event
 				logger.GetLogger().Debugf("Processing PaymentOrderDTOResponse on network %s: %v", string(listener.network), ev)
-
+				// Check if a webhook URL is provided
+				if ev.WebhookURL == "" {
+					logger.GetLogger().Warnf("No webhook URL provided for PaymentOrderDTOResponse on network %s", string(listener.network))
+					continue
+				}
 				// Use a separate goroutine for webhook sending
 				go func(ev dto.PaymentOrderDTOResponse) {
 					if err := sendWebhookForProcessedPaymentOrder(ev); err != nil {

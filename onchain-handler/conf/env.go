@@ -176,11 +176,23 @@ func (config Configuration) GetExpiredOrderTime() time.Duration {
 
 func (config Configuration) GetPaymentCovering() float64 {
 	paymentCoveringStr := config.PaymentGateway.PaymentCovering
-	paymentCoveringFloat, err := strconv.ParseFloat(paymentCoveringStr, 64)
-	if err != nil {
-		log.Error().Err(err).Msg("Error converting PaymentCovering to float64")
+	if paymentCoveringStr == "" {
+		log.Error().Msg("PaymentCovering is not set or is empty in the configuration")
 		return 0.0
 	}
+
+	// Convert string to float64
+	paymentCoveringFloat, err := strconv.ParseFloat(paymentCoveringStr, 64)
+	if err != nil {
+		log.Error().Err(err).Str("PaymentCovering", paymentCoveringStr).Msg("Error parsing PaymentCovering as float64")
+		return 0.0
+	}
+
+	if paymentCoveringFloat <= 0 {
+		log.Error().Float64("PaymentCovering", paymentCoveringFloat).Msg("PaymentCovering must be greater than 0")
+		return 0.0
+	}
+
 	return paymentCoveringFloat
 }
 

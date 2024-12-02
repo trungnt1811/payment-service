@@ -120,19 +120,13 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	queueItems := listener.queue.GetItems()
 
 	// Process each payment order based on the transfer event
-	for index, order := range queueItems {
+	for _, order := range queueItems {
 		// Check if the transfer matches the order's wallet and token symbol
 		if strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) && strings.EqualFold(order.Symbol, tokenSymbol) {
 			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
-			}
-			order.Status = constants.Processing
-			order.BlockHeight = vLog.BlockNumber
-			if err := listener.queue.ReplaceItemAtIndex(index, order); err != nil {
-				logger.GetLogger().Errorf("Failed to update order in queue on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
-				return nil, fmt.Errorf("failed to update order in queue: %w", err)
 			}
 		}
 	}
