@@ -295,13 +295,18 @@ func (listener *tokenTransferListener) dequeueOrders() {
 	for index, order := range orders {
 		// Check if the order needs to be dequeued
 		if listener.shouldDequeueOrder(order) {
+			// Update the order status to 'Expired' if it has expired
 			if order.Status != constants.Success {
 				orders[index].Status = constants.Expired
 				if latestProcessedBlock > 0 {
 					orders[index].BlockHeight = latestProcessedBlock
 				}
 				dequeueOrders = append(dequeueOrders, orders[index])
+
+				// Send webhook for expired payment order
+				listener.sendWebhookForExpiredPaymentOrder(order)
 			}
+			// Remove the order from the queue
 			if err := listener.queue.Dequeue(func(o dto.PaymentOrderDTO) bool {
 				return o.ID == order.ID
 			}); err != nil {
@@ -359,6 +364,35 @@ func (listener *tokenTransferListener) isMatchOrderToEvent(
 ) bool {
 	return strings.EqualFold(transferEvent.To.Hex(), order.PaymentAddress) &&
 		strings.EqualFold(order.Symbol, tokenSymbol)
+}
+
+// sendWebhookForExpiredPaymentOrder sends a webhook for an expired payment order.
+func (listener *tokenTransferListener) sendWebhookForExpiredPaymentOrder(order dto.PaymentOrderDTO) {
+	// Send webhook if webhook URL is present
+	if order.WebhookURL == "" {
+		return
+	}
+
+	// Prepare the payload for the webhook
+	paymentOrderDTO := dto.PaymentOrderDTOResponse{
+		ID:            order.ID,
+		RequestID:     order.RequestID,
+		Network:       order.Network,
+		Amount:        order.Amount,
+		Transferred:   order.Transferred,
+		Status:        constants.Expired,
+		WebhookURL:    order.WebhookURL,
+		Symbol:        order.Symbol,
+		WalletAddress: &order.PaymentAddress,
+		Expired:       uint64(order.ExpiredTime.Unix()),
+	}
+
+	// Use a separate goroutine for webhook sending
+	go func() {
+		if err := utils.SendWebhook(paymentOrderDTO, paymentOrderDTO.WebhookURL); err != nil {
+			logger.GetLogger().Errorf("Failed to send webhook for order ID %d on network %s: %v", order.ID, string(listener.network), err)
+		}
+	}()
 }
 
 // Register registers the listeners for token transfer events.
