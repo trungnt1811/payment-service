@@ -280,11 +280,11 @@ func (listener *tokenTransferListener) dequeueOrders() {
 	// Retrieve last processed block from cache
 	cacheKey := &caching.Keyer{Raw: constants.LastProcessedBlockCacheKey + string(listener.network)}
 
-	var latestProcessedBlock uint64
-	err := listener.cacheRepo.RetrieveItem(cacheKey, &latestProcessedBlock)
-	if err == nil {
-		logger.GetLogger().Debugf("Retrieved %s last processed block from cache: %d", string(listener.network), latestProcessedBlock)
-		latestProcessedBlock = 0
+	var lastProcessedBlock uint64
+	err := listener.cacheRepo.RetrieveItem(cacheKey, &lastProcessedBlock)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to retrieve last processed block from cache: %v", err)
+		lastProcessedBlock = 0
 	}
 
 	// Retrieve all current orders in the queue
@@ -298,8 +298,8 @@ func (listener *tokenTransferListener) dequeueOrders() {
 			// Update the order status to 'Expired' if it has expired
 			if order.Status != constants.Success {
 				orders[index].Status = constants.Expired
-				if latestProcessedBlock > 0 {
-					orders[index].BlockHeight = latestProcessedBlock
+				if lastProcessedBlock > 0 {
+					orders[index].BlockHeight = lastProcessedBlock
 				}
 				dequeueOrders = append(dequeueOrders, orders[index])
 

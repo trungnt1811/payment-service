@@ -225,8 +225,8 @@ func (config Configuration) GetPaymentCovering() float64 {
 		return 0.0
 	}
 
-	if paymentCoveringFloat <= 0 {
-		log.Error().Float64("PaymentCovering", paymentCoveringFloat).Msg("PaymentCovering must be greater than 0")
+	if paymentCoveringFloat < 0 {
+		log.Error().Float64("PaymentCovering", paymentCoveringFloat).Msg("PaymentCovering must be greater than or equal 0")
 		return 0.0
 	}
 
