@@ -171,6 +171,40 @@ func (c *paymentOrderCache) UpdateOrderStatus(
 	return nil
 }
 
+func (c *paymentOrderCache) UpdateOrderNetwork(
+	ctx context.Context,
+	orderID uint64,
+	network string,
+) error {
+	// Construct the cache key for the payment order
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+
+	// Attempt to retrieve the payment order from the cache
+	var cachedOrder domain.PaymentOrder
+	cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
+
+	// If the order is found in the cache, update it
+	if cacheErr == nil {
+		// Update the network in the cached order
+		cachedOrder.Network = network
+
+		// Save the updated order back into the cache
+		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
+		}
+	} else {
+		// Log cache miss but proceed with the update
+		logger.GetLogger().Warnf("Failed to retrieve payment order ID %d from cache: %v", orderID, cacheErr)
+	}
+
+	// Update the order network in the repository (DB)
+	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, network); err != nil {
+		return fmt.Errorf("failed to update payment order network in repository: %w", err)
+	}
+
+	return nil
+}
+
 func (c *paymentOrderCache) BatchUpdateOrderStatuses(
 	ctx context.Context,
 	orderIDs []uint64,

@@ -111,6 +111,24 @@ func (r *PaymentOrderRepository) UpdateOrderStatus(ctx context.Context, orderID 
 	return nil
 }
 
+// UpdateOrderNetwork updates the network of a payment order by its ID.
+func (r *PaymentOrderRepository) UpdateOrderNetwork(ctx context.Context, orderID uint64, network string) error {
+	result := r.db.WithContext(ctx).
+		Model(&domain.PaymentOrder{}).
+		Where("id = ?", orderID).
+		Update("network", network)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update order network: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no order found with the provided ID")
+	}
+
+	return nil
+}
+
 // BatchUpdateOrderStatuses updates the statuses of multiple payment orders by their OrderIDs.
 func (r *PaymentOrderRepository) BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error {
 	// Check if the lengths of orderIDs and newStatuses match

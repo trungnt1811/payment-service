@@ -191,8 +191,16 @@ func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
 		return
 	}
 
+	// Determine the network type
+	var network constants.NetworkType
+	if req.Network == string(constants.AvaxCChain) {
+		network = constants.AvaxCChain
+	} else {
+		network = constants.Bsc
+	}
+
 	// Call the use case to update the payment order network
-	if err := h.ucase.UpdatePaymentOrder(ctx, req.ID, nil, nil, nil, &req.Network); err != nil {
+	if err := h.ucase.UpdateOrderNetwork(ctx, req.ID, network); err != nil {
 		logger.GetLogger().Errorf("Failed to update payment order network: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to update payment order network", err)
 		return

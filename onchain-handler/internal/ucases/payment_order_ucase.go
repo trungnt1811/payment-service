@@ -244,6 +244,17 @@ func (u *paymentOrderUCase) UpdateOrderStatus(ctx context.Context, orderID uint6
 	return u.paymentOrderRepository.UpdateOrderStatus(ctx, orderID, newStatus)
 }
 
+func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error {
+	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
+	}
+	if order.Status != constants.Pending {
+		return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
+	}
+	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, string(network))
+}
+
 func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error {
 	var orderIDs []uint64
 	var newStatuses []string
