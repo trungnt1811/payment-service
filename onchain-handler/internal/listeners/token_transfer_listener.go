@@ -302,6 +302,10 @@ func (listener *tokenTransferListener) dequeueOrders() {
 	var dequeueOrders []dto.PaymentOrderDTO
 	// Iterate over current orders in the queue
 	for index, order := range orders {
+		// Double-check the order network before dequeuing
+		if order.Network != string(listener.network) {
+			continue
+		}
 		// Check if the order needs to be dequeued
 		if listener.shouldDequeueOrder(order) {
 			// Update the order status to 'Expired' if it has expired
