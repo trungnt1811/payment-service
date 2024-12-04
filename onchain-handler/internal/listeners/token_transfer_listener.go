@@ -13,7 +13,6 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
@@ -277,16 +276,6 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 
 // dequeueOrders removes expired or successful orders from the queue and refills it to maintain the limit.
 func (listener *tokenTransferListener) dequeueOrders() {
-	// Retrieve last processed block from cache
-	cacheKey := &caching.Keyer{Raw: constants.LastProcessedBlockCacheKey + string(listener.network)}
-
-	var lastProcessedBlock uint64
-	err := listener.cacheRepo.RetrieveItem(cacheKey, &lastProcessedBlock)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve last processed block from cache: %v", err)
-		lastProcessedBlock = 0
-	}
-
 	// Retrieve all current orders in the queue
 	orders := listener.queue.GetItems()
 
@@ -298,9 +287,6 @@ func (listener *tokenTransferListener) dequeueOrders() {
 			// Update the order status to 'Expired' if it has expired
 			if order.Status != constants.Success {
 				orders[index].Status = constants.Expired
-				if lastProcessedBlock > 0 {
-					orders[index].BlockHeight = lastProcessedBlock
-				}
 				dequeueOrders = append(dequeueOrders, orders[index])
 
 				// Send webhook for expired payment order
