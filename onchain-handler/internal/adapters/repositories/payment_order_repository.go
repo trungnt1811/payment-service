@@ -31,22 +31,27 @@ func (r *PaymentOrderRepository) CreatePaymentOrders(ctx context.Context, orders
 }
 
 // GetActivePaymentOrders retrieves active orders that have not expired on a specific network.
-func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]domain.PaymentOrder, error) {
+func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
 	currentTime := time.Now().UTC() // Calculate current time in Go
 
-	if err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id"). // Join PaymentWallet with PaymentOrder.
 		Preload("Wallet").                                                           // Preload the associated Wallet
 		Limit(limit).
 		Offset(offset).
-		Where("payment_order.network = ? AND payment_order.status IN (?) AND payment_order.expired_time > ?",
-			network,
+		Where("payment_order.status IN (?) AND payment_order.expired_time > ?",
 			[]string{constants.Pending, constants.Processing, constants.Partial},
 			currentTime,
-		).
-		Order("payment_order.expired_time ASC"). // Order results by expiration time.
-		Find(&orders).Error; err != nil {
+		)
+
+	// Check if the network is specified
+	if network != nil {
+		query = query.Where("payment_order.network = ?", *network)
+	}
+
+	if err := query.Order("payment_order.expired_time ASC"). // Order results by expiration time.
+									Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve pending orders: %w", err)
 	}
 

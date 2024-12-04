@@ -96,8 +96,8 @@ const (
 // Worker config
 const (
 	LatestBlockFetchInterval          = 3 * time.Second
-	ExpiredOrderCatchupInterval       = 5 * time.Minute
-	OrderCleanInterval                = 7 * time.Minute
+	ExpiredOrderCatchupInterval       = 1 * time.Minute
+	OrderCleanInterval                = 3 * time.Minute
 	PaymentWalletBalanceFetchInterval = 10 * time.Second
 )
 

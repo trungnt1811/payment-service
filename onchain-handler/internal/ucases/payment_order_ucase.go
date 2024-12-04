@@ -279,21 +279,8 @@ func (u *paymentOrderUCase) BatchUpdateOrderBlockHeights(ctx context.Context, or
 	return u.paymentOrderRepository.BatchUpdateOrderBlockHeights(ctx, orderIDs, blockHeights)
 }
 
-func (u *paymentOrderUCase) GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
-	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, string(constants.AvaxCChain))
-	if err != nil {
-		return nil, err
-	}
-	var orderDtos []dto.PaymentOrderDTO
-	for _, order := range orders {
-		orderDto := order.ToDto()
-		orderDtos = append(orderDtos, orderDto)
-	}
-	return orderDtos, nil
-}
-
-func (u *paymentOrderUCase) GetActivePaymentOrdersOnBsc(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
-	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, string(constants.Bsc))
+func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
+	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, nil)
 	if err != nil {
 		return nil, err
 	}

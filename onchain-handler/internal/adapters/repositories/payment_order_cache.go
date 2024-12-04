@@ -57,9 +57,18 @@ func (c *paymentOrderCache) CreatePaymentOrders(ctx context.Context, orders []do
 	return createdOrders, nil
 }
 
-func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]domain.PaymentOrder, error) {
+func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error) {
+	// Handle nil network gracefully in the cache key
+	networkStr := "nil"
+	if network != nil {
+		networkStr = *network
+	}
+
 	// Generate a consistent cache key
-	key := &caching.Keyer{Raw: fmt.Sprintf("%sGetActivePaymentOrders_network:%s_limit:%d_offset:%d", keyPrefixPaymentOrder, network, limit, offset)}
+	key := &caching.Keyer{
+		Raw: fmt.Sprintf("%sGetActivePaymentOrders_network:%s_limit:%d_offset:%d",
+			keyPrefixPaymentOrder, networkStr, limit, offset),
+	}
 
 	// Attempt to retrieve data from cache
 	var paymentOrders []domain.PaymentOrder
@@ -76,7 +85,7 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, o
 
 	// Store the fetched data in the cache for future use
 	if cacheErr := c.cache.SaveItem(key, paymentOrders, defaultCacheTimePaymentOrder); cacheErr != nil {
-		logger.GetLogger().Warnf("Failed to cache active payment orders for network %s: %v", network, cacheErr)
+		logger.GetLogger().Warnf("Failed to cache active payment orders for network %s: %v", networkStr, cacheErr)
 	}
 
 	return paymentOrders, nil

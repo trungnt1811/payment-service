@@ -71,11 +71,8 @@ func RunApp(config *conf.Configuration) {
 	tokenTransferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
 	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
 
-	// Initialize AVAX C-Chain payment order queue
-	paymentOrderQueueOnAvax := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrdersOnAvax)
-
-	// Initialize BSC payment order queue
-	paymentOrderQueueOnBsc := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrdersOnBsc)
+	// Initialize payment order queue
+	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrders)
 
 	// Initialize payment wallets
 	initializePaymentWallets(ctx, config, paymentWalletUCase)
@@ -130,7 +127,7 @@ func RunApp(config *conf.Configuration) {
 		blockstateUcase,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
-		paymentOrderQueueOnAvax,
+		paymentOrderQueue,
 	)
 
 	// Start BSC event listeners
@@ -145,7 +142,7 @@ func RunApp(config *conf.Configuration) {
 		blockstateUcase,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
-		paymentOrderQueueOnBsc,
+		paymentOrderQueue,
 	)
 
 	// Register routes

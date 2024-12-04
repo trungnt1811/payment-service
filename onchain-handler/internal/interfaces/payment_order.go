@@ -11,7 +11,7 @@ import (
 
 type PaymentOrderRepository interface {
 	CreatePaymentOrders(ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
-	GetActivePaymentOrders(ctx context.Context, limit, offset int, network string) ([]domain.PaymentOrder, error)
+	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
 	UpdateOrderStatus(ctx context.Context, orderID uint64, newStatus string) error
 	UpdateOrderNetwork(ctx context.Context, orderID uint64, network string) error
@@ -48,8 +48,7 @@ type PaymentOrderUCase interface {
 	UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error
 	BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error
-	GetActivePaymentOrdersOnAvax(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
-	GetActivePaymentOrdersOnBsc(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
+	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
 	GetPaymentOrders(
 		ctx context.Context,
 		status, orderBy *string,

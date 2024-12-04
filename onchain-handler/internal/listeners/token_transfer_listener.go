@@ -120,6 +120,16 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 
 	// Process each payment order based on the transfer event
 	for _, order := range queueItems {
+		// Double-check the order network before processing
+		orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
+			continue
+		}
+		if orderDTO.Network != string(listener.network) {
+			continue
+		}
+
 		// Check if the transfer matches the order's wallet and token symbol
 		if listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
 			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
@@ -158,6 +168,16 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 
 	// Process each payment order based on the transfer event
 	for index, order := range queueItems {
+		// Double-check the order network before processing
+		orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
+			continue
+		}
+		if orderDTO.Network != string(listener.network) {
+			continue
+		}
+
 		// Check if the transfer matches the order's wallet and token symbol
 		if !listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
 			continue
