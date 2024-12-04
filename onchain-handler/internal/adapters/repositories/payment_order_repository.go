@@ -116,17 +116,26 @@ func (r *PaymentOrderRepository) UpdateOrderStatus(ctx context.Context, orderID 
 	return nil
 }
 
-// UpdateOrderNetwork updates the network of a payment order by its ID.
-func (r *PaymentOrderRepository) UpdateOrderNetwork(ctx context.Context, orderID uint64, network string) error {
+// UpdateOrderNetwork updates the network and block height of a payment order by its ID.
+func (r *PaymentOrderRepository) UpdateOrderNetwork(ctx context.Context, orderID uint64, network string, blockHeight uint64) error {
+	// Prepare the update map
+	updates := map[string]interface{}{
+		"network":      network,
+		"block_height": blockHeight,
+	}
+
+	// Execute the update
 	result := r.db.WithContext(ctx).
 		Model(&domain.PaymentOrder{}).
 		Where("id = ?", orderID).
-		Update("network", network)
+		Updates(updates)
 
+	// Handle errors from the update query
 	if result.Error != nil {
-		return fmt.Errorf("failed to update order network: %w", result.Error)
+		return fmt.Errorf("failed to update order network and block height: %w", result.Error)
 	}
 
+	// Check if any rows were affected
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("no order found with the provided ID")
 	}

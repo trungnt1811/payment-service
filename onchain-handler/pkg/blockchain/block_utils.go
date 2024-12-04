@@ -36,3 +36,21 @@ func GetLatestBlockFromCacheOrBlockchain(
 	logger.GetLogger().Debugf("Retrieved latest block number from %s: %d", network, latestBlock.Uint64())
 	return latestBlock.Uint64(), nil
 }
+
+// GetLatestBlockFromCache retrieves the latest block from the cache.
+func GetLatestBlockFromCache(
+	ctx context.Context,
+	network string,
+	cacheRepo infrainterfaces.CacheRepository,
+) (uint64, error) {
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network}
+
+	var cachedLatestBlock uint64
+	err := cacheRepo.RetrieveItem(cacheKey, &cachedLatestBlock)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get latest block from cache: %w", err)
+	}
+
+	logger.GetLogger().Debugf("Retrieved %s latest block number from cache: %d", network, cachedLatestBlock)
+	return cachedLatestBlock, nil
+}

@@ -12,6 +12,7 @@ import (
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -206,8 +207,13 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 		logger.GetLogger().Warnf("Failed to retrieve payment order ID %d from cache: %v", orderID, cacheErr)
 	}
 
+	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network, c.cache)
+	if err != nil {
+		return fmt.Errorf("failed to get latest block from cache: %w", err)
+	}
+
 	// Update the order network in the repository (DB)
-	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, network); err != nil {
+	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, network, latestBlock); err != nil {
 		return fmt.Errorf("failed to update payment order network in repository: %w", err)
 	}
 
