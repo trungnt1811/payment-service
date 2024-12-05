@@ -2,7 +2,6 @@ package workers
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -74,44 +73,17 @@ func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 		return
 	}
 
-	// Limit concurrency with a semaphore
-	sem := make(chan struct{}, constants.MaxWebhookWorkers)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var errors []error
-
-	for _, orderDTO := range orderDTOs {
-		sem <- struct{}{} // Acquire a slot
-		wg.Add(1)
-
-		go func(order dto.PaymentOrderDTOResponse) {
-			defer func() {
-				<-sem // Release the slot
-				wg.Done()
-			}()
-
-			select {
-			case <-ctx.Done():
-				logger.GetLogger().Warnf("Context canceled before sending webhook for order ID %d", order.ID)
-				return
-			default:
-				if err := utils.SendWebhook(order, order.WebhookURL); err != nil {
-					logger.GetLogger().Errorf("Failed to send webhook for order ID %d: %v", order.ID, err)
-					mu.Lock()
-					errors = append(errors, fmt.Errorf("order ID %d: %w", order.ID, err))
-					mu.Unlock()
-				} else {
-					logger.GetLogger().Infof("Webhook sent successfully for order ID %d", order.ID)
-				}
-			}
-		}(orderDTO)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
+	errors := utils.SendWebhooks(
+		ctx,
+		utils.ToInterfaceSlice(orderDTOs),
+		func(order interface{}) string {
+			return order.(dto.PaymentOrderDTOResponse).WebhookURL
+		},
+	)
 	if len(errors) > 0 {
 		logger.GetLogger().Errorf("Failed to send webhooks for some orders: %v", errors)
+	} else {
+		logger.GetLogger().Info("All webhooks for failed orders sent successfully.")
 	}
 }
 
@@ -133,45 +105,16 @@ func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
 		return
 	}
 
-	// Limit concurrency with a semaphore
-	sem := make(chan struct{}, constants.MaxWebhookWorkers)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var errors []error
-
-	for _, orderDTO := range orderDTOs {
-		sem <- struct{}{} // Acquire a slot
-		wg.Add(1)
-
-		go func(order dto.PaymentOrderDTOResponse) {
-			defer func() {
-				<-sem // Release the slot
-				wg.Done()
-			}()
-
-			select {
-			case <-ctx.Done():
-				logger.GetLogger().Warnf("Context canceled before sending webhook for order ID %d", order.ID)
-				return
-			default:
-				if err := utils.SendWebhook(order, order.WebhookURL); err != nil {
-					logger.GetLogger().Errorf("Failed to send webhook for order ID %d: %v", order.ID, err)
-					mu.Lock()
-					errors = append(errors, fmt.Errorf("order ID %d: %w", order.ID, err))
-					mu.Unlock()
-				} else {
-					logger.GetLogger().Infof("Webhook sent successfully for order ID %d", order.ID)
-				}
-			}
-		}(orderDTO)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
+	errors := utils.SendWebhooks(
+		ctx,
+		utils.ToInterfaceSlice(orderDTOs),
+		func(order interface{}) string {
+			return order.(dto.PaymentOrderDTOResponse).WebhookURL
+		},
+	)
 	if len(errors) > 0 {
 		logger.GetLogger().Errorf("Failed to send webhooks for some orders: %v", errors)
 	} else {
-		logger.GetLogger().Info("All webhooks for updated orders sent successfully.")
+		logger.GetLogger().Info("All webhooks for expired orders sent successfully.")
 	}
 }

@@ -90,3 +90,12 @@ func CalculateFee(gasUsed uint64, gasPrice *big.Int) string {
 	eth := new(big.Float).Quo(fee, big.NewFloat(math.Pow10(constants.NativeTokenDecimalPlaces))) // Convert wei to ETH
 	return eth.Text('f', 6)                                                                      // Return as string with 6 decimal places
 }
+
+// ToInterfaceSlice converts a slice of any type to a slice of interface{}
+func ToInterfaceSlice[T any](slice []T) []interface{} {
+	result := make([]interface{}, len(slice))
+	for i, v := range slice {
+		result[i] = v
+	}
+	return result
+}

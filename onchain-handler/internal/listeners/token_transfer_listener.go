@@ -385,60 +385,36 @@ func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.Payment
 		return
 	}
 
-	// Limit concurrency with a semaphore
-	sem := make(chan struct{}, constants.MaxWebhookWorkers)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var errors []error
-
+	// Prepare the payment order DTOs for the webhook
+	var orderDTOs []dto.PaymentOrderDTOResponse
 	for _, order := range orders {
-		sem <- struct{}{} // Acquire a semaphore slot
-		wg.Add(1)
-
-		go func(order dto.PaymentOrderDTO) {
-			defer func() {
-				<-sem // Release the slot
-				wg.Done()
-			}()
-
-			// Skip if webhook URL is empty
-			if order.WebhookURL == "" {
-				logger.GetLogger().Warnf("No webhook URL provided for order ID %d", order.ID)
-				return
-			}
-
-			// Prepare the payload
-			paymentOrderDTO := dto.PaymentOrderDTOResponse{
-				ID:            order.ID,
-				RequestID:     order.RequestID,
-				Network:       order.Network,
-				Amount:        order.Amount,
-				Transferred:   order.Transferred,
-				Status:        status,
-				WebhookURL:    order.WebhookURL,
-				Symbol:        order.Symbol,
-				WalletAddress: &order.PaymentAddress,
-				Expired:       uint64(order.ExpiredTime.Unix()),
-			}
-
-			// Send the webhook
-			if err := utils.SendWebhook(paymentOrderDTO, paymentOrderDTO.WebhookURL); err != nil {
-				logger.GetLogger().Errorf("Failed to send webhook for order ID %d on network %s: %v", order.ID, string(listener.network), err)
-				mu.Lock()
-				errors = append(errors, fmt.Errorf("order ID %d: %w", order.ID, err))
-				mu.Unlock()
-			} else {
-				logger.GetLogger().Infof("Webhook sent successfully for order ID %d on network %s", order.ID, string(listener.network))
-			}
-		}(order)
+		paymentOrderDTO := dto.PaymentOrderDTOResponse{
+			ID:            order.ID,
+			RequestID:     order.RequestID,
+			Network:       order.Network,
+			Amount:        order.Amount,
+			Transferred:   order.Transferred,
+			Status:        status,
+			WebhookURL:    order.WebhookURL,
+			Symbol:        order.Symbol,
+			WalletAddress: &order.PaymentAddress,
+			Expired:       uint64(order.ExpiredTime.Unix()),
+		}
+		orderDTOs = append(orderDTOs, paymentOrderDTO)
 	}
 
-	// Wait for all goroutines to complete
-	wg.Wait()
-
-	// Log errors if any
+	// Send webhooks
+	errors := utils.SendWebhooks(
+		listener.ctx,
+		utils.ToInterfaceSlice(orderDTOs),
+		func(order interface{}) string {
+			return order.(dto.PaymentOrderDTOResponse).WebhookURL
+		},
+	)
 	if len(errors) > 0 {
 		logger.GetLogger().Errorf("Failed to send webhooks for some orders: %v", errors)
+	} else {
+		logger.GetLogger().Infof("All webhooks for %s orders sent successfully.", status)
 	}
 }
 
