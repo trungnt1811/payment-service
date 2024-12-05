@@ -94,6 +94,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/payment-order/request/{request_id}": {
+            "get": {
+                "description": "This endpoint retrieves a payment order by its request ID, which can contain special characters.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment order by request ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment order request ID",
+                        "name": "request_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of payment order",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-order/{id}": {
             "get": {
                 "description": "This endpoint retrieves a payment order by its ID.",

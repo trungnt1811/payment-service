@@ -245,6 +245,36 @@ paths:
       summary: Update payment order network
       tags:
       - payment-order
+  /api/v1/payment-order/request/{request_id}:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves a payment order by its request ID, which
+        can contain special characters.
+      parameters:
+      - description: Payment order request ID
+        in: path
+        name: request_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of payment order
+          schema:
+            $ref: '#/definitions/dto.PaymentOrderDTOResponse'
+        "400":
+          description: Invalid request ID
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Retrieve payment order by request ID
+      tags:
+      - payment-order
   /api/v1/payment-orders:
     get:
       consumes:

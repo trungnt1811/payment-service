@@ -420,3 +420,31 @@ func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) 
 
 	return order, nil
 }
+
+func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error) {
+	// Construct the cache key using the request ID
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + requestID}
+
+	// Attempt to retrieve the payment order from the cache
+	var cachedOrder domain.PaymentOrder
+	if err := c.cache.RetrieveItem(cacheKey, &cachedOrder); err == nil {
+		// Cache hit: return the cached order
+		return &cachedOrder, nil
+	} else {
+		// Log cache miss
+		logger.GetLogger().Infof("Cache miss for payment order Request ID %d: %v", requestID, err)
+	}
+
+	// Cache miss: fetch the payment order from the repository (DB)
+	order, err := c.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch payment order with Request ID %s from repository: %w", requestID, err)
+	}
+
+	// Cache the fetched payment order for future use
+	if cacheErr := c.cache.SaveItem(cacheKey, *order, c.config.GetExpiredOrderTime()); cacheErr != nil {
+		logger.GetLogger().Warnf("Failed to cache payment order with Request ID %d: %v", requestID, cacheErr)
+	}
+
+	return order, nil
+}

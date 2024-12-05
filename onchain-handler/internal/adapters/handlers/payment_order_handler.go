@@ -163,6 +163,38 @@ func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GetPaymentOrderByRequestID retrieves a payment order by its request ID.
+// @Summary Retrieve payment order by request ID
+// @Description This endpoint retrieves a payment order by its request ID, which can contain special characters.
+// @Tags payment-order
+// @Accept json
+// @Produce json
+// @Param request_id path string true "Payment order request ID"
+// @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
+// @Failure 400 {object} response.GeneralError "Invalid request ID"
+// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Router /api/v1/payment-order/request/{request_id} [get]
+func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
+	// Extract request ID directly as a string
+	requestID := ctx.Param("request_id")
+	if requestID == "" {
+		logger.GetLogger().Error("Request ID is empty")
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order, request ID cannot be empty", nil)
+		return
+	}
+
+	// Delegate to the use case layer
+	response, err := h.ucase.GetPaymentOrderByRequestID(ctx, requestID)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to retrieve payment order for request ID %s: %v", requestID, err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order", err)
+		return
+	}
+
+	// Return the payment order in JSON format
+	ctx.JSON(http.StatusOK, response)
+}
+
 // UpdatePaymentOrderNetwork updates the network of a payment order.
 // @Summary Update payment order network
 // @Description This endpoint allows updating the network of a payment order.

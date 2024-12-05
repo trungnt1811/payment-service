@@ -349,3 +349,21 @@ func (r *PaymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uin
 
 	return &order, nil
 }
+
+// GetPaymentOrderByRequestID retrieves a single payment order by its request ID.
+func (r *PaymentOrderRepository) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error) {
+	var order domain.PaymentOrder
+
+	// Execute query to find the payment order by request ID with preloaded PaymentEventHistories
+	if err := r.db.WithContext(ctx).
+		Preload("Wallet").
+		Preload("PaymentEventHistories").
+		First(&order, "request_id = ?", requestID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("payment order with request ID %s not found: %w", requestID, err)
+		}
+		return nil, fmt.Errorf("failed to retrieve payment order: %w", err)
+	}
+
+	return &order, nil
+}

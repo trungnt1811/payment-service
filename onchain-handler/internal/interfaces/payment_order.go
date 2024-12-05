@@ -27,6 +27,7 @@ type PaymentOrderRepository interface {
 		orderDirection constants.OrderDirection,
 	) ([]domain.PaymentOrder, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error)
+	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error)
 }
 
 type PaymentOrderUCase interface {
@@ -56,4 +57,5 @@ type PaymentOrderUCase interface {
 		page, size int,
 	) (dto.PaginationDTOResponse, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error)
+	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error)
 }

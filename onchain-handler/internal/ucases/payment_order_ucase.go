@@ -370,6 +370,30 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 	return orderDTO, nil
 }
 
+func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error) {
+	order, err := u.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
+	if err != nil {
+		return dto.PaymentOrderDTOResponse{}, err
+	}
+	orderDTO := dto.PaymentOrderDTOResponse{
+		ID:             order.ID,
+		RequestID:      order.RequestID,
+		Network:        order.Network,
+		Amount:         order.Amount,
+		Transferred:    order.Transferred,
+		Status:         order.Status,
+		WebhookURL:     order.WebhookURL,
+		Symbol:         order.Symbol,
+		WalletAddress:  &order.Wallet.Address,
+		Expired:        uint64(order.ExpiredTime.Unix()),
+		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+	}
+	if order.Status == constants.Success {
+		orderDTO.SucceededAt = &order.SucceededAt
+	}
+	return orderDTO, nil
+}
+
 // Helper function to map PaymentEventHistory to PaymentHistoryDTO
 func mapEventHistoriesToDTO(eventHistories []domain.PaymentEventHistory) []dto.PaymentHistoryDTO {
 	eventHistoriesDTO := make([]dto.PaymentHistoryDTO, len(eventHistories))
