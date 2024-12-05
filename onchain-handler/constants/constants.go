@@ -154,4 +154,7 @@ const (
 )
 
 // Webhook constants
-const MaxWebhookWorkers = 10
+const (
+	MaxWebhookWorkers = 10
+	WebhookTimeout    = 5 * time.Second
+)

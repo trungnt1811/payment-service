@@ -8,14 +8,13 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 func SendWebhook(payload interface{}, webhookURL string) error {
-	client := http.Client{Timeout: 5 * time.Second}
+	client := http.Client{Timeout: constants.WebhookTimeout}
 	parsedPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %v", err)
