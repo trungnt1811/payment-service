@@ -173,13 +173,12 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 	return response, nil
 }
 
-func (u *paymentOrderUCase) UpdateExpiredOrdersToFailed(ctx context.Context) error {
+func (u *paymentOrderUCase) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
 	return u.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx)
 }
 
-func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) error {
-	_, err := u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
-	return err
+func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
+	return u.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
 }
 
 func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTO, error) {
@@ -347,10 +346,13 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 }
 
 func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error) {
+	// Fetch the order from the repository
 	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, id)
 	if err != nil {
 		return dto.PaymentOrderDTOResponse{}, err
 	}
+
+	// Map the order to a DTO
 	orderDTO := dto.PaymentOrderDTOResponse{
 		ID:             order.ID,
 		RequestID:      order.RequestID,
@@ -367,7 +369,40 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 	if order.Status == constants.Success {
 		orderDTO.SucceededAt = &order.SucceededAt
 	}
+
 	return orderDTO, nil
+}
+
+func (u *paymentOrderUCase) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]dto.PaymentOrderDTOResponse, error) {
+	// Fetch orders from the repository
+	orders, err := u.paymentOrderRepository.GetPaymentOrdersByIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve payment orders: %w", err)
+	}
+
+	// Map orders to DTOs
+	var orderDTOs []dto.PaymentOrderDTOResponse
+	for _, order := range orders {
+		orderDTO := dto.PaymentOrderDTOResponse{
+			ID:             order.ID,
+			RequestID:      order.RequestID,
+			Network:        order.Network,
+			Amount:         order.Amount,
+			Transferred:    order.Transferred,
+			Status:         order.Status,
+			WebhookURL:     order.WebhookURL,
+			Symbol:         order.Symbol,
+			WalletAddress:  &order.Wallet.Address,
+			Expired:        uint64(order.ExpiredTime.Unix()),
+			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+		}
+		if order.Status == constants.Success {
+			orderDTO.SucceededAt = &order.SucceededAt
+		}
+		orderDTOs = append(orderDTOs, orderDTO)
+	}
+
+	return orderDTOs, nil
 }
 
 func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error) {

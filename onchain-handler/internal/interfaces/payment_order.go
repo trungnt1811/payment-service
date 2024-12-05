@@ -20,7 +20,7 @@ type PaymentOrderRepository interface {
 	BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
-	UpdateExpiredOrdersToFailed(ctx context.Context) error
+	UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error)
 	UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error)
 	GetPaymentOrders(
 		ctx context.Context,
@@ -29,8 +29,8 @@ type PaymentOrderRepository interface {
 		orderDirection constants.OrderDirection,
 	) ([]domain.PaymentOrder, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error)
+	GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]domain.PaymentOrder, error)
 	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error)
-	GetWalletsIDByOrderID(ctx context.Context, orderID uint64) (uint64, error)
 }
 
 type PaymentOrderUCase interface {
@@ -39,8 +39,8 @@ type PaymentOrderUCase interface {
 		payloads []dto.PaymentOrderPayloadDTO,
 		expiredOrderTime time.Duration,
 	) ([]dto.CreatedPaymentOrderDTO, error)
-	UpdateExpiredOrdersToFailed(ctx context.Context) error
-	UpdateActiveOrdersToExpired(ctx context.Context) error
+	UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error)
+	UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error)
 	GetExpiredPaymentOrders(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTO, error)
 	UpdatePaymentOrder(
 		ctx context.Context,
@@ -60,5 +60,6 @@ type PaymentOrderUCase interface {
 		page, size int,
 	) (dto.PaginationDTOResponse, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error)
+	GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]dto.PaymentOrderDTOResponse, error)
 	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error)
 }

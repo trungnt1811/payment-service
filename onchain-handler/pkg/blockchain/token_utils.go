@@ -21,11 +21,6 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
-const (
-	batchSize  = 250                    // Max addresses per batch
-	batchDelay = 250 * time.Millisecond // Delay between each batch
-)
-
 // validateURL ensures the URL is valid
 func validateURL(rawURL string) error {
 	_, err := url.ParseRequestURI(rawURL)
@@ -67,8 +62,8 @@ func GetTokenBalances(rpcURL, tokenContractAddress string, tokenDecimals uint8, 
 	balances := make(map[string]string)
 
 	// Split addresses into batches based on batchSize
-	for start := 0; start < len(addresses); start += batchSize {
-		end := start + batchSize
+	for start := 0; start < len(addresses); start += constants.BatchSize {
+		end := start + constants.BatchSize
 		if end > len(addresses) {
 			end = len(addresses)
 		}
@@ -128,7 +123,7 @@ func GetTokenBalances(rpcURL, tokenContractAddress string, tokenDecimals uint8, 
 		}
 
 		// Delay between batches to prevent overwhelming the RPC provider
-		time.Sleep(batchDelay)
+		time.Sleep(constants.BatchDelay)
 	}
 
 	return balances, nil
@@ -145,8 +140,8 @@ func GetNativeTokenBalances(rpcURL string, addresses []string) (map[string]strin
 	balances := make(map[string]string)
 
 	// Split addresses into batches based on batchSize
-	for start := 0; start < len(addresses); start += batchSize {
-		end := start + batchSize
+	for start := 0; start < len(addresses); start += constants.BatchSize {
+		end := start + constants.BatchSize
 		if end > len(addresses) {
 			end = len(addresses)
 		}
@@ -202,7 +197,7 @@ func GetNativeTokenBalances(rpcURL string, addresses []string) (map[string]strin
 		}
 
 		// Delay between batches to prevent overwhelming the RPC provider
-		time.Sleep(batchDelay)
+		time.Sleep(constants.BatchDelay)
 	}
 
 	return balances, nil

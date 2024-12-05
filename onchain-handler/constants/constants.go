@@ -147,4 +147,11 @@ const (
 	Desc OrderDirection = "DESC"
 )
 
-const BatchSize = 100
+// Batch constants
+const (
+	BatchSize  = 250
+	BatchDelay = 250 * time.Millisecond
+)
+
+// Webhook constants
+const MaxWebhookWorkers = 10

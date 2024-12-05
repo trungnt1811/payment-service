@@ -345,8 +345,35 @@ func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network
 	return paymentOrders, nil
 }
 
-func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) error {
-	return c.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx, c.config.GetOrderCutoffTime())
+func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
+	// Call the repository to update expired orders to "Failed" and get the updated IDs
+	updatedIDs, err := c.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx, c.config.GetOrderCutoffTime())
+	if err != nil {
+		return nil, fmt.Errorf("failed to update expired orders to failed in repository: %w", err)
+	}
+
+	// Update the cache for the affected orders
+	for _, id := range updatedIDs {
+		// Construct the cache key for each order
+		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
+
+		// Attempt to retrieve the cached order
+		var cachedOrder domain.PaymentOrder
+		cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
+
+		if cacheErr == nil {
+			// If found in cache, update the status and save back
+			cachedOrder.Status = constants.Failed
+			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+				logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", id, saveErr)
+			}
+		} else {
+			// Log cache miss, but proceed
+			logger.GetLogger().Warnf("Payment order ID %d not found in cache: %v", id, cacheErr)
+		}
+	}
+
+	return updatedIDs, nil
 }
 
 func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
@@ -441,6 +468,34 @@ func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) 
 	return order, nil
 }
 
+func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]domain.PaymentOrder, error) {
+	// Construct the cache key using the order IDs
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + fmt.Sprint(ids)}
+
+	// Attempt to retrieve the payment orders from the cache
+	var cachedOrders []domain.PaymentOrder
+	if err := c.cache.RetrieveItem(cacheKey, &cachedOrders); err == nil {
+		// Cache hit: return the cached orders
+		return cachedOrders, nil
+	} else {
+		// Log cache miss
+		logger.GetLogger().Infof("Cache miss for payment orders IDs %v: %v", ids, err)
+	}
+
+	// Cache miss: fetch the payment orders from the repository (DB)
+	orders, err := c.paymentOrderRepository.GetPaymentOrdersByIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch payment orders with IDs %v from repository: %w", ids, err)
+	}
+
+	// Cache the fetched payment orders for future use
+	if cacheErr := c.cache.SaveItem(cacheKey, orders, c.config.GetExpiredOrderTime()); cacheErr != nil {
+		logger.GetLogger().Warnf("Failed to cache payment orders IDs %v: %v", ids, cacheErr)
+	}
+
+	return orders, nil
+}
+
 func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error) {
 	// Construct the cache key using the request ID
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + requestID}
@@ -467,27 +522,4 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	return order, nil
-}
-
-func (c *paymentOrderCache) GetWalletsIDByOrderID(ctx context.Context, orderID uint64) (uint64, error) {
-	// Construct the cache key using the order ID
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
-
-	// Attempt to retrieve the payment order from the cache
-	var cachedOrder domain.PaymentOrder
-	if err := c.cache.RetrieveItem(cacheKey, &cachedOrder); err == nil {
-		// Cache hit: return the cached order
-		return cachedOrder.WalletID, nil
-	} else {
-		// Log cache miss
-		logger.GetLogger().Infof("Cache miss for payment order ID %d: %v", orderID, err)
-	}
-
-	// Cache miss: fetch the payment order from the repository (DB)
-	walletID, err := c.paymentOrderRepository.GetWalletsIDByOrderID(ctx, orderID)
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch wallet ID by order ID %d from repository: %w", orderID, err)
-	}
-
-	return walletID, nil
 }

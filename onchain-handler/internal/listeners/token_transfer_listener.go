@@ -312,10 +312,8 @@ func (listener *tokenTransferListener) dequeueOrders() {
 			if order.Status != constants.Success {
 				orders[index].Status = constants.Expired
 				dequeueOrders = append(dequeueOrders, orders[index])
-
-				// Send webhook for expired payment order
-				listener.sendWebhookForExpiredPaymentOrder(order)
 			}
+
 			// Remove the order from the queue
 			if err := listener.queue.Dequeue(func(o dto.PaymentOrderDTO) bool {
 				return o.ID == order.ID
@@ -328,6 +326,10 @@ func (listener *tokenTransferListener) dequeueOrders() {
 
 	// Update the statuses of dequeued orders
 	if len(dequeueOrders) > 0 {
+		// Send webhooks for expired orders
+		listener.sendWebhookForOrders(dequeueOrders, constants.Expired)
+
+		// Update the statuses of the dequeued orders
 		err := listener.paymentOrderUCase.BatchUpdateOrderStatuses(listener.ctx, dequeueOrders)
 		// Log the result of the batch update
 		if err != nil {
@@ -376,33 +378,68 @@ func (listener *tokenTransferListener) isMatchOrderToEvent(
 		strings.EqualFold(order.Symbol, tokenSymbol)
 }
 
-// sendWebhookForExpiredPaymentOrder sends a webhook for an expired payment order.
-func (listener *tokenTransferListener) sendWebhookForExpiredPaymentOrder(order dto.PaymentOrderDTO) {
-	// Send webhook if webhook URL is present
-	if order.WebhookURL == "" {
+// sendWebhookForOrders sends webhooks for the given orders with the specified status.
+func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.PaymentOrderDTO, status string) {
+	if len(orders) == 0 {
+		logger.GetLogger().Info("No orders to send webhooks for.")
 		return
 	}
 
-	// Prepare the payload for the webhook
-	paymentOrderDTO := dto.PaymentOrderDTOResponse{
-		ID:            order.ID,
-		RequestID:     order.RequestID,
-		Network:       order.Network,
-		Amount:        order.Amount,
-		Transferred:   order.Transferred,
-		Status:        constants.Expired,
-		WebhookURL:    order.WebhookURL,
-		Symbol:        order.Symbol,
-		WalletAddress: &order.PaymentAddress,
-		Expired:       uint64(order.ExpiredTime.Unix()),
+	// Limit concurrency with a semaphore
+	sem := make(chan struct{}, constants.MaxWebhookWorkers)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errors []error
+
+	for _, order := range orders {
+		sem <- struct{}{} // Acquire a semaphore slot
+		wg.Add(1)
+
+		go func(order dto.PaymentOrderDTO) {
+			defer func() {
+				<-sem // Release the slot
+				wg.Done()
+			}()
+
+			// Skip if webhook URL is empty
+			if order.WebhookURL == "" {
+				logger.GetLogger().Warnf("No webhook URL provided for order ID %d", order.ID)
+				return
+			}
+
+			// Prepare the payload
+			paymentOrderDTO := dto.PaymentOrderDTOResponse{
+				ID:            order.ID,
+				RequestID:     order.RequestID,
+				Network:       order.Network,
+				Amount:        order.Amount,
+				Transferred:   order.Transferred,
+				Status:        status,
+				WebhookURL:    order.WebhookURL,
+				Symbol:        order.Symbol,
+				WalletAddress: &order.PaymentAddress,
+				Expired:       uint64(order.ExpiredTime.Unix()),
+			}
+
+			// Send the webhook
+			if err := utils.SendWebhook(paymentOrderDTO, paymentOrderDTO.WebhookURL); err != nil {
+				logger.GetLogger().Errorf("Failed to send webhook for order ID %d on network %s: %v", order.ID, string(listener.network), err)
+				mu.Lock()
+				errors = append(errors, fmt.Errorf("order ID %d: %w", order.ID, err))
+				mu.Unlock()
+			} else {
+				logger.GetLogger().Infof("Webhook sent successfully for order ID %d on network %s", order.ID, string(listener.network))
+			}
+		}(order)
 	}
 
-	// Use a separate goroutine for webhook sending
-	go func() {
-		if err := utils.SendWebhook(paymentOrderDTO, paymentOrderDTO.WebhookURL); err != nil {
-			logger.GetLogger().Errorf("Failed to send webhook for order ID %d on network %s: %v", order.ID, string(listener.network), err)
-		}
-	}()
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Log errors if any
+	if len(errors) > 0 {
+		logger.GetLogger().Errorf("Failed to send webhooks for some orders: %v", errors)
+	}
 }
 
 // Register registers the listeners for token transfer events.

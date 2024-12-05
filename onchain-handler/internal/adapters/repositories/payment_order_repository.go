@@ -69,17 +69,6 @@ func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 	return orders, nil
 }
 
-func (r *PaymentOrderRepository) GetWalletsIDByOrderID(ctx context.Context, orderID uint64) (uint64, error) {
-	var walletID uint64
-	if err := r.db.WithContext(ctx).Model(&domain.PaymentOrder{}).
-		Select("wallet_id").
-		Where("id = ?", orderID).
-		First(&walletID).Error; err != nil {
-		return 0, fmt.Errorf("failed to retrieve wallet ID by order ID: %w", err)
-	}
-	return walletID, nil
-}
-
 func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Step 1: Update the payment order with row-level locking
@@ -257,12 +246,14 @@ func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, ne
 	return orders, nil
 }
 
-// UpdateExpiredOrdersToFailed updates all expired orders to "Failed"
-// and sets their associated wallets' "in_use" status to false.
-func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context, orderCutoffTime time.Duration) error {
+// UpdateExpiredOrdersToFailed updates all expired orders to "Failed" and sets their associated wallets' "in_use" status to false.
+// It returns the IDs of the updated orders.
+func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context, orderCutoffTime time.Duration) ([]uint64, error) {
 	cutoffTime := time.Now().UTC().Add(-orderCutoffTime)
 
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var allUpdatedIDs []uint64
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		offset := 0
 
 		for {
@@ -301,14 +292,22 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 				return fmt.Errorf("failed to update associated wallets: %w", err)
 			}
 
+			// Append the processed IDs to the result slice
+			allUpdatedIDs = append(allUpdatedIDs, orderIDs...)
+
 			offset += constants.BatchSize
 		}
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return allUpdatedIDs, nil
 }
 
-// UpdateActiveOrdersToExpired updates all active orders to "Expired"
+// UpdateActiveOrdersToExpired updates all active orders to "Expired" and returns their IDs.
 func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context, orderCutoffTime time.Duration) ([]uint64, error) {
 	currentTime := time.Now().UTC()
 	cutoffTime := currentTime.Add(-orderCutoffTime)
@@ -317,7 +316,7 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 
 	// Use GORM transaction
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Fetch the IDs of orders to be updated
+		// Step 1: Fetch the IDs of orders to be updated
 		if err := tx.Model(&domain.PaymentOrder{}).
 			Select("id").
 			Where("status IN (?)", []string{constants.Pending, constants.Partial, constants.Processing}).
@@ -331,7 +330,7 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 			return nil
 		}
 
-		// Update the status of the fetched orders
+		// Step 2: Update the status of the fetched orders
 		if err := tx.Model(&domain.PaymentOrder{}).
 			Where("id IN (?)", updatedIDs).
 			Update("status", constants.Expired).Error; err != nil {
@@ -400,6 +399,26 @@ func (r *PaymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uin
 	}
 
 	return &order, nil
+}
+
+// GetPaymentOrdersByIDs retrieves multiple payment orders by their IDs.
+func (r *PaymentOrderRepository) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]domain.PaymentOrder, error) {
+	var orders []domain.PaymentOrder
+
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no IDs provided to retrieve payment orders")
+	}
+
+	// Execute query to find the payment orders by IDs with preloaded PaymentEventHistories
+	if err := r.db.WithContext(ctx).
+		Preload("Wallet").
+		Preload("PaymentEventHistories").
+		Where("id IN ?", ids).
+		Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("failed to retrieve payment orders: %w", err)
+	}
+
+	return orders, nil
 }
 
 // GetPaymentOrderByRequestID retrieves a single payment order by its request ID.
