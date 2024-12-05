@@ -86,7 +86,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			// Convert each payload to a PaymentOrder model, associating it with the latest block
 			for _, payload := range groupedPayloads {
 				// Try to claim an available wallet
-				assignWallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(ctx)
+				assignWallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(tx, ctx)
 				if err != nil {
 					return fmt.Errorf("failed to claim available wallet: %w", err)
 				}
@@ -112,7 +112,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			}
 
 			// Save the created payment orders to the database within the transaction
-			orders, err = u.paymentOrderRepository.CreatePaymentOrders(ctx, orders)
+			orders, err = u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders)
 			if err != nil {
 				return fmt.Errorf("failed to create payment orders: %w", err)
 			}
@@ -128,7 +128,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 		// Check if there was an error within the transaction
 		if err != nil {
 			// Rollback claimed wallets
-			rollbackErr := u.paymentWalletRepository.BatchReleaseWallets(ctx, claimedWalletIDs)
+			rollbackErr := u.paymentWalletRepository.ReleaseWalletsByIDs(ctx, claimedWalletIDs)
 			if rollbackErr != nil {
 				return nil, fmt.Errorf("transaction failed, and rollback also failed: %w", rollbackErr)
 			}

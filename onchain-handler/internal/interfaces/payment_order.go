@@ -4,13 +4,15 @@ import (
 	"context"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 )
 
 type PaymentOrderRepository interface {
-	CreatePaymentOrders(ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
+	CreatePaymentOrders(tx *gorm.DB, ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
 	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
 	UpdateOrderStatus(ctx context.Context, orderID uint64, newStatus string) error
@@ -28,6 +30,7 @@ type PaymentOrderRepository interface {
 	) ([]domain.PaymentOrder, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error)
 	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error)
+	GetWalletsIDByOrderID(ctx context.Context, orderID uint64) (uint64, error)
 }
 
 type PaymentOrderUCase interface {

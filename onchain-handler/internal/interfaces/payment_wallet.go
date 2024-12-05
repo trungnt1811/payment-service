@@ -3,6 +3,8 @@ package interfaces
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
@@ -11,11 +13,11 @@ import (
 type PaymentWalletRepository interface {
 	CreatePaymentWallets(ctx context.Context, models []domain.PaymentWallet) error
 	IsRowExist(ctx context.Context) (bool, error)
-	ClaimFirstAvailableWallet(ctx context.Context) (*domain.PaymentWallet, error)
+	ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*domain.PaymentWallet, error)
 	GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error)
 	GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error)
 	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *string) ([]domain.PaymentWallet, error)
-	BatchReleaseWallets(ctx context.Context, walletIDs []uint64) error
+	ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error
 }
 
 type PaymentWalletUCase interface {

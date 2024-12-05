@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
@@ -51,60 +52,92 @@ func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) 
 }
 
 // ClaimFirstAvailableWallet fetches the first available wallet or creates a new one if none are available
-func (r *paymentWalletRepository) ClaimFirstAvailableWallet(ctx context.Context) (*domain.PaymentWallet, error) {
+func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*domain.PaymentWallet, error) {
 	var wallet domain.PaymentWallet
 
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Attempt to find and lock the first available wallet
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").
-			Where("in_use = ?", false).
-			Order("id").
-			First(&wallet).Error; err == nil {
-			// Wallet found, mark as in use
-			return tx.Model(&wallet).Update("in_use", true).Error
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			// An error occurred other than 'record not found'
-			return fmt.Errorf("failed to find available wallet: %w", err)
-		}
-
-		// If no wallet found, count current records to derive next ID
-		var recordCount int64
-		if err := tx.Model(&domain.PaymentWallet{}).Count(&recordCount).Error; err != nil {
-			return fmt.Errorf("failed to count wallets: %w", err)
-		}
-		nextID := uint64(recordCount + 1)
-
-		// Generate a new wallet account
-		account, _, genErr := crypto.GenerateAccount(
-			r.config.Wallet.Mnemonic,
-			r.config.Wallet.Passphrase,
-			r.config.Wallet.Salt,
-			constants.PaymentWallet,
-			nextID,
-		)
-		if genErr != nil {
-			return fmt.Errorf("failed to generate new wallet: %w", genErr)
-		}
-
-		// Initialize the new wallet struct
-		wallet = domain.PaymentWallet{
-			ID:      nextID,
-			Address: account.Address.Hex(),
-			InUse:   true,
-		}
-
-		// Insert the new wallet into the database
-		if err := tx.Create(&wallet).Error; err != nil {
-			return fmt.Errorf("failed to create new wallet: %w", err)
-		}
-
-		return nil
-	})
+	// Attempt to find and lock the first available wallet
+	found, err := r.findAndLockAvailableWallet(tx, ctx, &wallet)
 	if err != nil {
-		return nil, fmt.Errorf("failed to claim available wallet: %w", err)
+		return nil, fmt.Errorf("failed to find available wallet: %w", err)
 	}
 
-	return &wallet, nil
+	if found {
+		// Mark the wallet as in use
+		if err := r.markWalletInUse(tx, &wallet); err != nil {
+			return nil, fmt.Errorf("failed to mark wallet as in use: %w", err)
+		}
+		return &wallet, nil
+	}
+
+	// Create a new wallet if none are available
+	newWallet, err := r.createNewWallet(tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new wallet: %w", err)
+	}
+
+	return newWallet, nil
+}
+
+func (r *paymentWalletRepository) findAndLockAvailableWallet(tx *gorm.DB, ctx context.Context, wallet *domain.PaymentWallet) (bool, error) {
+	err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}). // Apply row-level lock
+		Where("in_use = ?", false).
+		Order("id").
+		First(wallet).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// No available wallet found
+			return false, nil
+		}
+		// Other errors
+		return false, err
+	}
+
+	// Wallet found
+	return true, nil
+}
+
+func (r *paymentWalletRepository) markWalletInUse(tx *gorm.DB, wallet *domain.PaymentWallet) error {
+	result := tx.Model(wallet).Update("in_use", true)
+	if result.Error != nil {
+		return fmt.Errorf("failed to mark wallet as in use: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no rows affected, wallet may have been updated by another transaction")
+	}
+	return nil
+}
+
+func (r *paymentWalletRepository) createNewWallet(tx *gorm.DB) (*domain.PaymentWallet, error) {
+	var maxID uint64
+	if err := tx.Model(&domain.PaymentWallet{}).Select("MAX(id)").Scan(&maxID).Error; err != nil {
+		return nil, fmt.Errorf("failed to retrieve max wallet ID: %w", err)
+	}
+	nextID := maxID + 1
+
+	// Generate a new wallet account
+	account, _, genErr := crypto.GenerateAccount(
+		r.config.Wallet.Mnemonic,
+		r.config.Wallet.Passphrase,
+		r.config.Wallet.Salt,
+		constants.PaymentWallet,
+		nextID,
+	)
+	if genErr != nil {
+		return nil, fmt.Errorf("failed to generate new wallet: %w", genErr)
+	}
+
+	// Create and persist the wallet
+	newWallet := domain.PaymentWallet{
+		ID:      nextID,
+		Address: account.Address.Hex(),
+		InUse:   true,
+	}
+	if err := tx.Create(&newWallet).Error; err != nil {
+		return nil, fmt.Errorf("failed to insert new wallet: %w", err)
+	}
+
+	return &newWallet, nil
 }
 
 func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error) {
@@ -163,13 +196,17 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(ctx context.Cont
 	return wallets, nil
 }
 
-func (r *paymentWalletRepository) BatchReleaseWallets(ctx context.Context, walletIDs []uint64) error {
+func (r *paymentWalletRepository) ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error {
+	if len(walletIDs) == 0 {
+		return nil // No IDs provided, nothing to release
+	}
+
 	err := r.db.WithContext(ctx).Model(&domain.PaymentWallet{}).
 		Where("id IN ?", walletIDs).
 		Update("in_use", false).
 		Error
 	if err != nil {
-		return fmt.Errorf("failed to batch release wallets: %w", err)
+		return fmt.Errorf("failed to release wallets: %w", err)
 	}
 	return nil
 }

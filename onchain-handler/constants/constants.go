@@ -146,3 +146,5 @@ const (
 	Asc  OrderDirection = "ASC"
 	Desc OrderDirection = "DESC"
 )
+
+const BatchSize = 100

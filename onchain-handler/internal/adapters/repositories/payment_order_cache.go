@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
@@ -39,20 +41,35 @@ func NewPaymentOrderCacheRepository(
 	}
 }
 
-func (c *paymentOrderCache) CreatePaymentOrders(ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error) {
+func (c *paymentOrderCache) CreatePaymentOrders(
+	tx *gorm.DB,
+	ctx context.Context,
+	orders []domain.PaymentOrder,
+) ([]domain.PaymentOrder, error) {
+	// Validate input
+	if len(orders) == 0 {
+		return nil, fmt.Errorf("no orders to create")
+	}
+
 	// Create orders in the repository (DB)
-	createdOrders, err := c.paymentOrderRepository.CreatePaymentOrders(ctx, orders)
+	createdOrders, err := c.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payment orders in repository: %w", err)
 	}
 
-	// Cache each created order
+	// Cache the created orders
+	var cacheErrors []error
 	for _, order := range createdOrders {
-		key := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)} // Ensure proper ID conversion
-		if cacheErr := c.cache.SaveItem(key, order, c.config.GetExpiredOrderTime()); cacheErr != nil {
-			// Log the caching error but don't stop the entire operation
-			logger.GetLogger().Warnf("Failed to cache payment order ID %d: %v", order.ID, cacheErr)
+		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
+		if err := c.cache.SaveItem(cacheKey, order, c.config.GetExpiredOrderTime()); err != nil {
+			logger.GetLogger().Warnf("Failed to cache payment order ID %d: %v", order.ID, err)
+			cacheErrors = append(cacheErrors, err)
 		}
+	}
+
+	// Log and return any cache errors
+	if len(cacheErrors) > 0 {
+		logger.GetLogger().Warnf("Encountered %d cache errors while caching payment orders", len(cacheErrors))
 	}
 
 	return createdOrders, nil
@@ -144,6 +161,9 @@ func mergePaymentOrderFields(dst, src *domain.PaymentOrder) {
 	}
 	if src.Network != "" {
 		dst.Network = src.Network
+	}
+	if src.BlockHeight != 0 {
+		dst.BlockHeight = src.BlockHeight
 	}
 }
 
@@ -447,4 +467,27 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	return order, nil
+}
+
+func (c *paymentOrderCache) GetWalletsIDByOrderID(ctx context.Context, orderID uint64) (uint64, error) {
+	// Construct the cache key using the order ID
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+
+	// Attempt to retrieve the payment order from the cache
+	var cachedOrder domain.PaymentOrder
+	if err := c.cache.RetrieveItem(cacheKey, &cachedOrder); err == nil {
+		// Cache hit: return the cached order
+		return cachedOrder.WalletID, nil
+	} else {
+		// Log cache miss
+		logger.GetLogger().Infof("Cache miss for payment order ID %d: %v", orderID, err)
+	}
+
+	// Cache miss: fetch the payment order from the repository (DB)
+	walletID, err := c.paymentOrderRepository.GetWalletsIDByOrderID(ctx, orderID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch wallet ID by order ID %d from repository: %w", orderID, err)
+	}
+
+	return walletID, nil
 }
