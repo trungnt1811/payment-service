@@ -106,11 +106,6 @@ const (
 	TransferEventName = "Transfer"
 )
 
-// Payment order config
-const (
-	OrderCutoffTime = 24 * time.Hour
-)
-
 // Block confirmations
 const (
 	ConfirmationDepth = 20

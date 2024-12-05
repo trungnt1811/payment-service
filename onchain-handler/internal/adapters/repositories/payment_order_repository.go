@@ -206,12 +206,12 @@ func (r *PaymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Contex
 }
 
 // GetExpiredPaymentOrders retrieves orders for a specific network that are expired within a day.
-func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error) {
+func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string, orderCutoffTime time.Duration) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
 
 	// Calculate the time range for the past day
 	now := time.Now().UTC()
-	cutoffTime := now.Add(-constants.OrderCutoffTime)
+	cutoffTime := now.Add(-orderCutoffTime)
 
 	// Execute the query
 	if err := r.db.WithContext(ctx).
@@ -229,9 +229,9 @@ func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, ne
 
 // UpdateExpiredOrdersToFailed updates all expired orders (longer than 1 day) to "Failed"
 // and sets their associated wallets' "in_use" status to false.
-func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context) error {
+func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context, orderCutoffTime time.Duration) error {
 	// Calculate the cutoff time (1 day before the current time)
-	cutoffTime := time.Now().UTC().Add(-constants.OrderCutoffTime)
+	cutoffTime := time.Now().UTC().Add(-orderCutoffTime)
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Step 1: Update the status of expired payment orders to "Failed"
@@ -257,9 +257,9 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 }
 
 // UpdateActiveOrdersToExpired updates all active orders to "Expired"
-func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
+func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context, orderCutoffTime time.Duration) ([]uint64, error) {
 	currentTime := time.Now().UTC()
-	cutoffTime := currentTime.Add(-constants.OrderCutoffTime)
+	cutoffTime := currentTime.Add(-orderCutoffTime)
 
 	var updatedIDs []uint64
 

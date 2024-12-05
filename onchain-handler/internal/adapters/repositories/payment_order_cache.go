@@ -312,7 +312,7 @@ func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network
 	}
 
 	// Cache miss: fetch from repository
-	paymentOrders, err := c.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network)
+	paymentOrders, err := c.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network, c.config.GetOrderCutoffTime())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch expired payment orders: %w", err)
 	}
@@ -326,12 +326,12 @@ func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network
 }
 
 func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) error {
-	return c.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx)
+	return c.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx, c.config.GetOrderCutoffTime())
 }
 
 func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
 	// Call repository to update active orders to expired and get the updated IDs
-	updatedIDs, err := c.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
+	updatedIDs, err := c.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx, c.config.GetOrderCutoffTime())
 	if err != nil {
 		return nil, fmt.Errorf("failed to update active orders to expired in repository: %w", err)
 	}

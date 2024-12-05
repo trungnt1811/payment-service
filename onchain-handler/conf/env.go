@@ -29,6 +29,7 @@ type DatabaseConfiguration struct {
 type PaymentGatewayConfiguration struct {
 	InitWalletCount        uint   `mapstructure:"INIT_WALLET_COUNT"`
 	ExpiredOrderTime       uint   `mapstructure:"EXPIRED_ORDER_TIME"`
+	OrderCutoffTime        uint   `mapstructure:"ORDER_CUTOFF_TIME"`
 	PaymentCovering        string `mapstructure:"PAYMENT_COVERING"`
 	MasterWalletAddress    string `mapstructure:"MASTER_WALLET_ADDRESS"`
 	PrivateKeyMasterWallet string `mapstructure:"PRIVATE_KEY_MASTER_WALLET"`
@@ -104,7 +105,8 @@ var defaultConfigurations = map[string]any{
 	"DB_PORT":                           "",
 	"DB_NAME":                           "",
 	"INIT_WALLET_COUNT":                 10,
-	"EXPIRED_ORDER_TIME":                15,
+	"ORDER_CUTOFF_TIME":                 10,
+	"EXPIRED_ORDER_TIME":                3,
 	"PAYMENT_COVERING":                  1.2,
 	"MASTER_WALLET_ADDRESS":             "",
 	"PRIVATE_KEY_MASTER_WALLET":         "",
@@ -209,6 +211,10 @@ func (config Configuration) GetPoolAddress(poolName string) (string, error) {
 
 func (config Configuration) GetExpiredOrderTime() time.Duration {
 	return time.Duration(config.PaymentGateway.ExpiredOrderTime) * time.Minute
+}
+
+func (config Configuration) GetOrderCutoffTime() time.Duration {
+	return time.Duration(config.PaymentGateway.OrderCutoffTime) * time.Minute
 }
 
 func (config Configuration) GetPaymentCovering() float64 {
