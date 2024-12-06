@@ -738,6 +738,9 @@ const docTemplate = `{
                 "amount": {
                     "type": "string"
                 },
+                "block_height": {
+                    "type": "integer"
+                },
                 "event_histories": {
                     "type": "array",
                     "items": {

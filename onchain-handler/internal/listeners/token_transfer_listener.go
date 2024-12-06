@@ -136,7 +136,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		// Check if the transfer matches the order's wallet and token symbol
 		if listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
 			status := constants.Processing
-			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &status, nil, nil)
+			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, &vLog.BlockNumber, &status, nil, nil)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
@@ -262,20 +262,35 @@ func (listener *tokenTransferListener) processOrderPayment(
 	// Calculate the total transferred amount by adding the new transfer event value.
 	totalTransferred := new(big.Int).Add(transferredAmount, transferEvent.Value)
 
+	// Double-check the order block height before processing
+	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get order by ID %d: %w", order.ID, err)
+	}
+	orderBlockHeight := orderDTO.BlockHeight
+
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(listener.network), order.ID)
 
+		// Check if order is still 'Processing' or needs to be marked as 'Success'.
+		status := constants.Success
+		if blockHeight < orderBlockHeight {
+			status = constants.Processing
+			blockHeight = orderBlockHeight
+		}
+
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return true, listener.updatePaymentOrderStatus(itemIndex, order, constants.Success, totalTransferred.String(), blockHeight)
+		return true, listener.updatePaymentOrderStatus(itemIndex, order, status, totalTransferred.String(), blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(listener.network), order.ID)
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
-		if blockHeight < order.BlockHeight {
+		if blockHeight < orderBlockHeight {
 			status = constants.Processing
+			blockHeight = orderBlockHeight
 		}
 
 		// Update the order status and keep the wallet associated with the order.

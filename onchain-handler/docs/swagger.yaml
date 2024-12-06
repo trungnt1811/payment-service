@@ -54,6 +54,8 @@ definitions:
     properties:
       amount:
         type: string
+      block_height:
+        type: integer
       event_histories:
         items:
           $ref: '#/definitions/dto.PaymentHistoryDTO'

@@ -25,6 +25,7 @@ type PaymentOrderDTOResponse struct {
 	Status         string              `json:"status"`
 	WebhookURL     string              `json:"webhook_url"`
 	Symbol         string              `json:"symbol"`
+	BlockHeight    uint64              `json:"block_height"`
 	WalletAddress  *string             `json:"wallet_address,omitempty"`
 	SucceededAt    *time.Time          `json:"succeeded_at,omitempty"`
 	Expired        uint64              `json:"expired,omitempty"`

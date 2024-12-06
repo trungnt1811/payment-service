@@ -87,9 +87,7 @@ func (c *client) BulkTransfer(
 	var txFeeInEth *big.Float
 
 	// Get token address and symbol based on the symbol
-	var erc20Token interface{}
-	var err error
-	erc20Token, err = erc20token.NewErc20token(common.HexToAddress(tokenContractAddress), c.client)
+	erc20Token, err := erc20token.NewErc20token(common.HexToAddress(tokenContractAddress), c.client)
 	if err != nil {
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate ERC20 contract for token contract address %s: %w", tokenContractAddress, err)
 	}
@@ -118,11 +116,8 @@ func (c *client) BulkTransfer(
 		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
 	}
 
-	// Type assertion to ERC20Token interface
-	token, ok := erc20Token.(interfaces.ERC20Token)
-	if !ok {
-		return &txHash, &tokenSymbol, txFeeInEth, fmt.Errorf("erc20Token does not implement ERC20Token interface for token contract address %s", tokenContractAddress)
-	}
+	// Instantiate the ERC20 token
+	var token interfaces.ERC20Token = erc20Token
 
 	// Get the token symbol from the contract
 	tokenSymbol, err = token.Symbol(nil)

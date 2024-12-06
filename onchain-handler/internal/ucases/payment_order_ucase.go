@@ -351,6 +351,7 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 		Status:         order.Status,
 		WebhookURL:     order.WebhookURL,
 		Symbol:         order.Symbol,
+		BlockHeight:    order.BlockHeight,
 		WalletAddress:  &order.Wallet.Address,
 		Expired:        uint64(order.ExpiredTime.Unix()),
 		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
