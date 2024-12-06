@@ -92,6 +92,10 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 			listener.mu.Lock()
 			logger.GetLogger().Debug("Starting dequeue operation...")
 			listener.dequeueOrders()
+			// Refill the queue to ensure it has the required number of items
+			if err := listener.queue.FillQueue(); err != nil {
+				logger.GetLogger().Errorf("Failed to refill the %s queue: %v", string(listener.network), err)
+			}
 			logger.GetLogger().Debug("Dequeue operation finished.")
 			listener.mu.Unlock()
 		case <-listener.ctx.Done():
@@ -356,11 +360,6 @@ func (listener *tokenTransferListener) dequeueOrders() {
 			}
 			logger.GetLogger().Infof("Successfully updated orders with IDs: %v to expired status", successfulOrderIDs)
 		}
-	}
-
-	// Refill the queue to ensure it has the required number of items
-	if err := listener.queue.FillQueue(); err != nil {
-		logger.GetLogger().Errorf("Failed to refill the %s queue: %v", string(listener.network), err)
 	}
 }
 
