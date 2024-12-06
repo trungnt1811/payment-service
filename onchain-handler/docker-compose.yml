@@ -8,10 +8,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_USER: postgres
-      DB_PASSWORD: 123456
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: db
-      DB_PORT: 5432
+      DB_PORT: ${DB_PORT}
       DB_NAME: onchain-handler
 
       BSC_RPC_URL: https://bsc-testnet-rpc.publicnode.com
@@ -32,6 +32,7 @@ services:
 
       INIT_WALLET_COUNT: 10
       EXPIRED_ORDER_TIME: 15
+      ORDER_CUTOFF_TIME: 1440
       PAYMENT_COVERING: 1.2
       MASTER_WALLET_ADDRESS: 0x131d21c1b52B7D41d1FBBdab45fBA9D0539565CA
 
@@ -51,8 +52,8 @@ services:
   db:
     image: postgres:14-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: onchain-handler
     volumes:
       - pgdata:/var/lib/postgresql/data # Persistent volume for PostgreSQL data
