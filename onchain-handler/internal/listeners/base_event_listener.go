@@ -318,6 +318,11 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 	for {
 		select {
 		case event := <-listener.eventChan:
+			// Check if the event is nil
+			if event == nil {
+				continue
+			}
+
 			// Use a type switch to determine the event type
 			switch ev := event.(type) {
 			case dto.PaymentOrderDTOResponse:
@@ -325,7 +330,6 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 				logger.GetLogger().Debugf("Processing PaymentOrderDTOResponse on network %s: %v", string(listener.network), ev)
 				// Check if a webhook URL is provided
 				if ev.WebhookURL == "" {
-					logger.GetLogger().Warnf("No webhook URL provided for PaymentOrderDTOResponse on network %s", string(listener.network))
 					continue
 				}
 				// Use a separate goroutine for webhook sending

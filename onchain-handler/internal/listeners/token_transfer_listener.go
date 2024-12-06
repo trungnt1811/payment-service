@@ -114,9 +114,8 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
-	logger.GetLogger().Infof("Detected realtime transfer event on network %s : From: %s, To: %s, Value: %s", string(listener.network), transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
-
 	queueItems := listener.queue.GetItems()
+	isProcessed := false
 
 	// Process each payment order based on the transfer event
 	for _, order := range queueItems {
@@ -135,9 +134,16 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
-				return nil, err
+				continue
 			}
+			logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, string(listener.network))
+			isProcessed = true
 		}
+	}
+
+	// Return nil if the transfer event was not processed
+	if !isProcessed {
+		return nil, nil
 	}
 
 	return transferEvent, nil
@@ -159,8 +165,6 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
-
-	logger.GetLogger().Infof("Detected confirmed transfer event on network %s : From: %s, To: %s, Value: %s", string(listener.network), transferEvent.From.Hex(), transferEvent.To.Hex(), transferEvent.Value.String())
 
 	queueItems := listener.queue.GetItems()
 
@@ -224,6 +228,11 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 			return nil, err
 		}
 		break
+	}
+
+	// Return nil if no order was processed
+	if processedOrder.ID == 0 {
+		return nil, nil
 	}
 
 	return processedOrder, nil
