@@ -343,8 +343,14 @@ func (listener *tokenTransferListener) dequeueOrders() {
 		// Send webhooks for expired orders
 		listener.sendWebhookForOrders(dequeueOrders, constants.Expired)
 
+		// Collect order IDs
+		var orderIDs []uint64
+		for _, order := range dequeueOrders {
+			orderIDs = append(orderIDs, order.ID)
+		}
+
 		// Update the statuses of the dequeued orders
-		err := listener.paymentOrderUCase.BatchUpdateOrderStatuses(listener.ctx, dequeueOrders)
+		err := listener.paymentOrderUCase.BatchUpdateOrdersToExpired(listener.ctx, orderIDs)
 		// Log the result of the batch update
 		if err != nil {
 			// Log all failed order IDs in case of an error

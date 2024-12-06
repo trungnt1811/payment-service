@@ -16,7 +16,7 @@ type PaymentOrderRepository interface {
 	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
 	UpdateOrderNetwork(ctx context.Context, orderID uint64, network string) error
-	BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error
+	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error)
@@ -50,7 +50,7 @@ type PaymentOrderUCase interface {
 		status, transferredAmount, network *string,
 	) error
 	UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error
-	BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error
+	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error
 	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
 	GetPaymentOrders(

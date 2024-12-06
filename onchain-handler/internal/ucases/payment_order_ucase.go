@@ -251,16 +251,8 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, orderID uint
 	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, string(network))
 }
 
-func (u *paymentOrderUCase) BatchUpdateOrderStatuses(ctx context.Context, orders []dto.PaymentOrderDTO) error {
-	var orderIDs []uint64
-	var newStatuses []string
-	// Parse orders to extract orderIDs and newStatuses
-	for _, order := range orders {
-		orderIDs = append(orderIDs, order.ID)
-		newStatuses = append(newStatuses, order.Status)
-	}
-
-	return u.paymentOrderRepository.BatchUpdateOrderStatuses(ctx, orderIDs, newStatuses)
+func (u *paymentOrderUCase) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
+	return u.paymentOrderRepository.BatchUpdateOrdersToExpired(ctx, orderIDs)
 }
 
 func (u *paymentOrderUCase) BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error {

@@ -145,17 +145,12 @@ func (r *PaymentOrderRepository) UpdateOrderNetwork(ctx context.Context, orderID
 	return nil
 }
 
-// BatchUpdateOrderStatuses updates the statuses of multiple payment orders by their OrderIDs.
-func (r *PaymentOrderRepository) BatchUpdateOrderStatuses(ctx context.Context, orderIDs []uint64, newStatuses []string) error {
-	// Check if the lengths of orderIDs and newStatuses match
-	if len(orderIDs) != len(newStatuses) {
-		return fmt.Errorf("the number of order IDs and statuses must be the same")
-	}
-
+// BatchUpdateOrdersToExpired updates the status of multiple payment orders to "Expired" by their OrderIDs.
+func (r *PaymentOrderRepository) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
 	// Build the SQL CASE statement for updating different statuses based on order IDs
 	caseSQL := constants.SqlCase
-	for i, orderID := range orderIDs {
-		caseSQL += fmt.Sprintf(" WHEN id = %d THEN '%s'::order_status", orderID, newStatuses[i]) // Casting to order_status enum
+	for _, orderID := range orderIDs {
+		caseSQL += fmt.Sprintf(" WHEN id = %d THEN '%s'::order_status", orderID, constants.Expired)
 	}
 	caseSQL += constants.SqlEnd
 

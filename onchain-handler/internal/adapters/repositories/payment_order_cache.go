@@ -206,18 +206,12 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	return nil
 }
 
-func (c *paymentOrderCache) BatchUpdateOrderStatuses(
+func (c *paymentOrderCache) BatchUpdateOrdersToExpired(
 	ctx context.Context,
 	orderIDs []uint64,
-	newStatuses []string,
 ) error {
-	// Ensure that orderIDs and newStatuses have the same length
-	if len(orderIDs) != len(newStatuses) {
-		return fmt.Errorf("mismatched lengths: orderIDs=%d, newStatuses=%d", len(orderIDs), len(newStatuses))
-	}
-
 	// Iterate over the order IDs and new statuses
-	for i, orderID := range orderIDs {
+	for _, orderID := range orderIDs {
 		// Construct the cache key
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
@@ -228,7 +222,7 @@ func (c *paymentOrderCache) BatchUpdateOrderStatuses(
 		// If found in cache, update it
 		if cacheErr == nil {
 			// Update status in the cached order
-			cachedOrder.Status = newStatuses[i]
+			cachedOrder.Status = constants.Expired
 
 			// Save the updated order back into the cache
 			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
@@ -241,7 +235,7 @@ func (c *paymentOrderCache) BatchUpdateOrderStatuses(
 	}
 
 	// Batch update the order status in the repository (DB)
-	if err := c.paymentOrderRepository.BatchUpdateOrderStatuses(ctx, orderIDs, newStatuses); err != nil {
+	if err := c.paymentOrderRepository.BatchUpdateOrdersToExpired(ctx, orderIDs); err != nil {
 		return err
 	}
 
