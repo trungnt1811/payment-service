@@ -355,6 +355,38 @@ paths:
       summary: Create payment orders
       tags:
       - payment-order
+  /api/v1/payment-orders/request:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves payment orders by a list of request IDs,
+        limited to 25.
+      parameters:
+      - description: Comma-separated list of Request IDs (maximum 25)
+        in: query
+        name: request_ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of payment orders
+          schema:
+            items:
+              $ref: '#/definitions/dto.PaymentOrderDTOResponse'
+            type: array
+        "400":
+          description: Invalid request IDs
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Retrieve payment orders by request IDs
+      tags:
+      - payment-order
   /api/v1/payment-wallet/{address}:
     get:
       consumes:

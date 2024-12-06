@@ -286,6 +286,53 @@
                 }
             }
         },
+        "/api/v1/payment-orders/request": {
+            "get": {
+                "description": "This endpoint retrieves payment orders by a list of request IDs, limited to 25.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment orders by request IDs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comma-separated list of Request IDs (maximum 25)",
+                        "name": "request_ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of payment orders",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request IDs",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-wallet/{address}": {
             "get": {
                 "description": "Retrieves a payment wallet by its address.",

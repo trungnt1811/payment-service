@@ -219,6 +219,7 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 		order.Transferred = *transferredAmount
 	}
 
+	// Only update the network if the order is pending
 	if network != nil {
 		if order.Status == constants.Pending {
 			order.Network = *network
@@ -381,6 +382,36 @@ func (u *paymentOrderUCase) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 	}
 
 	// Map orders to DTOs
+	var orderDTOs []dto.PaymentOrderDTOResponse
+	for _, order := range orders {
+		orderDTO := dto.PaymentOrderDTOResponse{
+			ID:             order.ID,
+			RequestID:      order.RequestID,
+			Network:        order.Network,
+			Amount:         order.Amount,
+			Transferred:    order.Transferred,
+			Status:         order.Status,
+			WebhookURL:     order.WebhookURL,
+			Symbol:         order.Symbol,
+			WalletAddress:  &order.Wallet.Address,
+			Expired:        uint64(order.ExpiredTime.Unix()),
+			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+		}
+		if order.Status == constants.Success {
+			orderDTO.SucceededAt = &order.SucceededAt
+		}
+		orderDTOs = append(orderDTOs, orderDTO)
+	}
+
+	return orderDTOs, nil
+}
+
+func (u *paymentOrderUCase) GetPaymentOrdersByRequestIDs(ctx context.Context, requestIDs []string) ([]dto.PaymentOrderDTOResponse, error) {
+	orders, err := u.paymentOrderRepository.GetPaymentOrdersByRequestIDs(ctx, requestIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve payment orders: %w", err)
+	}
+
 	var orderDTOs []dto.PaymentOrderDTOResponse
 	for _, order := range orders {
 		orderDTO := dto.PaymentOrderDTOResponse{

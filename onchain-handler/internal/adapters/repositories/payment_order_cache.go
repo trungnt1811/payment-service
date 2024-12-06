@@ -497,8 +497,14 @@ func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 }
 
 func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error) {
-	// Construct the cache key using the request ID
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + requestID}
+	// Fetch the order ID using the request ID
+	orderID, err := c.GetPaymentOrderIDByRequestID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Construct the cache key using the order ID
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
 	var cachedOrder domain.PaymentOrder
@@ -522,4 +528,60 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	return order, nil
+}
+
+func (c *paymentOrderCache) GetPaymentOrdersByRequestIDs(ctx context.Context, requestIDs []string) ([]domain.PaymentOrder, error) {
+	// Construct the cache key using the request IDs
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + fmt.Sprint(requestIDs)}
+
+	// Attempt to retrieve the payment orders from the cache
+	var cachedOrders []domain.PaymentOrder
+	if err := c.cache.RetrieveItem(cacheKey, &cachedOrders); err == nil {
+		// Cache hit: return the cached orders
+		return cachedOrders, nil
+	} else {
+		// Log cache miss
+		logger.GetLogger().Infof("Cache miss for payment orders with Request IDs %v: %v", requestIDs, err)
+	}
+
+	// Cache miss: fetch the payment orders from the repository (DB)
+	orders, err := c.paymentOrderRepository.GetPaymentOrdersByRequestIDs(ctx, requestIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch payment orders with Request IDs %v from repository: %w", requestIDs, err)
+	}
+
+	// Cache the fetched payment orders for future use
+	if cacheErr := c.cache.SaveItem(cacheKey, orders, defaultCacheTimePaymentOrder); cacheErr != nil {
+		logger.GetLogger().Warnf("Failed to cache payment orders with Request IDs %v: %v", requestIDs, cacheErr)
+	}
+
+	return orders, nil
+}
+
+func (c *paymentOrderCache) GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error) {
+	// Construct the cache key using the request ID
+	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + requestID}
+
+	// Attempt to retrieve the payment order ID from the cache
+	var cachedOrderID uint64
+	if err := c.cache.RetrieveItem(cacheKey, &cachedOrderID); err == nil {
+		// Cache hit: return the cached order ID
+		return cachedOrderID, nil
+	} else {
+		// Log cache miss
+		logger.GetLogger().Infof("Cache miss for payment order ID with Request ID %s: %v", requestID, err)
+	}
+
+	// Cache miss: fetch the payment order ID from the repository (DB)
+	orderID, err := c.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch payment order ID with Request ID %s from repository: %w", requestID, err)
+	}
+
+	// Cache the fetched payment order ID for future use
+	if cacheErr := c.cache.SaveItem(cacheKey, orderID, c.config.GetExpiredOrderTime()); cacheErr != nil {
+		logger.GetLogger().Warnf("Failed to cache payment order ID with Request ID %s: %v", requestID, cacheErr)
+	}
+
+	return orderID, nil
 }

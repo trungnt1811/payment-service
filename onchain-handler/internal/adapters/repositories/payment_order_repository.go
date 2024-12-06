@@ -438,3 +438,41 @@ func (r *PaymentOrderRepository) GetPaymentOrderByRequestID(ctx context.Context,
 
 	return &order, nil
 }
+
+// GetPaymentOrdersByRequestIDs retrieves multiple payment orders by their request IDs.
+func (r *PaymentOrderRepository) GetPaymentOrdersByRequestIDs(ctx context.Context, requestIDs []string) ([]domain.PaymentOrder, error) {
+	if len(requestIDs) == 0 {
+		return nil, fmt.Errorf("no request IDs provided")
+	}
+
+	var orders []domain.PaymentOrder
+
+	// Query to fetch payment orders by a list of request IDs
+	if err := r.db.WithContext(ctx).
+		Preload("Wallet").
+		Where("request_id IN ?", requestIDs).
+		Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("failed to retrieve payment orders for request IDs %v: %w", requestIDs, err)
+	}
+
+	return orders, nil
+}
+
+// GetPaymentOrderIDByRequestID retrieves the ID of a payment order by its request ID.
+func (r *PaymentOrderRepository) GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error) {
+	var orderID uint64
+
+	// Query to fetch only the ID
+	if err := r.db.WithContext(ctx).
+		Model(&domain.PaymentOrder{}).
+		Select("id").
+		Where("request_id = ?", requestID).
+		Scan(&orderID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, fmt.Errorf("payment order with request ID %s not found: %w", requestID, err)
+		}
+		return 0, fmt.Errorf("failed to retrieve payment order ID: %w", err)
+	}
+
+	return orderID, nil
+}
