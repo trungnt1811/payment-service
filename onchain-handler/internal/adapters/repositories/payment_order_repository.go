@@ -79,7 +79,8 @@ func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *
 				"status":       order.Status,
 				"network":      order.Network,
 				"block_height": order.BlockHeight,
-				"transferred":  order.Transferred, // Explicitly update fields
+				"transferred":  order.Transferred,
+				"succeeded_at": order.SucceededAt, // Explicitly update fields
 			}).Error; err != nil {
 			return fmt.Errorf("failed to update payment order: %w", err)
 		}
@@ -115,24 +116,6 @@ func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *
 
 		return nil
 	})
-}
-
-// UpdateOrderStatus updates the status of a payment order by its ID.
-func (r *PaymentOrderRepository) UpdateOrderStatus(ctx context.Context, orderID uint64, newStatus string) error {
-	result := r.db.WithContext(ctx).
-		Model(&domain.PaymentOrder{}).
-		Where("id = ?", orderID).
-		Update("status", newStatus)
-
-	if result.Error != nil {
-		return fmt.Errorf("failed to update order status: %w", result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("no order found with the provided ID")
-	}
-
-	return nil
 }
 
 // UpdateOrderNetwork updates the network and block height of a payment order by its ID.

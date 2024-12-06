@@ -240,10 +240,6 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	return nil
 }
 
-func (u *paymentOrderUCase) UpdateOrderStatus(ctx context.Context, orderID uint64, newStatus string) error {
-	return u.paymentOrderRepository.UpdateOrderStatus(ctx, orderID, newStatus)
-}
-
 func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error {
 	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
 	if err != nil {

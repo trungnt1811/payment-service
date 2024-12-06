@@ -135,7 +135,8 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 
 		// Check if the transfer matches the order's wallet and token symbol
 		if listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
-			err := listener.paymentOrderUCase.UpdateOrderStatus(listener.ctx, order.ID, constants.Processing)
+			status := constants.Processing
+			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &status, nil, nil)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
