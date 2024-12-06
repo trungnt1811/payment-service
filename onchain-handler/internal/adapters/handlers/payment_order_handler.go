@@ -198,11 +198,11 @@ func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 
 // GetPaymentOrdersByRequestIDs retrieves a list of payment orders by their request IDs.
 // @Summary Retrieve payment orders by request IDs
-// @Description This endpoint retrieves payment orders by a list of request IDs, limited to 25.
+// @Description This endpoint retrieves payment orders by a list of request IDs, limited to 50.
 // @Tags payment-order
 // @Accept json
 // @Produce json
-// @Param request_ids query string true "Comma-separated list of Request IDs (maximum 25)"
+// @Param request_ids query string true "Comma-separated list of Request IDs (maximum 50)"
 // @Success 200 {array} dto.PaymentOrderDTOResponse "Successful retrieval of payment orders"
 // @Failure 400 {object} response.GeneralError "Invalid request IDs"
 // @Failure 500 {object} response.GeneralError "Internal server error"
@@ -238,9 +238,9 @@ func (h *paymentOrderHandler) GetPaymentOrdersByRequestIDs(ctx *gin.Context) {
 	}
 
 	// Check if the number of request IDs exceeds the limit
-	if len(requestIDs) > 25 {
-		logger.GetLogger().Errorf("Too many request IDs: received %d, maximum allowed is 25", len(requestIDs))
-		httpresponse.Error(ctx, http.StatusBadRequest, "Too many request IDs. Maximum allowed is 25", nil)
+	if len(requestIDs) > 50 {
+		logger.GetLogger().Errorf("Too many request IDs: received %d, maximum allowed is 50", len(requestIDs))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Too many request IDs. Maximum allowed is 50", nil)
 		return
 	}
 

@@ -360,9 +360,9 @@ paths:
       consumes:
       - application/json
       description: This endpoint retrieves payment orders by a list of request IDs,
-        limited to 25.
+        limited to 50.
       parameters:
-      - description: Comma-separated list of Request IDs (maximum 25)
+      - description: Comma-separated list of Request IDs (maximum 50)
         in: query
         name: request_ids
         required: true

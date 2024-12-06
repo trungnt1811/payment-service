@@ -299,7 +299,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-orders/request": {
             "get": {
-                "description": "This endpoint retrieves payment orders by a list of request IDs, limited to 25.",
+                "description": "This endpoint retrieves payment orders by a list of request IDs, limited to 50.",
                 "consumes": [
                     "application/json"
                 ],
@@ -313,7 +313,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Comma-separated list of Request IDs (maximum 25)",
+                        "description": "Comma-separated list of Request IDs (maximum 50)",
                         "name": "request_ids",
                         "in": "query",
                         "required": true
