@@ -106,8 +106,9 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
 // @Param request_ids query []string false "List of request IDs to filter"
-// @Param start_time query string false "Start time in RFC3339 format to filter example("2024-01-01T00:00:00Z")"
-// @Param end_time query string false "End time in RFC3339 format to filter example("2024-02-01T00:00:00Z")"
+// @Param start_time query string false "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)"
+// @Param end_time query string false "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)"
+// @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
@@ -121,10 +122,21 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	}
 
 	// Extract and parse request IDs from query string
-	requestIDsStr := ctx.Query("request_ids")
+	requestIDsParam := ctx.Query("request_ids")
+
+	requestIDsMap := make(map[string]struct{}) // To handle duplicates
 	var requestIDs []string
-	if requestIDsStr != "" {
-		requestIDs = strings.Split(requestIDsStr, ",")
+
+	if requestIDsParam != "" {
+		for _, id := range strings.Split(requestIDsParam, ",") {
+			trimmedID := strings.TrimSpace(id)
+			if trimmedID != "" {
+				if _, exists := requestIDsMap[trimmedID]; !exists {
+					requestIDsMap[trimmedID] = struct{}{}
+					requestIDs = append(requestIDs, trimmedID)
+				}
+			}
+		}
 	}
 
 	// Parse and validate the start_time query parameter
@@ -151,8 +163,19 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
+	// Parse and validate the `sort` parameter
+	sort := ctx.Query("sort")
+	orderBy, orderDirection, err := utils.ParseSortParameter(sort)
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid sort parameter: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid sort parameter", err)
+		return
+	}
+
 	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
-	response, err := h.ucase.GetTokenTransferHistories(ctx, requestIDs, startTime, endTime, page, size)
+	response, err := h.ucase.GetTokenTransferHistories(
+		ctx, requestIDs, startTime, endTime, orderBy, orderDirection, page, size,
+	)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve token transfer histories: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve token transfer histories", err)

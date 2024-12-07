@@ -253,6 +253,8 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 	ctx context.Context,
 	requestIDs []string, // List of request IDs to filter
 	startTime, endTime time.Time, // Time range to filter by
+	orderBy *string, // Order by field
+	orderDirection constants.OrderDirection, // Order direction for sorting
 	page, size int,
 ) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
@@ -260,7 +262,9 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 	offset := (page - 1) * size
 
 	// Fetch the token transfer histories using request IDs and time range
-	listTokenTransfers, err := s.tokenTransferRepository.GetTokenTransferHistories(ctx, limit, offset, requestIDs, startTime, endTime)
+	listTokenTransfers, err := s.tokenTransferRepository.GetTokenTransferHistories(
+		ctx, limit, offset, requestIDs, orderBy, orderDirection, startTime, endTime,
+	)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}

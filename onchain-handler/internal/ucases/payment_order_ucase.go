@@ -282,6 +282,7 @@ func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, o
 
 func (u *paymentOrderUCase) GetPaymentOrders(
 	ctx context.Context,
+	requestIDs []string,
 	status, orderBy *string,
 	orderDirection constants.OrderDirection,
 	page, size int,
@@ -291,7 +292,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 	offset := (page - 1) * size
 
 	// Fetch the orders with event histories from the repository
-	orders, err := u.paymentOrderRepository.GetPaymentOrders(ctx, limit, offset, status, orderBy, orderDirection)
+	orders, err := u.paymentOrderRepository.GetPaymentOrders(ctx, limit, offset, requestIDs, status, orderBy, orderDirection)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}
@@ -371,36 +372,6 @@ func (u *paymentOrderUCase) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 	}
 
 	// Map orders to DTOs
-	var orderDTOs []dto.PaymentOrderDTOResponse
-	for _, order := range orders {
-		orderDTO := dto.PaymentOrderDTOResponse{
-			ID:             order.ID,
-			RequestID:      order.RequestID,
-			Network:        order.Network,
-			Amount:         order.Amount,
-			Transferred:    order.Transferred,
-			Status:         order.Status,
-			WebhookURL:     order.WebhookURL,
-			Symbol:         order.Symbol,
-			WalletAddress:  &order.Wallet.Address,
-			Expired:        uint64(order.ExpiredTime.Unix()),
-			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
-		}
-		if order.Status == constants.Success {
-			orderDTO.SucceededAt = &order.SucceededAt
-		}
-		orderDTOs = append(orderDTOs, orderDTO)
-	}
-
-	return orderDTOs, nil
-}
-
-func (u *paymentOrderUCase) GetPaymentOrdersByRequestIDs(ctx context.Context, requestIDs []string) ([]dto.PaymentOrderDTOResponse, error) {
-	orders, err := u.paymentOrderRepository.GetPaymentOrdersByRequestIDs(ctx, requestIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve payment orders: %w", err)
-	}
-
 	var orderDTOs []dto.PaymentOrderDTOResponse
 	for _, order := range orders {
 		orderDTO := dto.PaymentOrderDTOResponse{

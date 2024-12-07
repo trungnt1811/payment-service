@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
@@ -33,12 +34,24 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 	ctx context.Context,
 	limit, offset int,
 	requestIDs []string, // List of request IDs to filter
+	orderBy *string, // Order by field
+	orderDirection constants.OrderDirection,
 	startTime, endTime time.Time, // Range of time to filter by
 ) ([]domain.TokenTransferHistory, error) {
 	var tokenTransfers []domain.TokenTransferHistory
 
+	orderColumn := "id" // Default values for ordering
+	if orderBy != nil && *orderBy != "" {
+		orderColumn = *orderBy
+	}
+
+	orderDir := string(constants.Asc) // Default direction
+	if orderDirection == constants.Desc {
+		orderDir = string(constants.Desc)
+	}
+
 	// Start with pagination setup
-	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order("id ASC")
+	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
 
 	// Apply filter for request IDs if provided
 	if len(requestIDs) > 0 {

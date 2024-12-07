@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 )
@@ -14,6 +15,8 @@ type TokenTransferRepository interface {
 		ctx context.Context,
 		limit, offset int,
 		requestIDs []string,
+		orderBy *string,
+		orderDirection constants.OrderDirection,
 		startTime, endTime time.Time,
 	) ([]domain.TokenTransferHistory, error)
 }
@@ -25,6 +28,8 @@ type TokenTransferUCase interface {
 		ctx context.Context,
 		requestIDs []string,
 		startTime, endTime time.Time,
+		orderBy *string,
+		orderDirection constants.OrderDirection,
 		page, size int,
 	) (dto.PaginationDTOResponse, error)
 }

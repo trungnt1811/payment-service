@@ -292,6 +292,13 @@ paths:
         in: query
         name: size
         type: integer
+      - collectionFormat: csv
+        description: List of request IDs to filter
+        in: query
+        items:
+          type: string
+        name: request_ids
+        type: array
       - description: Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED,
           FAILED)
         in: query
@@ -355,38 +362,6 @@ paths:
           schema:
             $ref: '#/definitions/response.GeneralError'
       summary: Create payment orders
-      tags:
-      - payment-order
-  /api/v1/payment-orders/request:
-    get:
-      consumes:
-      - application/json
-      description: This endpoint retrieves payment orders by a list of request IDs,
-        limited to 50.
-      parameters:
-      - description: Comma-separated list of Request IDs (maximum 50)
-        in: query
-        name: request_ids
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successful retrieval of payment orders
-          schema:
-            items:
-              $ref: '#/definitions/dto.PaymentOrderDTOResponse'
-            type: array
-        "400":
-          description: Invalid request IDs
-          schema:
-            $ref: '#/definitions/response.GeneralError'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.GeneralError'
-      summary: Retrieve payment orders by request IDs
       tags:
       - payment-order
   /api/v1/payment-wallet/{address}:
@@ -499,15 +474,18 @@ paths:
           type: string
         name: request_ids
         type: array
-      - description: Start time in RFC3339 format to filter example(
-        example: '"2024-01-01T00:00:00Z"'
+      - description: Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)
         in: query
         name: start_time
         type: string
-      - description: End time in RFC3339 format to filter example(
-        example: '"2024-02-01T00:00:00Z"'
+      - description: End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)
         in: query
         name: end_time
+        type: string
+      - description: Sorting parameter in the format `field_direction` (e.g., id_asc,
+          created_at_desc)
+        in: query
+        name: sort
         type: string
       produces:
       - application/json

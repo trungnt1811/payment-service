@@ -328,6 +328,7 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 func (r *PaymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
+	requestIDs []string,
 	status, orderBy *string,
 	orderDirection constants.OrderDirection,
 ) ([]domain.PaymentOrder, error) {
@@ -351,6 +352,11 @@ func (r *PaymentOrderRepository) GetPaymentOrders(
 	// If a status filter is provided, apply it to the query
 	if status != nil {
 		query = query.Where("status = ?", *status)
+	}
+
+	// Apply filter for request IDs if provided
+	if len(requestIDs) > 0 {
+		query = query.Where("request_id IN ?", requestIDs)
 	}
 
 	// Execute query
@@ -415,25 +421,6 @@ func (r *PaymentOrderRepository) GetPaymentOrderByRequestID(ctx context.Context,
 	}
 
 	return &order, nil
-}
-
-// GetPaymentOrdersByRequestIDs retrieves multiple payment orders by their request IDs.
-func (r *PaymentOrderRepository) GetPaymentOrdersByRequestIDs(ctx context.Context, requestIDs []string) ([]domain.PaymentOrder, error) {
-	if len(requestIDs) == 0 {
-		return nil, fmt.Errorf("no request IDs provided")
-	}
-
-	var orders []domain.PaymentOrder
-
-	// Query to fetch payment orders by a list of request IDs
-	if err := r.db.WithContext(ctx).
-		Preload("Wallet").
-		Where("request_id IN ?", requestIDs).
-		Find(&orders).Error; err != nil {
-		return nil, fmt.Errorf("failed to retrieve payment orders for request IDs %v: %w", requestIDs, err)
-	}
-
-	return orders, nil
 }
 
 // GetPaymentOrderIDByRequestID retrieves the ID of a payment order by its request ID.

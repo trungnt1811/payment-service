@@ -96,6 +96,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
+// @Param request_ids query []string false "List of request IDs to filter"
 // @Param status query string false "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
@@ -111,6 +112,24 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 		return
 	}
 
+	// Extract and parse request IDs from query string
+	requestIDsParam := ctx.Query("request_ids")
+
+	requestIDsMap := make(map[string]struct{}) // To handle duplicates
+	var requestIDs []string
+
+	if requestIDsParam != "" {
+		for _, id := range strings.Split(requestIDsParam, ",") {
+			trimmedID := strings.TrimSpace(id)
+			if trimmedID != "" {
+				if _, exists := requestIDsMap[trimmedID]; !exists {
+					requestIDsMap[trimmedID] = struct{}{}
+					requestIDs = append(requestIDs, trimmedID)
+				}
+			}
+		}
+	}
+
 	// Parse optional query parameters
 	status := utils.ParseOptionalQuery(ctx.Query("status"))
 
@@ -124,7 +143,7 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	}
 
 	// Call the use case to get payment orders
-	response, err := h.ucase.GetPaymentOrders(ctx, status, orderBy, orderDirection, page, size)
+	response, err := h.ucase.GetPaymentOrders(ctx, requestIDs, status, orderBy, orderDirection, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment orders", err)
@@ -194,65 +213,6 @@ func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 
 	// Return the payment order in JSON format
 	ctx.JSON(http.StatusOK, response)
-}
-
-// GetPaymentOrdersByRequestIDs retrieves a list of payment orders by their request IDs.
-// @Summary Retrieve payment orders by request IDs
-// @Description This endpoint retrieves payment orders by a list of request IDs, limited to 50.
-// @Tags payment-order
-// @Accept json
-// @Produce json
-// @Param request_ids query string true "Comma-separated list of Request IDs (maximum 50)"
-// @Success 200 {array} dto.PaymentOrderDTOResponse "Successful retrieval of payment orders"
-// @Failure 400 {object} response.GeneralError "Invalid request IDs"
-// @Failure 500 {object} response.GeneralError "Internal server error"
-// @Router /api/v1/payment-orders/request [get]
-func (h *paymentOrderHandler) GetPaymentOrdersByRequestIDs(ctx *gin.Context) {
-	// Parse the query parameter for request IDs
-	requestIDsParam := ctx.Query("request_ids")
-	if requestIDsParam == "" {
-		logger.GetLogger().Error("Request IDs query parameter is empty")
-		httpresponse.Error(ctx, http.StatusBadRequest, "Request IDs query parameter cannot be empty", nil)
-		return
-	}
-
-	// Split the request IDs into a slice and process them
-	requestIDsMap := make(map[string]struct{}) // To handle duplicates
-	var requestIDs []string
-
-	for _, id := range strings.Split(requestIDsParam, ",") {
-		trimmedID := strings.TrimSpace(id)
-		if trimmedID != "" {
-			if _, exists := requestIDsMap[trimmedID]; !exists {
-				requestIDsMap[trimmedID] = struct{}{}
-				requestIDs = append(requestIDs, trimmedID)
-			}
-		}
-	}
-
-	// Ensure the list is not empty after processing
-	if len(requestIDs) == 0 {
-		logger.GetLogger().Error("Parsed request IDs list is empty after processing")
-		httpresponse.Error(ctx, http.StatusBadRequest, "Parsed request IDs list cannot be empty", nil)
-		return
-	}
-
-	// Check if the number of request IDs exceeds the limit
-	if len(requestIDs) > 50 {
-		logger.GetLogger().Errorf("Too many request IDs: received %d, maximum allowed is 50", len(requestIDs))
-		httpresponse.Error(ctx, http.StatusBadRequest, "Too many request IDs. Maximum allowed is 50", nil)
-		return
-	}
-
-	// Retrieve the payment orders from the use case
-	orders, err := h.ucase.GetPaymentOrdersByRequestIDs(ctx, requestIDs)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment orders", err)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, orders)
 }
 
 // UpdatePaymentOrderNetwork updates the network of a payment order.

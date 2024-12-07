@@ -209,6 +209,16 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "List of request IDs to filter",
+                        "name": "request_ids",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
                         "name": "status",
@@ -284,53 +294,6 @@ const docTemplate = `{
                     },
                     "412": {
                         "description": "Duplicate key value",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/payment-orders/request": {
-            "get": {
-                "description": "This endpoint retrieves payment orders by a list of request IDs, limited to 50.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "payment-order"
-                ],
-                "summary": "Retrieve payment orders by request IDs",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Comma-separated list of Request IDs (maximum 50)",
-                        "name": "request_ids",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful retrieval of payment orders",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request IDs",
                         "schema": {
                             "$ref": "#/definitions/response.GeneralError"
                         }
@@ -510,16 +473,20 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"2024-01-01T00:00:00Z\"",
-                        "description": "Start time in RFC3339 format to filter example(",
+                        "description": "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)",
                         "name": "start_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "example": "\"2024-02-01T00:00:00Z\"",
-                        "description": "End time in RFC3339 format to filter example(",
+                        "description": "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)",
                         "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting parameter in the format ` + "`" + `field_direction` + "`" + ` (e.g., id_asc, created_at_desc)",
+                        "name": "sort",
                         "in": "query"
                     }
                 ],

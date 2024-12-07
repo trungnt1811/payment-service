@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -370,12 +371,16 @@ func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]
 func (c *paymentOrderCache) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
+	requestIDs []string,
 	status, orderBy *string,
 	orderDirection constants.OrderDirection,
 ) ([]domain.PaymentOrder, error) {
 	// Generate the cache key based on input parameters
-	cacheKey := &caching.Keyer{Raw: fmt.Sprintf("%sGetPaymentOrders_limit:%d_offset:%d_status:%v_orderBy:%v_orderDirection:%v",
-		keyPrefixPaymentOrder, limit, offset, status, orderBy, orderDirection)}
+	requestIDsKey := strings.Join(requestIDs, ",")
+	cacheKey := &caching.Keyer{
+		Raw: fmt.Sprintf("%sGetPaymentOrders_limit:%d_offset:%d_requestIDs:%s_status:%v_orderBy:%v_orderDirection:%v",
+			keyPrefixPaymentOrder, limit, offset, requestIDsKey, status, orderBy, orderDirection),
+	}
 
 	// Attempt to retrieve the data from the cache
 	var paymentOrders []domain.PaymentOrder
@@ -386,7 +391,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 
 	// Cache miss: fetch from the repository (DB)
 	paymentOrders, err := c.paymentOrderRepository.GetPaymentOrders(
-		ctx, limit, offset, status, orderBy, orderDirection,
+		ctx, limit, offset, requestIDs, status, orderBy, orderDirection,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch payment orders from repository: %w", err)
@@ -488,34 +493,6 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	return order, nil
-}
-
-func (c *paymentOrderCache) GetPaymentOrdersByRequestIDs(ctx context.Context, requestIDs []string) ([]domain.PaymentOrder, error) {
-	// Construct the cache key using the request IDs
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + fmt.Sprint(requestIDs)}
-
-	// Attempt to retrieve the payment orders from the cache
-	var cachedOrders []domain.PaymentOrder
-	if err := c.cache.RetrieveItem(cacheKey, &cachedOrders); err == nil {
-		// Cache hit: return the cached orders
-		return cachedOrders, nil
-	} else {
-		// Log cache miss
-		logger.GetLogger().Infof("Cache miss for payment orders with Request IDs %v: %v", requestIDs, err)
-	}
-
-	// Cache miss: fetch the payment orders from the repository (DB)
-	orders, err := c.paymentOrderRepository.GetPaymentOrdersByRequestIDs(ctx, requestIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch payment orders with Request IDs %v from repository: %w", requestIDs, err)
-	}
-
-	// Cache the fetched payment orders for future use
-	if cacheErr := c.cache.SaveItem(cacheKey, orders, defaultCacheTimePaymentOrder); cacheErr != nil {
-		logger.GetLogger().Warnf("Failed to cache payment orders with Request IDs %v: %v", requestIDs, cacheErr)
-	}
-
-	return orders, nil
 }
 
 func (c *paymentOrderCache) GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error) {
