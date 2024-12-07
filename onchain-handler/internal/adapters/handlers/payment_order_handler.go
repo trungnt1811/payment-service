@@ -96,7 +96,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param request_ids query []string false "List of request IDs to filter"
+// @Param request_ids query []string false "List of request IDs to filter (maximum 50)"
 // @Param status query string false "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
@@ -128,6 +128,13 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 				}
 			}
 		}
+	}
+
+	// Check if the number of request IDs exceeds the limit
+	if len(requestIDs) > 50 {
+		logger.GetLogger().Errorf("Too many request IDs: received %d, maximum allowed is 50", len(requestIDs))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Too many request IDs. Maximum allowed is 50", nil)
+		return
 	}
 
 	// Parse optional query parameters

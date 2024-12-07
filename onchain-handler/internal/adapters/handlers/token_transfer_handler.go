@@ -105,7 +105,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param request_ids query []string false "List of request IDs to filter"
+// @Param request_ids query []string false "List of request IDs to filter (maximum 50)"
 // @Param start_time query string false "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)"
 // @Param end_time query string false "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
@@ -137,6 +137,13 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 				}
 			}
 		}
+	}
+
+	// Check if the number of request IDs exceeds the limit
+	if len(requestIDs) > 50 {
+		logger.GetLogger().Errorf("Too many request IDs: received %d, maximum allowed is 50", len(requestIDs))
+		httpresponse.Error(ctx, http.StatusBadRequest, "Too many request IDs. Maximum allowed is 50", nil)
+		return
 	}
 
 	// Parse and validate the start_time query parameter

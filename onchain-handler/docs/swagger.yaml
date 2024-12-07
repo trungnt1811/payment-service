@@ -293,7 +293,7 @@ paths:
         name: size
         type: integer
       - collectionFormat: csv
-        description: List of request IDs to filter
+        description: List of request IDs to filter (maximum 50)
         in: query
         items:
           type: string
@@ -468,7 +468,7 @@ paths:
         name: size
         type: integer
       - collectionFormat: csv
-        description: List of request IDs to filter
+        description: List of request IDs to filter (maximum 50)
         in: query
         items:
           type: string

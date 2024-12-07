@@ -214,7 +214,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "List of request IDs to filter",
+                        "description": "List of request IDs to filter (maximum 50)",
                         "name": "request_ids",
                         "in": "query"
                     },
@@ -467,7 +467,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "List of request IDs to filter",
+                        "description": "List of request IDs to filter (maximum 50)",
                         "name": "request_ids",
                         "in": "query"
                     },
