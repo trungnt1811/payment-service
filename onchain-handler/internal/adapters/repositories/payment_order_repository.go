@@ -297,7 +297,7 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 		// Step 1: Fetch the IDs of orders to be updated
 		if err := tx.Model(&domain.PaymentOrder{}).
 			Select("id").
-			Where("status IN (?)", []string{constants.Pending, constants.Partial, constants.Processing}).
+			Where("status IN (?)", []string{constants.Pending, constants.Partial}).
 			Where("expired_time > ? AND expired_time <= ?", cutoffTime, currentTime).
 			Scan(&updatedIDs).Error; err != nil {
 			return fmt.Errorf("failed to fetch IDs of active orders to be updated: %w", err)

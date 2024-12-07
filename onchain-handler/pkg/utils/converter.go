@@ -35,9 +35,9 @@ func ConvertFloatTokenToSmallestUnit(amount string, decimals uint8) (*big.Int, e
 	// Handle the fractional part.
 	fractionPart := parts[1]
 
-	// Check if the fractional part exceeds the allowed decimal places.
+	// If the fractional part exceeds the allowed decimal places, truncate it.
 	if len(fractionPart) > int(decimals) {
-		return nil, fmt.Errorf("fractional part exceeds %d decimal places", decimals)
+		fractionPart = fractionPart[:decimals] // Truncate without rounding
 	}
 
 	// Pad the fractional part to the required decimal places by appending zeros.
