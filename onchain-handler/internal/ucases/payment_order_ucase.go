@@ -305,14 +305,16 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 			break
 		}
 		orderDTO := dto.PaymentOrderDTOResponse{
-			ID:          order.ID,
-			RequestID:   order.RequestID,
-			Network:     order.Network,
-			Amount:      order.Amount,
-			Symbol:      order.Symbol,
-			WebhookURL:  order.WebhookURL,
-			Transferred: order.Transferred,
-			Status:      order.Status,
+			ID:            order.ID,
+			RequestID:     order.RequestID,
+			Network:       order.Network,
+			Amount:        order.Amount,
+			Symbol:        order.Symbol,
+			BlockHeight:   order.BlockHeight,
+			WebhookURL:    order.WebhookURL,
+			Transferred:   order.Transferred,
+			WalletAddress: &order.Wallet.Address,
+			Status:        order.Status,
 		}
 		if order.Status == constants.Success {
 			orderDTO.SucceededAt = &order.SucceededAt
