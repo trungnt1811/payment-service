@@ -387,6 +387,9 @@ func (listener *tokenTransferListener) dequeueOrders() {
 
 // shouldDequeueOrder checks if an order is expired or succeeded.
 func (listener *tokenTransferListener) shouldDequeueOrder(order dto.PaymentOrderDTO) bool {
+	if order.Status == constants.Processing {
+		return false
+	}
 	return listener.isOrderExpired(order) || listener.isOrderSucceeded(order)
 }
 
