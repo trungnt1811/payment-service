@@ -122,7 +122,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	isProcessed := false
 
 	// Process each payment order based on the transfer event
-	for _, order := range queueItems {
+	for index, order := range queueItems {
 		// Double-check the order network before processing
 		orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
 		if err != nil {
@@ -142,6 +142,12 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 				continue
 			}
 			logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, string(listener.network))
+			// Update the order status to 'Processing' in the queue
+			order.Status = status
+			if err := listener.queue.ReplaceItemAtIndex(index, order); err != nil {
+				logger.GetLogger().Errorf("Failed to update order in queue: %v", err)
+				continue
+			}
 			isProcessed = true
 		}
 	}
