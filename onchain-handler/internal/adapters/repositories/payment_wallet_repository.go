@@ -51,61 +51,37 @@ func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) 
 	return true, nil
 }
 
-// ClaimFirstAvailableWallet fetches the first available wallet or creates a new one if none are available
+// ClaimFirstAvailableWallet attempts to find the first available wallet and mark it as in-use.
+// If no available wallet is found, it creates a new one.
 func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*domain.PaymentWallet, error) {
 	var wallet domain.PaymentWallet
 
 	// Attempt to find and lock the first available wallet
-	found, err := r.findAndLockAvailableWallet(tx, ctx, &wallet)
+	err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("in_use = ?", false).
+		Order("id").
+		First(&wallet).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// No available wallet found; create a new one
+			newWallet, createErr := r.createNewWallet(tx.WithContext(ctx))
+			if createErr != nil {
+				return nil, fmt.Errorf("failed to create new wallet: %w", createErr)
+			}
+			return newWallet, nil
+		}
+		// Other errors
 		return nil, fmt.Errorf("failed to find available wallet: %w", err)
 	}
 
-	if found {
-		// Mark the wallet as in use
-		if err := r.markWalletInUse(tx, &wallet); err != nil {
-			return nil, fmt.Errorf("failed to mark wallet as in use: %w", err)
-		}
-		return &wallet, nil
+	// Mark the found wallet as in-use in a separate query
+	if updateErr := tx.Model(&wallet).Update("in_use", true).Error; updateErr != nil {
+		return nil, fmt.Errorf("failed to mark wallet as in use: %w", updateErr)
 	}
 
-	// Create a new wallet if none are available
-	newWallet, err := r.createNewWallet(tx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new wallet: %w", err)
-	}
-
-	return newWallet, nil
-}
-
-func (r *paymentWalletRepository) findAndLockAvailableWallet(tx *gorm.DB, ctx context.Context, wallet *domain.PaymentWallet) (bool, error) {
-	err := tx.WithContext(ctx).
-		Clauses(clause.Locking{Strength: "UPDATE"}). // Apply row-level lock
-		Where("in_use = ?", false).
-		Order("id").
-		First(wallet).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// No available wallet found
-			return false, nil
-		}
-		// Other errors
-		return false, err
-	}
-
-	// Wallet found
-	return true, nil
-}
-
-func (r *paymentWalletRepository) markWalletInUse(tx *gorm.DB, wallet *domain.PaymentWallet) error {
-	result := tx.Model(wallet).Update("in_use", true)
-	if result.Error != nil {
-		return fmt.Errorf("failed to mark wallet as in use: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("no rows affected, wallet may have been updated by another transaction")
-	}
-	return nil
+	// If we reach here, we have successfully locked and updated an existing wallet
+	return &wallet, nil
 }
 
 func (r *paymentWalletRepository) createNewWallet(tx *gorm.DB) (*domain.PaymentWallet, error) {
