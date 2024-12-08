@@ -136,7 +136,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		// Check if the transfer matches the order's wallet and token symbol
 		if listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
 			status := constants.Processing
-			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, &vLog.BlockNumber, &status, nil, nil)
+			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &status, nil, nil)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
@@ -144,6 +144,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 			logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, string(listener.network))
 			// Update the order status to 'Processing' in the queue
 			order.Status = status
+			order.BlockHeight = vLog.BlockNumber
 			if err := listener.queue.ReplaceItemAtIndex(index, order); err != nil {
 				logger.GetLogger().Errorf("Failed to update order in queue: %v", err)
 				continue
@@ -268,22 +269,14 @@ func (listener *tokenTransferListener) processOrderPayment(
 	// Calculate the total transferred amount by adding the new transfer event value.
 	totalTransferred := new(big.Int).Add(transferredAmount, transferEvent.Value)
 
-	// Double-check the order block height before processing
-	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
-	if err != nil {
-		return false, fmt.Errorf("failed to get order by ID %d: %w", order.ID, err)
-	}
-	orderBlockHeight := orderDTO.BlockHeight
-
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(listener.network), order.ID)
 
 		// Check if order is still 'Processing' or needs to be marked as 'Success'.
 		status := constants.Success
-		if blockHeight < orderBlockHeight {
+		if blockHeight < order.BlockHeight {
 			status = constants.Processing
-			blockHeight = orderBlockHeight
 		}
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
@@ -294,9 +287,8 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
-		if blockHeight < orderBlockHeight {
+		if blockHeight < order.BlockHeight {
 			status = constants.Processing
-			blockHeight = orderBlockHeight
 		}
 
 		// Update the order status and keep the wallet associated with the order.
