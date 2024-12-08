@@ -2,39 +2,43 @@ package ucases
 
 import (
 	"context"
+	"fmt"
+
+	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type paymentWalletUCase struct {
+	db                             *gorm.DB
 	paymentWalletRepository        interfaces.PaymentWalletRepository
 	paymentWalletBalanceRepository interfaces.PaymentWalletBalanceRepository
 }
 
 func NewPaymentWalletUCase(
+	db *gorm.DB,
 	paymentWalletRepository interfaces.PaymentWalletRepository,
 	paymentWalletBalanceRepository interfaces.PaymentWalletBalanceRepository,
 ) interfaces.PaymentWalletUCase {
 	return &paymentWalletUCase{
+		db:                             db,
 		paymentWalletRepository:        paymentWalletRepository,
 		paymentWalletBalanceRepository: paymentWalletBalanceRepository,
 	}
 }
 
-func (u *paymentWalletUCase) CreatePaymentWallets(ctx context.Context, payloads []dto.PaymentWalletPayloadDTO) error {
-	var wallets []domain.PaymentWallet
-	for _, payload := range payloads {
-		wallet := domain.PaymentWallet{
-			ID:      payload.ID,
-			Address: payload.Address,
-			InUse:   payload.InUse,
+func (u *paymentWalletUCase) CreateAndGenerateWallet(ctx context.Context, mnemonic, passphrase, salt string, inUse bool) error {
+	return u.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		wallet, err := u.paymentWalletRepository.CreateNewWallet(tx, inUse)
+		if err != nil {
+			return fmt.Errorf("failed to create and generate wallet: %w", err)
 		}
-		wallets = append(wallets, wallet)
-	}
-	return u.paymentWalletRepository.CreatePaymentWallets(ctx, wallets)
+		logger.GetLogger().Debugf("Created wallet ID: %d, Address: %s", wallet.ID, wallet.Address)
+		return nil
+	})
 }
 
 func (u *paymentWalletUCase) IsRowExist(ctx context.Context) (bool, error) {

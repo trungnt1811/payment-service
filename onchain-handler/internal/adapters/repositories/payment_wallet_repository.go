@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"github.com/google/uuid"
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
@@ -25,14 +28,6 @@ func NewPaymentWalletRepository(db *gorm.DB, config *conf.Configuration) interfa
 		db:     db,
 		config: config,
 	}
-}
-
-func (r *paymentWalletRepository) CreatePaymentWallets(ctx context.Context, wallets []domain.PaymentWallet) error {
-	err := r.db.WithContext(ctx).Create(&wallets).Error
-	if err != nil {
-		return fmt.Errorf("failed to create payment wallets: %w", err)
-	}
-	return nil
 }
 
 func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) {
@@ -65,7 +60,8 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx con
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// No available wallet found; create a new one
-			newWallet, createErr := r.createNewWallet(tx.WithContext(ctx))
+			inUse := true // New wallets are always in use
+			newWallet, createErr := r.CreateNewWallet(tx.WithContext(ctx), inUse)
 			if createErr != nil {
 				return nil, fmt.Errorf("failed to create new wallet: %w", createErr)
 			}
@@ -84,36 +80,43 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx con
 	return &wallet, nil
 }
 
-func (r *paymentWalletRepository) createNewWallet(tx *gorm.DB) (*domain.PaymentWallet, error) {
-	var maxID uint64
-	if err := tx.Model(&domain.PaymentWallet{}).Select("MAX(id)").Scan(&maxID).Error; err != nil {
-		return nil, fmt.Errorf("failed to retrieve max wallet ID: %w", err)
-	}
-	nextID := maxID + 1
+func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*domain.PaymentWallet, error) {
+	// Generate a unique, temporary address
+	uuidPart := strings.ReplaceAll(uuid.New().String(), "-", "") // Remove dashes from UUID
+	tempAddress := "temp-" + uuidPart[:min(len(uuidPart), 37)]   // Ensure total length <= 42
 
-	// Generate a new wallet account
+	// Insert a placeholder wallet with the unique temporary address
+	placeholderWallet := domain.PaymentWallet{
+		InUse:   inUse,
+		Address: tempAddress, // Unique temporary address within 42 characters
+	}
+
+	if err := tx.Create(&placeholderWallet).Error; err != nil {
+		return nil, fmt.Errorf("failed to insert new wallet placeholder: %w", err)
+	}
+
+	// The placeholderWallet.ID now contains the auto-incremented ID from the DB.
+
+	// Generate the real wallet account using the assigned ID.
 	account, _, genErr := crypto.GenerateAccount(
 		r.config.Wallet.Mnemonic,
 		r.config.Wallet.Passphrase,
 		r.config.Wallet.Salt,
 		constants.PaymentWallet,
-		nextID,
+		placeholderWallet.ID,
 	)
 	if genErr != nil {
 		return nil, fmt.Errorf("failed to generate new wallet: %w", genErr)
 	}
 
-	// Create and persist the wallet
-	newWallet := domain.PaymentWallet{
-		ID:      nextID,
-		Address: account.Address.Hex(),
-		InUse:   true,
-	}
-	if err := tx.Create(&newWallet).Error; err != nil {
-		return nil, fmt.Errorf("failed to insert new wallet: %w", err)
+	// Update the wallet record with the real address
+	if err := tx.Model(&placeholderWallet).Update("address", account.Address.Hex()).Error; err != nil {
+		return nil, fmt.Errorf("failed to update wallet address: %w", err)
 	}
 
-	return &newWallet, nil
+	// Return the wallet with its final state
+	placeholderWallet.Address = account.Address.Hex()
+	return &placeholderWallet, nil
 }
 
 func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error) {

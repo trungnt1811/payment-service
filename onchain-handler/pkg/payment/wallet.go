@@ -3,11 +3,11 @@ package payment
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
@@ -23,38 +23,24 @@ func InitPaymentWallets(
 	// Check if wallets already exist
 	isExist, err := walletUCase.IsRowExist(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check existing wallets: %w", err)
+	}
+
+	if isExist {
+		logger.GetLogger().Info("Payment wallets already exist")
+		return nil
 	}
 
 	// Insert wallets if none exist
-	if !isExist {
-		var wallets []dto.PaymentWalletPayloadDTO
-		for index := 1; index <= int(totalWallets); index++ {
-			account, _, err := crypto.GenerateAccount(
-				mnemonic,
-				passphrase,
-				salt,
-				constants.PaymentWallet,
-				uint64(index),
-			)
-			if err != nil {
-				return err
-			}
-			wallet := dto.PaymentWalletPayloadDTO{
-				ID:      uint64(index),
-				Address: account.Address.Hex(),
-				InUse:   false, // New wallets are not in use by default
-			}
-			wallets = append(wallets, wallet)
-		}
-
-		err := walletUCase.CreatePaymentWallets(ctx, wallets)
+	for i := 0; i < int(totalWallets); i++ {
+		inUse := false
+		err := walletUCase.CreateAndGenerateWallet(ctx, mnemonic, passphrase, salt, inUse)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to initialize wallet %d: %w", i+1, err)
 		}
-		logger.GetLogger().Info("Successfully created payment wallets")
 	}
 
+	logger.GetLogger().Infof("Successfully created %d payment wallets", totalWallets)
 	return nil
 }
 
