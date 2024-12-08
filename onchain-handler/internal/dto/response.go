@@ -17,17 +17,18 @@ type TokenTransferResultDTOResponse struct {
 }
 
 type PaymentOrderDTOResponse struct {
-	ID             uint64              `json:"id"`
-	RequestID      string              `json:"request_id"`
-	Network        string              `json:"network"`
-	Amount         string              `json:"amount"`
-	Transferred    string              `json:"transferred"`
-	Status         string              `json:"status"`
-	WebhookURL     string              `json:"webhook_url"`
-	Symbol         string              `json:"symbol"`
-	BlockHeight    uint64              `json:"block_height"`
-	WalletAddress  *string             `json:"wallet_address,omitempty"`
-	SucceededAt    *time.Time          `json:"succeeded_at,omitempty"`
-	Expired        uint64              `json:"expired,omitempty"`
-	EventHistories []PaymentHistoryDTO `json:"event_histories,omitempty"`
+	ID                  uint64              `json:"id"`
+	RequestID           string              `json:"request_id"`
+	Network             string              `json:"network"`
+	Amount              string              `json:"amount"`
+	Transferred         string              `json:"transferred"`
+	Status              string              `json:"status"`
+	WebhookURL          string              `json:"webhook_url"`
+	Symbol              string              `json:"symbol"`
+	BlockHeight         uint64              `json:"block_height"`
+	UpcomingBlockHeight uint64              `json:"upcoming_block_height,omitempty"`
+	WalletAddress       *string             `json:"wallet_address,omitempty"`
+	SucceededAt         *time.Time          `json:"succeeded_at,omitempty"`
+	Expired             uint64              `json:"expired,omitempty"`
+	EventHistories      []PaymentHistoryDTO `json:"event_histories,omitempty"`
 }

@@ -166,6 +166,9 @@ func mergePaymentOrderFields(dst, src *domain.PaymentOrder) {
 	if src.BlockHeight != 0 {
 		dst.BlockHeight = src.BlockHeight
 	}
+	if src.UpcomingBlockHeight != 0 {
+		dst.UpcomingBlockHeight = src.UpcomingBlockHeight
+	}
 }
 
 func (c *paymentOrderCache) UpdateOrderNetwork(
@@ -173,35 +176,35 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	orderID uint64,
 	network string,
 ) error {
+	// Fetch the latest block height for the given network
+	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network, c.cache)
+	if err != nil {
+		return fmt.Errorf("failed to get latest block from cache: %w", err)
+	}
+
+	// Update the database (source of truth) first
+	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, network, latestBlock); err != nil {
+		return fmt.Errorf("failed to update payment order network in repository: %w", err)
+	}
+
 	// Construct the cache key for the payment order
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
 	var cachedOrder domain.PaymentOrder
 	cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
-
-	// If the order is found in the cache, update it
 	if cacheErr == nil {
 		// Update the network in the cached order
 		cachedOrder.Network = network
+		cachedOrder.BlockHeight = latestBlock
 
 		// Save the updated order back into the cache
 		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
 			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
 		}
 	} else {
-		// Log cache miss but proceed with the update
+		// Log cache miss
 		logger.GetLogger().Warnf("Failed to retrieve payment order ID %d from cache: %v", orderID, cacheErr)
-	}
-
-	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network, c.cache)
-	if err != nil {
-		return fmt.Errorf("failed to get latest block from cache: %w", err)
-	}
-
-	// Update the order network in the repository (DB)
-	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, network, latestBlock); err != nil {
-		return fmt.Errorf("failed to update payment order network in repository: %w", err)
 	}
 
 	return nil

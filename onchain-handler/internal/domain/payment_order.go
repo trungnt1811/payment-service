@@ -12,6 +12,7 @@ type PaymentOrder struct {
 	WalletID              uint64                `json:"wallet_id"`
 	Wallet                PaymentWallet         `gorm:"foreignKey:WalletID"`
 	BlockHeight           uint64                `json:"block_height"`
+	UpcomingBlockHeight   uint64                `json:"upcoming_block_height"`
 	Amount                string                `json:"amount"`
 	Transferred           string                `json:"transferred"`
 	Symbol                string                `json:"symbol"`
@@ -31,18 +32,19 @@ func (m *PaymentOrder) TableName() string {
 
 func (m *PaymentOrder) ToDto() dto.PaymentOrderDTO {
 	return dto.PaymentOrderDTO{
-		ID:             m.ID,
-		RequestID:      m.RequestID,
-		PaymentAddress: m.Wallet.Address,
-		Wallet:         m.Wallet.ToDto(),
-		BlockHeight:    m.BlockHeight,
-		Amount:         m.Amount,
-		Transferred:    m.Transferred,
-		Symbol:         m.Symbol,
-		Network:        m.Network,
-		Status:         m.Status,
-		WebhookURL:     m.WebhookURL,
-		ExpiredTime:    m.ExpiredTime,
+		ID:                  m.ID,
+		RequestID:           m.RequestID,
+		PaymentAddress:      m.Wallet.Address,
+		Wallet:              m.Wallet.ToDto(),
+		BlockHeight:         m.BlockHeight,
+		UpcomingBlockHeight: m.UpcomingBlockHeight,
+		Amount:              m.Amount,
+		Transferred:         m.Transferred,
+		Symbol:              m.Symbol,
+		Network:             m.Network,
+		Status:              m.Status,
+		WebhookURL:          m.WebhookURL,
+		ExpiredTime:         m.ExpiredTime,
 	}
 }
 

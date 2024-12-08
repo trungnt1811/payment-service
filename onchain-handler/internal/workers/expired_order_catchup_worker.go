@@ -359,6 +359,11 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(w.network), order.ID)
 
+		if order.BlockHeight < order.UpcomingBlockHeight {
+			// Update the order tranferred and keep the wallet associated with the order.
+			return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight)
+		}
+
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
 		return w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
@@ -390,7 +395,7 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	order.Status = status
 
 	// Save the updated order to the repository
-	err = w.paymentOrderUCase.UpdatePaymentOrder(ctx, order.ID, &blockHeight, &status, &transferredAmountInEth, nil)
+	err = w.paymentOrderUCase.UpdatePaymentOrder(ctx, order.ID, &blockHeight, nil, &status, &transferredAmountInEth, nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to update payment order status for order ID %d: %w", order.ID, err)
 	}

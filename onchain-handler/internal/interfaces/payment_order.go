@@ -46,7 +46,7 @@ type PaymentOrderUCase interface {
 	UpdatePaymentOrder(
 		ctx context.Context,
 		orderID uint64,
-		blockHeight *uint64,
+		blockHeight, upcomingBlockHeight *uint64,
 		status, transferredAmount, network *string,
 	) error
 	UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error

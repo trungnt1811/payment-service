@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -57,7 +55,7 @@ services:
       POSTGRES_DB: onchain-handler
     volumes:
       - pgdata:/var/lib/postgresql/data # Persistent volume for PostgreSQL data
-      - ./scripts/sql:/docker-entrypoint-initdb.d  # Mount SQL scripts to initdb.d directory
+      - ./scripts/sql:/docker-entrypoint-initdb.d # Scripts to initialize the database
     ports:
       - "5432:5432"
     networks:

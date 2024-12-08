@@ -76,6 +76,8 @@ definitions:
         type: string
       transferred:
         type: string
+      upcoming_block_height:
+        type: integer
       wallet_address:
         type: string
       webhook_url:

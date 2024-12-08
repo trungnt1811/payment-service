@@ -197,7 +197,7 @@ func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network
 func (u *paymentOrderUCase) UpdatePaymentOrder(
 	ctx context.Context,
 	orderID uint64,
-	blockHeight *uint64,
+	blockHeight, upcomingBlockHeight *uint64,
 	status, transferredAmount, network *string,
 ) error {
 	// Retrieve the payment order from the repository
@@ -230,6 +230,10 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 
 	if blockHeight != nil {
 		order.BlockHeight = *blockHeight
+	}
+
+	if upcomingBlockHeight != nil {
+		order.UpcomingBlockHeight = *upcomingBlockHeight
 	}
 
 	// Persist the updated payment order to the database
@@ -345,18 +349,19 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 
 	// Map the order to a DTO
 	orderDTO := dto.PaymentOrderDTOResponse{
-		ID:             order.ID,
-		RequestID:      order.RequestID,
-		Network:        order.Network,
-		Amount:         order.Amount,
-		Transferred:    order.Transferred,
-		Status:         order.Status,
-		WebhookURL:     order.WebhookURL,
-		Symbol:         order.Symbol,
-		BlockHeight:    order.BlockHeight,
-		WalletAddress:  &order.Wallet.Address,
-		Expired:        uint64(order.ExpiredTime.Unix()),
-		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+		ID:                  order.ID,
+		RequestID:           order.RequestID,
+		Network:             order.Network,
+		Amount:              order.Amount,
+		Transferred:         order.Transferred,
+		Status:              order.Status,
+		WebhookURL:          order.WebhookURL,
+		Symbol:              order.Symbol,
+		BlockHeight:         order.BlockHeight,
+		UpcomingBlockHeight: order.UpcomingBlockHeight,
+		WalletAddress:       &order.Wallet.Address,
+		Expired:             uint64(order.ExpiredTime.Unix()),
+		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
 	}
 	if order.Status == constants.Success {
 		orderDTO.SucceededAt = &order.SucceededAt

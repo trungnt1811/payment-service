@@ -1,4 +1,10 @@
-CREATE TYPE order_status AS ENUM('PENDING', 'PROCESSING', 'SUCCESS', 'PARTIAL', 'EXPIRED', 'FAILED');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+        CREATE TYPE order_status AS ENUM('PENDING', 'PROCESSING', 'SUCCESS', 'PARTIAL', 'EXPIRED', 'FAILED');
+    END IF;
+END;
+$$;
 
 CREATE TABLE IF NOT EXISTS payment_order (
     id SERIAL PRIMARY KEY,
@@ -17,5 +23,5 @@ CREATE TABLE IF NOT EXISTS payment_order (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX payment_order_expired_time_idx ON payment_order (expired_time);
-CREATE INDEX payment_order_status_expired_time_idx ON payment_order (status, expired_time);
+CREATE INDEX IF NOT EXISTS payment_order_expired_time_idx ON payment_order (expired_time);
+CREATE INDEX IF NOT EXISTS payment_order_status_expired_time_idx ON payment_order (status, expired_time);

@@ -24,6 +24,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/route"
 	"github.com/genefriendway/onchain-handler/internal/workers"
+	"github.com/genefriendway/onchain-handler/migrations"
 	pkgblockchain "github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
@@ -46,6 +47,9 @@ func RunApp(config *conf.Configuration) {
 
 	// Initialize database connection
 	db := database.DBConnWithLoglevel(logger.Info)
+	if err := migrations.RunMigrations(db); err != nil {
+		pkglogger.GetLogger().Fatalf("Failed to migrate database: %v", err)
+	}
 
 	// Initialize AVAX C-Chain client
 	ethClientAvax := eth.NewClient(config.Blockchain.AvaxNetwork.AvaxRpcUrl)

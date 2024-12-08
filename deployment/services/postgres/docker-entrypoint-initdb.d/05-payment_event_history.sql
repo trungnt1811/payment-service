@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS payment_event_history (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX payment_event_history_payment_order_id_idx ON payment_event_history (payment_order_id);
+CREATE INDEX IF NOT EXISTS payment_event_history_payment_order_id_idx ON payment_event_history (payment_order_id);

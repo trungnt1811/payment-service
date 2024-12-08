@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS payment_wallet_balance (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX payment_wallet_balance_wallet_id_network_symbol_idx ON payment_wallet_balance (wallet_id, network, symbol);
+CREATE UNIQUE INDEX IF NOT EXISTS payment_wallet_balance_wallet_id_network_symbol_idx ON payment_wallet_balance (wallet_id, network, symbol);

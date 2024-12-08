@@ -738,6 +738,9 @@ const docTemplate = `{
                 "transferred": {
                     "type": "string"
                 },
+                "upcoming_block_height": {
+                    "type": "integer"
+                },
                 "wallet_address": {
                     "type": "string"
                 },

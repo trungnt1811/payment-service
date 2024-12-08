@@ -71,17 +71,30 @@ func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 
 func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Construct the updates map, excluding block_height and upcoming_block_height if they are 0
+		updates := map[string]interface{}{
+			"status":       order.Status,
+			"transferred":  order.Transferred,
+			"succeeded_at": order.SucceededAt,
+		}
+		// Only include block_height if it's not 0
+		if order.BlockHeight != 0 {
+			updates["block_height"] = order.BlockHeight
+		}
+		// Only include upcoming_block_height if it's not 0
+		if order.UpcomingBlockHeight != 0 {
+			updates["upcoming_block_height"] = order.UpcomingBlockHeight
+		}
+		// Only include network if it's not empty
+		if order.Network != "" {
+			updates["network"] = order.Network
+		}
+
 		// Step 1: Update the payment order with row-level locking
 		if err := tx.Model(&domain.PaymentOrder{}).
 			Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("id = ?", order.ID).
-			Updates(map[string]interface{}{
-				"status":       order.Status,
-				"network":      order.Network,
-				"block_height": order.BlockHeight,
-				"transferred":  order.Transferred,
-				"succeeded_at": order.SucceededAt, // Explicitly update fields
-			}).Error; err != nil {
+			Updates(updates).Error; err != nil {
 			return fmt.Errorf("failed to update payment order: %w", err)
 		}
 

@@ -119,6 +119,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	}
 
 	queueItems := listener.queue.GetItems()
+	upComingBlockHeight := vLog.BlockNumber
 	isProcessed := false
 
 	// Process each payment order based on the transfer event
@@ -136,7 +137,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		// Check if the transfer matches the order's wallet and token symbol
 		if listener.isMatchOrderToEvent(order, transferEvent, tokenSymbol) {
 			status := constants.Processing
-			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &status, nil, nil)
+			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &upComingBlockHeight, &status, nil, nil)
 			if err != nil {
 				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				continue
@@ -144,7 +145,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 			logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, string(listener.network))
 			// Update the order status to 'Processing' in the queue
 			order.Status = status
-			order.BlockHeight = vLog.BlockNumber
+			order.UpcomingBlockHeight = vLog.BlockNumber
 			if err := listener.queue.ReplaceItemAtIndex(index, order); err != nil {
 				logger.GetLogger().Errorf("Failed to update order in queue: %v", err)
 				continue
@@ -275,7 +276,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if order is still 'Processing' or needs to be marked as 'Success'.
 		status := constants.Success
-		if blockHeight < order.BlockHeight {
+		if blockHeight < order.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 
@@ -287,7 +288,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
-		if blockHeight < order.BlockHeight {
+		if blockHeight < order.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 
@@ -318,7 +319,7 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	}
 
 	// Call the method to update the payment order
-	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, &blockHeight, &status, &transferredAmountInEth, nil)
+	return listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, &blockHeight, nil, &status, &transferredAmountInEth, nil)
 }
 
 // dequeueOrders removes expired or successful orders from the queue and refills it to maintain the limit.
