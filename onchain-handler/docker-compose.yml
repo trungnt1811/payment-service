@@ -6,6 +6,9 @@ services:
     ports:
       - "8080:8080"
     environment:
+      ENV: DEV
+      LOG_LEVEL: debug
+
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: db
@@ -55,7 +58,6 @@ services:
       POSTGRES_DB: onchain-handler
     volumes:
       - pgdata:/var/lib/postgresql/data # Persistent volume for PostgreSQL data
-      - ./scripts/sql:/docker-entrypoint-initdb.d # Scripts to initialize the database
     ports:
       - "5432:5432"
     networks:
