@@ -260,7 +260,9 @@ func (listener *tokenTransferListener) processOrderPayment(
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
-	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, listener.config.GetPaymentCovering())
+	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(
+		orderAmount, listener.config.GetPaymentCovering(), listener.tokenDecimals,
+	)
 
 	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, listener.tokenDecimals)
 	if err != nil {

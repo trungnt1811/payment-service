@@ -345,7 +345,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
-	minimumAcceptedAmount := payment.CalculatePaymentCovering(orderAmount, w.config.GetPaymentCovering())
+	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(orderAmount, w.config.GetPaymentCovering(), w.tokenDecimals)
 
 	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, w.tokenDecimals)
 	if err != nil {
