@@ -323,6 +323,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 			BlockHeight: order.BlockHeight,
 			WebhookURL:  order.WebhookURL,
 			Transferred: order.Transferred,
+			CreatedAt:   order.CreatedAt,
 			Status:      order.Status,
 		}
 		if order.Status == constants.Success {
