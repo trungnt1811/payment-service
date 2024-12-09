@@ -244,7 +244,13 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	return nil
 }
 
-func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error {
+func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error {
+	// Retrieve the payment order ID by request ID
+	orderID, err := u.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve payment order id with request id %s: %w", requestID, err)
+	}
+	// Retrieve the payment order by ID
 	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
@@ -252,7 +258,7 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, orderID uint
 	if order.Status != constants.Pending {
 		return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
 	}
-	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, string(network))
+	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, string(network))
 }
 
 func (u *paymentOrderUCase) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
@@ -407,22 +413,27 @@ func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requ
 	if err != nil {
 		return dto.PaymentOrderDTOResponse{}, err
 	}
+
+	// Map the order to a DTO
 	orderDTO := dto.PaymentOrderDTOResponse{
-		ID:             order.ID,
-		RequestID:      order.RequestID,
-		Network:        order.Network,
-		Amount:         order.Amount,
-		Transferred:    order.Transferred,
-		Status:         order.Status,
-		WebhookURL:     order.WebhookURL,
-		Symbol:         order.Symbol,
-		WalletAddress:  &order.Wallet.Address,
-		Expired:        uint64(order.ExpiredTime.Unix()),
-		EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
+		ID:                  order.ID,
+		RequestID:           order.RequestID,
+		Network:             order.Network,
+		Amount:              order.Amount,
+		Transferred:         order.Transferred,
+		Status:              order.Status,
+		WebhookURL:          order.WebhookURL,
+		Symbol:              order.Symbol,
+		BlockHeight:         order.BlockHeight,
+		UpcomingBlockHeight: order.UpcomingBlockHeight,
+		WalletAddress:       &order.Wallet.Address,
+		Expired:             uint64(order.ExpiredTime.Unix()),
+		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
 	}
 	if order.Status == constants.Success {
 		orderDTO.SucceededAt = &order.SucceededAt
 	}
+
 	return orderDTO, nil
 }
 

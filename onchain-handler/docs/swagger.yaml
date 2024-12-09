@@ -85,9 +85,9 @@ definitions:
     type: object
   dto.PaymentOrderNetworkPayloadDTO:
     properties:
-      id:
-        type: integer
       network:
+        type: string
+      request_id:
         type: string
     type: object
   dto.PaymentOrderPayloadDTO:
@@ -189,17 +189,18 @@ paths:
       summary: Retrieves all networks metadata.
       tags:
       - metadata
-  /api/v1/payment-order/{id}:
+  /api/v1/payment-order/{request_id}:
     get:
       consumes:
       - application/json
-      description: This endpoint retrieves a payment order by its ID.
+      description: This endpoint retrieves a payment order by its request ID, which
+        can contain special characters.
       parameters:
-      - description: Payment order ID
+      - description: Payment order request ID
         in: path
-        name: id
+        name: request_id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -208,14 +209,14 @@ paths:
           schema:
             $ref: '#/definitions/dto.PaymentOrderDTOResponse'
         "400":
-          description: Invalid order ID
+          description: Invalid request ID
           schema:
             $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/response.GeneralError'
-      summary: Retrieve payment order by ID
+      summary: Retrieve payment order by request ID
       tags:
       - payment-order
   /api/v1/payment-order/network:
@@ -247,36 +248,6 @@ paths:
           schema:
             $ref: '#/definitions/response.GeneralError'
       summary: Update payment order network
-      tags:
-      - payment-order
-  /api/v1/payment-order/request/{request_id}:
-    get:
-      consumes:
-      - application/json
-      description: This endpoint retrieves a payment order by its request ID, which
-        can contain special characters.
-      parameters:
-      - description: Payment order request ID
-        in: path
-        name: request_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successful retrieval of payment order
-          schema:
-            $ref: '#/definitions/dto.PaymentOrderDTOResponse'
-        "400":
-          description: Invalid request ID
-          schema:
-            $ref: '#/definitions/response.GeneralError'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.GeneralError'
-      summary: Retrieve payment order by request ID
       tags:
       - payment-order
   /api/v1/payment-orders:

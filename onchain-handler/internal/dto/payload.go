@@ -18,8 +18,8 @@ type PaymentOrderPayloadDTO struct {
 }
 
 type PaymentOrderNetworkPayloadDTO struct {
-	ID      uint64 `json:"id"`
-	Network string `json:"network"`
+	RequestID string `json:"request_id"`
+	Network   string `json:"network"`
 }
 
 type PaymentEventPayloadDTO struct {

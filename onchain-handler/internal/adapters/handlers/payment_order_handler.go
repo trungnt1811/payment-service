@@ -161,35 +161,6 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// GetPaymentOrderByID retrieves a payment order by its ID.
-// @Summary Retrieve payment order by ID
-// @Description This endpoint retrieves a payment order by its ID.
-// @Tags payment-order
-// @Accept json
-// @Produce json
-// @Param id path int true "Payment order ID"
-// @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
-// @Failure 400 {object} response.GeneralError "Invalid order ID"
-// @Failure 500 {object} response.GeneralError "Internal server error"
-// @Router /api/v1/payment-order/{id} [get]
-func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if err != nil {
-		logger.GetLogger().Errorf("Invalid order ID: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve payment order, invalid order ID", err)
-		return
-	}
-
-	response, err := h.ucase.GetPaymentOrderByID(ctx, id)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve payment order: %v", err)
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order", err)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response)
-}
-
 // GetPaymentOrderByRequestID retrieves a payment order by its request ID.
 // @Summary Retrieve payment order by request ID
 // @Description This endpoint retrieves a payment order by its request ID, which can contain special characters.
@@ -200,7 +171,7 @@ func (h *paymentOrderHandler) GetPaymentOrderByID(ctx *gin.Context) {
 // @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
 // @Failure 400 {object} response.GeneralError "Invalid request ID"
 // @Failure 500 {object} response.GeneralError "Internal server error"
-// @Router /api/v1/payment-order/request/{request_id} [get]
+// @Router /api/v1/payment-order/{request_id} [get]
 func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 	// Extract request ID directly as a string
 	requestID := ctx.Param("request_id")
@@ -259,7 +230,7 @@ func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
 	}
 
 	// Call the use case to update the payment order network
-	if err := h.ucase.UpdateOrderNetwork(ctx, req.ID, network); err != nil {
+	if err := h.ucase.UpdateOrderNetwork(ctx, req.RequestID, network); err != nil {
 		logger.GetLogger().Errorf("Failed to update payment order network: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to update payment order network", err)
 		return

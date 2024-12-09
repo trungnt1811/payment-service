@@ -15,7 +15,7 @@ type PaymentOrderRepository interface {
 	CreatePaymentOrders(tx *gorm.DB, ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
 	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
-	UpdateOrderNetwork(ctx context.Context, orderID uint64, network string) error
+	UpdateOrderNetwork(ctx context.Context, requestID, network string) error
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)
@@ -49,7 +49,7 @@ type PaymentOrderUCase interface {
 		blockHeight, upcomingBlockHeight *uint64,
 		status, transferredAmount, network *string,
 	) error
-	UpdateOrderNetwork(ctx context.Context, orderID uint64, network constants.NetworkType) error
+	UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error
 	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)

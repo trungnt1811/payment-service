@@ -173,8 +173,7 @@ func mergePaymentOrderFields(dst, src *domain.PaymentOrder) {
 
 func (c *paymentOrderCache) UpdateOrderNetwork(
 	ctx context.Context,
-	orderID uint64,
-	network string,
+	requestID, network string,
 ) error {
 	// Fetch the latest block height for the given network
 	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network, c.cache)
@@ -183,8 +182,14 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	}
 
 	// Update the database (source of truth) first
-	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, orderID, network, latestBlock); err != nil {
+	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, network, latestBlock); err != nil {
 		return fmt.Errorf("failed to update payment order network in repository: %w", err)
+	}
+
+	// Retrieve the order ID by request ID
+	orderID, err := c.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to get payment order ID by request ID: %w", err)
 	}
 
 	// Construct the cache key for the payment order

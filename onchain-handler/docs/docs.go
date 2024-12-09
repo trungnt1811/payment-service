@@ -94,7 +94,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/payment-order/request/{request_id}": {
+        "/api/v1/payment-order/{request_id}": {
             "get": {
                 "description": "This endpoint retrieves a payment order by its request ID, which can contain special characters.",
                 "consumes": [
@@ -125,50 +125,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request ID",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/payment-order/{id}": {
-            "get": {
-                "description": "This endpoint retrieves a payment order by its ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "payment-order"
-                ],
-                "summary": "Retrieve payment order by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Payment order ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful retrieval of payment order",
-                        "schema": {
-                            "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid order ID",
                         "schema": {
                             "$ref": "#/definitions/response.GeneralError"
                         }
@@ -752,10 +708,10 @@ const docTemplate = `{
         "dto.PaymentOrderNetworkPayloadDTO": {
             "type": "object",
             "properties": {
-                "id": {
-                    "type": "integer"
-                },
                 "network": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
