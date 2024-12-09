@@ -71,60 +71,48 @@ func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 
 func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Construct the updates map, excluding block_height and upcoming_block_height if they are 0
+		// Construct the updates map
 		updates := map[string]interface{}{
 			"status":       order.Status,
 			"transferred":  order.Transferred,
 			"succeeded_at": order.SucceededAt,
 		}
-		// Only include block_height if it's not 0
 		if order.BlockHeight != 0 {
 			updates["block_height"] = order.BlockHeight
 		}
-		// Only include upcoming_block_height if it's not 0
 		if order.UpcomingBlockHeight != 0 {
 			updates["upcoming_block_height"] = order.UpcomingBlockHeight
 		}
-		// Only include network if it's not empty
 		if order.Network != "" {
 			updates["network"] = order.Network
 		}
 
-		// Step 1: Update the payment order with row-level locking
-		if err := tx.Model(&domain.PaymentOrder{}).
-			Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ?", order.ID).
-			Updates(updates).Error; err != nil {
-			return fmt.Errorf("failed to update payment order: %w", err)
-		}
-
-		// Step 2: Fetch the WalletID with row-level locking
+		// Step 1 & 2: Update the order and fetch WalletID atomically
 		var paymentOrder struct {
 			WalletID uint64
 		}
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Model(&domain.PaymentOrder{}).
+		if err := tx.Model(&domain.PaymentOrder{}).
+			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).
 			Select("wallet_id").
 			Where("id = ?", order.ID).
-			First(&paymentOrder).Error; err != nil {
-			return fmt.Errorf("failed to retrieve payment order with id %d: %w", order.ID, err)
+			Updates(updates).
+			Scan(&paymentOrder).Error; err != nil {
+			return fmt.Errorf("failed to update payment order and fetch wallet ID: %w", err)
 		}
 
-		// Step 3: Determine the wallet status
+		// Step 3: Update wallet status idempotently
 		walletStatus := true
 		if order.Status == constants.Success || order.Status == constants.Failed {
 			walletStatus = false
 		}
-
-		// Step 4: Update the wallet's `in_use` status
 		result := tx.Model(&domain.PaymentWallet{}).
-			Where("id = ?", paymentOrder.WalletID).
+			Where("id = ? AND in_use <> ?", paymentOrder.WalletID, walletStatus).
 			Update("in_use", walletStatus)
 		if result.Error != nil {
-			return fmt.Errorf("failed to update wallet status for wallet id %d: %w", paymentOrder.WalletID, result.Error)
+			return fmt.Errorf("failed to update wallet status for wallet ID %d: %w", paymentOrder.WalletID, result.Error)
 		}
 		if result.RowsAffected == 0 {
-			return fmt.Errorf("wallet id %d not updated, it might have been modified by another transaction", paymentOrder.WalletID)
+			logger.GetLogger().Warnf("No change in wallet status for wallet ID %d", paymentOrder.WalletID)
 		}
 
 		return nil
@@ -241,11 +229,10 @@ func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, ne
 // It returns the IDs of the updated orders.
 func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context, orderCutoffTime time.Duration) ([]uint64, error) {
 	cutoffTime := time.Now().UTC().Add(-orderCutoffTime)
-
 	var allUpdatedIDs []uint64
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		offset := 0
+		var lastProcessedID uint64
 
 		for {
 			var orderIDs []uint64
@@ -253,10 +240,11 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 			// Step 1: Select a batch of expired orders with row-level locks
 			if err := tx.Model(&domain.PaymentOrder{}).
 				Clauses(clause.Locking{Strength: "UPDATE"}).
-				Where("status NOT IN (?)", []string{constants.Success, constants.Failed}).
+				Where("id > ?", lastProcessedID).
+				Where("status NOT IN ?", []string{constants.Success, constants.Failed}).
 				Where("expired_time <= ?", cutoffTime).
+				Order("id").
 				Limit(constants.BatchSize).
-				Offset(offset).
 				Pluck("id", &orderIDs).Error; err != nil {
 				return fmt.Errorf("failed to fetch expired order IDs: %w", err)
 			}
@@ -274,19 +262,25 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 				return fmt.Errorf("failed to update expired orders: %w", err)
 			}
 
-			// Step 3: Update associated wallets to "in_use = false"
+			// Step 3: Fetch associated wallet IDs
+			var walletIDs []uint64
+			if err := tx.Model(&domain.PaymentOrder{}).
+				Select("wallet_id").
+				Where("id IN ?", orderIDs).
+				Pluck("wallet_id", &walletIDs).Error; err != nil {
+				return fmt.Errorf("failed to fetch wallet IDs: %w", err)
+			}
+
+			// Step 4: Update associated wallets to "in_use = false"
 			if err := tx.Model(&domain.PaymentWallet{}).
-				Where("id IN (?)", tx.Model(&domain.PaymentOrder{}).
-					Select("wallet_id").
-					Where("id IN ?", orderIDs)).
+				Where("id IN ?", walletIDs).
 				Update("in_use", false).Error; err != nil {
 				return fmt.Errorf("failed to update associated wallets: %w", err)
 			}
 
 			// Append the processed IDs to the result slice
 			allUpdatedIDs = append(allUpdatedIDs, orderIDs...)
-
-			offset += constants.BatchSize
+			lastProcessedID = orderIDs[len(orderIDs)-1] // Update the last processed ID for pagination
 		}
 
 		return nil
