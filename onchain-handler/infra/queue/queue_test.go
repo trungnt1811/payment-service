@@ -11,34 +11,22 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/pkg/interfaces"
-	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
-	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 // Initialize the logger once for all tests
 func TestMain(m *testing.M) {
-	// Create a logger with default configuration
-	factory := &zap.ZapLoggerFactory{}
-	logger, err := factory.CreateLogger(nil)
-	if err != nil {
-		panic(err)
-	}
-
-	// Set service name and environment
-	logger.SetServiceName("my-service")
-	logger.SetConfigModeByCode(interfaces.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
+	// Initialize the logger with a debug log level for testing
 	logger.SetLogLevel(interfaces.DebugLevel)
+	appLogger := logger.GetLogger()
 
-	pkglogger.InitLogger(logger)
+	// Set service details for consistent context in logs
+	appLogger.Info("Starting test suite for my-service in development mode")
 
-	// Use the logger
-	logger.Info("Application started")
-	logger.WithFields(map[string]interface{}{
-		"user":   "john",
-		"action": "login",
-	}).Info("User logged in")
-
+	// Run all tests
 	code := m.Run()
+
+	// Exit with the code from test execution
 	os.Exit(code)
 }
 
@@ -287,7 +275,7 @@ func TestQueuePerformance(t *testing.T) {
 	t.Run("Queue Performance with 10K items", func(t *testing.T) {
 		testPerformanceWithSize(10000)
 	})
-	t.Run("Queue Performance with 50K items", func(t *testing.T) {
-		testPerformanceWithSize(50000)
+	t.Run("Queue Performance with 1M items", func(t *testing.T) {
+		testPerformanceWithSize(1000000)
 	})
 }

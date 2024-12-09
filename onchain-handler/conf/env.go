@@ -90,6 +90,7 @@ type Configuration struct {
 	AppName        string                      `mapstructure:"APP_NAME"`
 	AppPort        uint32                      `mapstructure:"APP_PORT"`
 	Env            string                      `mapstructure:"ENV"`
+	LogLevel       string                      `mapstructure:"LOG_LEVEL"`
 }
 
 var configuration Configuration
@@ -99,6 +100,8 @@ var defaultConfigurations = map[string]any{
 	"REDIS_TTL":                         "60",
 	"APP_PORT":                          "8080",
 	"ENV_FILE":                          ".env",
+	"ENV":                               "DEV",
+	"LOG_LEVEL":                         "debug",
 	"DB_USER":                           "",
 	"DB_PASSWORD":                       "",
 	"DB_HOST":                           "",

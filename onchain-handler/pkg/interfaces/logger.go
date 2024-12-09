@@ -1,49 +1,18 @@
 package interfaces
 
-import (
-	"fmt"
-)
-
-// Environment mode constants
-const (
-	DEVELOPMENT_ENVIRONMENT_CODE_MODE = "development"
-	PRODUCTION_ENVIRONMENT_CODE_MODE  = "production"
-)
-
-// Level represents the logging level
-type Level int8
+// Level defines the severity level for logging.
+type Level string
 
 const (
-	// Log levels ordered by increasing severity
-	DebugLevel Level = iota
-	InfoLevel
-	WarnLevel
-	ErrorLevel
-	FatalLevel
-	PanicLevel
+	DebugLevel Level = "debug"
+	InfoLevel  Level = "info"
+	WarnLevel  Level = "warn"
+	ErrorLevel Level = "error"
+	FatalLevel Level = "fatal"
+	PanicLevel Level = "panic"
 )
 
-// String returns the string representation of the log level
-func (l Level) String() string {
-	switch l {
-	case DebugLevel:
-		return "DEBUG"
-	case InfoLevel:
-		return "INFO"
-	case WarnLevel:
-		return "WARN"
-	case ErrorLevel:
-		return "ERROR"
-	case FatalLevel:
-		return "FATAL"
-	case PanicLevel:
-		return "PANIC"
-	default:
-		return fmt.Sprintf("UNKNOWN(%d)", l)
-	}
-}
-
-// Logger interface defines common logging operations
+// Logger interface defines common logging operations.
 type Logger interface {
 	// Level management
 	SetLogLevel(level Level)
@@ -64,20 +33,5 @@ type Logger interface {
 	Panicf(format string, values ...interface{})
 
 	// Contextual logging
-	WithInterface(key string, value interface{}) Logger
 	WithFields(fields map[string]interface{}) Logger
-
-	// Configuration management
-	SetConfigModeByCode(code string)
-	SetConfig(config interface{})
-	GetConfig() interface{}
-
-	// Service information
-	SetServiceName(serviceName string)
-	GetServiceName() string
-}
-
-// LoggerFactory defines the interface for creating logger instances
-type LoggerFactory interface {
-	CreateLogger(config interface{}) (Logger, error)
 }

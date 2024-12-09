@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"gorm.io/gorm/logger"
@@ -29,7 +30,6 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
-	"github.com/genefriendway/onchain-handler/pkg/logger/zap"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 	"github.com/genefriendway/onchain-handler/pkg/providers"
 	"github.com/genefriendway/onchain-handler/wire"
@@ -161,32 +161,39 @@ func RunApp(config *conf.Configuration) {
 
 // Helper Functions
 func initializeLoggerAndMode(config *conf.Configuration) {
-	// config logger config. Can be replaced with any logger config
-	// Create a logger with default configuration
-	factory := &zap.ZapLoggerFactory{}
-	logger, err := factory.CreateLogger(nil)
-	if err != nil {
-		panic(err)
+	// Validate configuration
+	if config == nil {
+		panic("configuration cannot be nil")
 	}
 
-	// Set service name and environment
-	logger.SetServiceName(config.AppName)
-	if config.Env == "PROD" {
-		logger.SetConfigModeByCode(pkginterfaces.PRODUCTION_ENVIRONMENT_CODE_MODE)
-		logger.SetLogLevel(pkginterfaces.InfoLevel)
+	// Determine the log level from the configuration
+	var logLevel pkginterfaces.Level
+	switch strings.ToLower(config.LogLevel) {
+	case "debug":
+		logLevel = pkginterfaces.DebugLevel
+		gin.SetMode(gin.DebugMode) // Development mode
+	case "info":
+		logLevel = pkginterfaces.InfoLevel
+		gin.SetMode(gin.ReleaseMode) // Production mode
+	default:
+		// Default to info level if unspecified or invalid
+		logLevel = pkginterfaces.InfoLevel
 		gin.SetMode(gin.ReleaseMode)
-	} else {
-		logger.SetConfigModeByCode(pkginterfaces.DEVELOPMENT_ENVIRONMENT_CODE_MODE)
-		logger.SetLogLevel(pkginterfaces.DebugLevel)
 	}
 
-	// Use the logger
-	pkglogger.InitLogger(logger)
-	logger.Info("Application started")
-	logger.WithFields(map[string]interface{}{
-		"appName": config.AppName,
-		"env":     config.Env,
-	}).Info("Starting application")
+	// Set the log level in the logger package
+	pkglogger.SetLogLevel(logLevel)
+
+	// Retrieve the initialized logger
+	appLogger := pkglogger.GetLogger()
+
+	// Log application startup details
+	appLogger.Infof("Application '%s' started with log level '%s' in '%s' mode", config.AppName, logLevel, config.Env)
+
+	// Log additional details for debugging
+	if logLevel == pkginterfaces.DebugLevel {
+		appLogger.Debug("Debugging mode enabled. Verbose logging is active.")
+	}
 }
 
 func initializeRouter() *gin.Engine {
