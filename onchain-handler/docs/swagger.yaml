@@ -256,8 +256,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: This endpoint retrieves payment orders based on optional status
-        filter and sorting options.
+      description: This endpoint retrieves payment orders based on optional filters
+        such as status, from_address, and sorting options.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -274,6 +274,10 @@ paths:
           type: string
         name: request_ids
         type: array
+      - description: Filter by sender's address (from_address)
+        in: query
+        name: from_address
+        type: string
       - description: Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED,
           FAILED)
         in: query

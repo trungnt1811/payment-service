@@ -35,6 +35,7 @@ func RunMigrations(db *gorm.DB) error {
 		"migrations/sql/07-payment_wallet_balance.sql",
 		"migrations/sql/08-blockchain_network_metadata.sql",
 		"migrations/sql/09-add_upcoming_block_height_to_payment_order.sql",
+		"migrations/sql/10-add_index_for_from_address_in_payment_event_history.sql",
 	}
 
 	for _, script := range sqlScripts {

@@ -337,12 +337,11 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 	return updatedIDs, nil
 }
 
-// GetPaymentOrders retrieves payment orders by request IDs and optionally filters by status.
 func (r *PaymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
 	requestIDs []string,
-	status, orderBy *string,
+	status, orderBy, fromAddress *string,
 	orderDirection constants.OrderDirection,
 ) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
@@ -362,19 +361,28 @@ func (r *PaymentOrderRepository) GetPaymentOrders(
 		Offset(offset).
 		Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
 
-	// If a status filter is provided, apply it to the query
-	if status != nil {
-		query = query.Where("status = ?", *status)
-	}
-
 	// Apply filter for request IDs if provided
 	if len(requestIDs) > 0 {
 		query = query.Where("request_id IN ?", requestIDs)
 	}
 
-	// Execute query
+	// Apply filter for status if provided
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	// If fromAddress is provided, filter PaymentOrders based on matching PaymentEventHistories
+	if fromAddress != nil && *fromAddress != "" {
+		query = query.Where("payment_order.id IN (?)",
+			r.db.Table("payment_event_history").
+				Select("payment_order_id").
+				Where("from_address = ?", *fromAddress),
+		)
+	}
+
+	// Execute the query and retrieve the results
 	if err := query.Find(&orders).Error; err != nil {
-		return nil, fmt.Errorf("failed to retrieve payment order histories: %w", err)
+		return nil, fmt.Errorf("failed to retrieve payment orders: %w", err)
 	}
 
 	return orders, nil

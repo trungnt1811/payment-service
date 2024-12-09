@@ -140,7 +140,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-orders": {
             "get": {
-                "description": "This endpoint retrieves payment orders based on optional status filter and sorting options.",
+                "description": "This endpoint retrieves payment orders based on optional filters such as status, from_address, and sorting options.",
                 "consumes": [
                     "application/json"
                 ],
@@ -172,6 +172,12 @@ const docTemplate = `{
                         "collectionFormat": "csv",
                         "description": "List of request IDs to filter (maximum 50)",
                         "name": "request_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by sender's address (from_address)",
+                        "name": "from_address",
                         "in": "query"
                     },
                     {

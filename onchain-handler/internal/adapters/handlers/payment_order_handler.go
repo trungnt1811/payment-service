@@ -88,15 +88,16 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	})
 }
 
-// GetPaymentOrders retrieves payment orders optionally filtered by status and sorted using the `sort` query parameter.
+// GetPaymentOrders retrieves payment orders optionally filtered by status, from_address, and sorted using the sort query parameter.
 // @Summary Retrieve payment orders
-// @Description This endpoint retrieves payment orders based on optional status filter and sorting options.
+// @Description This endpoint retrieves payment orders based on optional filters such as status, from_address, and sorting options.
 // @Tags payment-order
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
 // @Param request_ids query []string false "List of request IDs to filter (maximum 50)"
+// @Param from_address query string false "Filter by sender's address (from_address)"
 // @Param status query string false "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
@@ -114,7 +115,6 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 
 	// Extract and parse request IDs from query string
 	requestIDsParam := ctx.Query("request_ids")
-
 	requestIDsMap := make(map[string]struct{}) // To handle duplicates
 	var requestIDs []string
 
@@ -139,6 +139,13 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 
 	// Parse optional query parameters
 	status := utils.ParseOptionalQuery(ctx.Query("status"))
+	fromAddress := utils.ParseOptionalQuery(ctx.Query("from_address"))
+
+	if fromAddress != nil && !utils.IsValidEthAddress(*fromAddress) {
+		logger.GetLogger().Errorf("Invalid from_address: %s", *fromAddress)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid from_address", nil)
+		return
+	}
 
 	// Parse and validate the `sort` parameter
 	sort := ctx.Query("sort")
@@ -150,7 +157,7 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	}
 
 	// Call the use case to get payment orders
-	response, err := h.ucase.GetPaymentOrders(ctx, requestIDs, status, orderBy, orderDirection, page, size)
+	response, err := h.ucase.GetPaymentOrders(ctx, requestIDs, status, orderBy, fromAddress, orderDirection, page, size)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment orders", err)
