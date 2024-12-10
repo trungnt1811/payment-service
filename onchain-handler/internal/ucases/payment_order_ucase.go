@@ -293,8 +293,10 @@ func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, o
 func (u *paymentOrderUCase) GetPaymentOrders(
 	ctx context.Context,
 	requestIDs []string,
-	status, orderBy, fromAddress *string,
+	status, orderBy, fromAddress, network *string,
 	orderDirection constants.OrderDirection,
+	startTime, endTime *time.Time,
+	timeFilterField *string,
 	page, size int,
 ) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
@@ -302,7 +304,9 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 	offset := (page - 1) * size
 
 	// Fetch the orders with event histories from the repository
-	orders, err := u.paymentOrderRepository.GetPaymentOrders(ctx, limit, offset, requestIDs, status, orderBy, fromAddress, orderDirection)
+	orders, err := u.paymentOrderRepository.GetPaymentOrders(
+		ctx, limit, offset, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField,
+	)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}

@@ -257,7 +257,7 @@ paths:
       consumes:
       - application/json
       description: This endpoint retrieves payment orders based on optional filters
-        such as status, from_address, and sorting options.
+        such as status, from_address, network, and sorting options.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -278,15 +278,31 @@ paths:
         in: query
         name: from_address
         type: string
+      - description: Filter by network (e.g., BSC, AVAX C-Chain)
+        in: query
+        name: network
+        type: string
       - description: Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED,
           FAILED)
         in: query
         name: status
         type: string
       - description: Sorting parameter in the format `field_direction` (e.g., id_asc,
-          created_at_desc)
+          created_at_desc, succeeded_at_desc)
         in: query
         name: sort
+        type: string
+      - description: Start time in UNIX timestamp format to filter (e.g., 1704067200)
+        in: query
+        name: start_time
+        type: integer
+      - description: End time in UNIX timestamp format to filter (e.g., 1706745600)
+        in: query
+        name: end_time
+        type: integer
+      - description: Field to filter time (e.g., created_at or succeeded_at)
+        in: query
+        name: time_filter_field
         type: string
       produces:
       - application/json

@@ -140,7 +140,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-orders": {
             "get": {
-                "description": "This endpoint retrieves payment orders based on optional filters such as status, from_address, and sorting options.",
+                "description": "This endpoint retrieves payment orders based on optional filters such as status, from_address, network, and sorting options.",
                 "consumes": [
                     "application/json"
                 ],
@@ -182,14 +182,38 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Filter by network (e.g., BSC, AVAX C-Chain)",
+                        "name": "network",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
                         "name": "status",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Sorting parameter in the format ` + "`" + `field_direction` + "`" + ` (e.g., id_asc, created_at_desc)",
+                        "description": "Sorting parameter in the format ` + "`" + `field_direction` + "`" + ` (e.g., id_asc, created_at_desc, succeeded_at_desc)",
                         "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start time in UNIX timestamp format to filter (e.g., 1704067200)",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End time in UNIX timestamp format to filter (e.g., 1706745600)",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to filter time (e.g., created_at or succeeded_at)",
+                        "name": "time_filter_field",
                         "in": "query"
                     }
                 ],

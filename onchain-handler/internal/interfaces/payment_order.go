@@ -25,8 +25,10 @@ type PaymentOrderRepository interface {
 		ctx context.Context,
 		limit, offset int,
 		requestIDs []string,
-		status, orderBy, fromAddress *string,
+		status, orderBy, fromAddress, network *string,
 		orderDirection constants.OrderDirection,
+		startTime, endTime *time.Time,
+		timeFilterField *string,
 	) ([]domain.PaymentOrder, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error)
 	GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]domain.PaymentOrder, error)
@@ -56,8 +58,10 @@ type PaymentOrderUCase interface {
 	GetPaymentOrders(
 		ctx context.Context,
 		requestIDs []string,
-		status, orderBy, fromAddress *string,
+		status, orderBy, fromAddress, network *string,
 		orderDirection constants.OrderDirection,
+		startTime, endTime *time.Time,
+		timeFilterField *string,
 		page, size int,
 	) (dto.PaginationDTOResponse, error)
 	GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error)

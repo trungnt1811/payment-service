@@ -147,9 +147,8 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	}
 
 	// Parse and validate the start_time query parameter
-	startTimeStr := ctx.Query("start_time")
-	startTime, err := time.Parse(time.RFC3339, startTimeStr)
-	if startTimeStr != "" && err != nil {
+	startTime, err := utils.ParseOptionalTime(ctx.Query("start_time"))
+	if err != nil {
 		logger.GetLogger().Errorf("Invalid start time: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid start time", fmt.Errorf("invalid start time. Must be in RFC3339 format"))
 		return
@@ -181,7 +180,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 
 	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
 	response, err := h.ucase.GetTokenTransferHistories(
-		ctx, requestIDs, startTime, endTime, orderBy, orderDirection, page, size,
+		ctx, requestIDs, *startTime, endTime, orderBy, orderDirection, page, size,
 	)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve token transfer histories: %v", err)

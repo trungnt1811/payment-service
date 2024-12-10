@@ -341,46 +341,48 @@ func (r *PaymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
 	requestIDs []string,
-	status, orderBy, fromAddress *string,
+	status, orderBy, fromAddress, network *string,
 	orderDirection constants.OrderDirection,
+	startTime, endTime *time.Time,
+	timeFilterField *string,
 ) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
 
-	orderColumn := "id" // Default values for ordering
-	if orderBy != nil && *orderBy != "" {
-		orderColumn = *orderBy
-	}
-
-	orderDir := string(constants.Asc) // Default direction
-	if orderDirection == constants.Desc {
-		orderDir = string(constants.Desc)
-	}
-
 	query := r.db.WithContext(ctx).
 		Limit(limit).
-		Offset(offset).
-		Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
+		Offset(offset)
 
-	// Apply filter for request IDs if provided
 	if len(requestIDs) > 0 {
 		query = query.Where("request_id IN ?", requestIDs)
 	}
 
-	// Apply filter for status if provided
 	if status != nil {
 		query = query.Where("status = ?", *status)
 	}
 
-	// If fromAddress is provided, filter PaymentOrders based on matching PaymentEventHistories
-	if fromAddress != nil && *fromAddress != "" {
-		query = query.Where("payment_order.id IN (?)",
+	if fromAddress != nil {
+		query = query.Where("id IN (?)",
 			r.db.Table("payment_event_history").
 				Select("payment_order_id").
 				Where("from_address = ?", *fromAddress),
 		)
 	}
 
-	// Execute the query and retrieve the results
+	if network != nil {
+		query = query.Where("network = ?", *network)
+	}
+
+	if timeFilterField != nil && (startTime != nil || endTime != nil) {
+		timeColumn := *timeFilterField
+		if startTime != nil {
+			query = query.Where(fmt.Sprintf("%s >= ?", timeColumn), *startTime)
+		}
+		if endTime != nil {
+			query = query.Where(fmt.Sprintf("%s <= ?", timeColumn), *endTime)
+		}
+	}
+
+	// Execute query
 	if err := query.Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve payment orders: %w", err)
 	}

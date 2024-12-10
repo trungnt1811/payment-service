@@ -380,8 +380,10 @@ func (c *paymentOrderCache) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
 	requestIDs []string,
-	status, orderBy, fromAddress *string,
+	status, orderBy, fromAddress, network *string,
 	orderDirection constants.OrderDirection,
+	startTime, endTime *time.Time,
+	timeFilterField *string,
 ) ([]domain.PaymentOrder, error) {
 	// Generate the cache key based on input parameters, including fromAddress
 	requestIDsKey := strings.Join(requestIDs, ",")
@@ -399,7 +401,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 
 	// Cache miss: fetch from the repository (DB)
 	paymentOrders, err := c.paymentOrderRepository.GetPaymentOrders(
-		ctx, limit, offset, requestIDs, status, orderBy, fromAddress, orderDirection,
+		ctx, limit, offset, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch payment orders from repository: %w", err)

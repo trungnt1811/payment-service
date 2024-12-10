@@ -88,9 +88,9 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	})
 }
 
-// GetPaymentOrders retrieves payment orders optionally filtered by status, from_address, and sorted using the sort query parameter.
+// GetPaymentOrders retrieves payment orders optionally filtered by status, from_address, network, and sorted using the sort query parameter.
 // @Summary Retrieve payment orders
-// @Description This endpoint retrieves payment orders based on optional filters such as status, from_address, and sorting options.
+// @Description This endpoint retrieves payment orders based on optional filters such as status, from_address, network, and sorting options.
 // @Tags payment-order
 // @Accept json
 // @Produce json
@@ -98,8 +98,12 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Param size query int false "Page size, default is 10"
 // @Param request_ids query []string false "List of request IDs to filter (maximum 50)"
 // @Param from_address query string false "Filter by sender's address (from_address)"
+// @Param network query string false "Filter by network (e.g., BSC, AVAX C-Chain)"
 // @Param status query string false "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)"
-// @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
+// @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc, succeeded_at_desc)"
+// @Param start_time query int false "Start time in UNIX timestamp format to filter (e.g., 1704067200)"
+// @Param end_time query int false "End time in UNIX timestamp format to filter (e.g., 1706745600)"
+// @Param time_filter_field query string false "Field to filter time (e.g., created_at or succeeded_at)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
 // @Failure 500 {object} response.GeneralError "Internal server error"
@@ -140,14 +144,42 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	// Parse optional query parameters
 	status := utils.ParseOptionalQuery(ctx.Query("status"))
 	fromAddress := utils.ParseOptionalQuery(ctx.Query("from_address"))
-
 	if fromAddress != nil && !utils.IsValidEthAddress(*fromAddress) {
 		logger.GetLogger().Errorf("Invalid from_address: %s", *fromAddress)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid from_address", nil)
 		return
 	}
+	network := utils.ParseOptionalQuery(ctx.Query("network"))
+	if network != nil {
+		if err := utils.ValidateNetworkType(*network); err != nil {
+			logger.GetLogger().Errorf("Invalid network: %v", err)
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Unsupported network: %s", *network), err)
+			return
+		}
+	}
 
-	// Parse and validate the `sort` parameter
+	// Parse and validate time filter parameters
+	timeFilterField := ctx.Query("time_filter_field")
+	if timeFilterField != "" && timeFilterField != "created_at" && timeFilterField != "succeeded_at" {
+		logger.GetLogger().Errorf("Invalid time_filter_field: %s", timeFilterField)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid time_filter_field. Use 'created_at' or 'succeeded_at'.", nil)
+		return
+	}
+
+	startTime, err := utils.ParseOptionalUnixTimestamp(ctx.Query("start_time"))
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid start_time: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid start_time. Provide a valid UNIX timestamp.", err)
+		return
+	}
+	endTime, err := utils.ParseOptionalUnixTimestamp(ctx.Query("end_time"))
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid end_time: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid end_time. Provide a valid UNIX timestamp.", err)
+		return
+	}
+
+	// Parse and validate sort parameter
 	sort := ctx.Query("sort")
 	orderBy, orderDirection, err := utils.ParseSortParameter(sort)
 	if err != nil {
@@ -157,7 +189,9 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	}
 
 	// Call the use case to get payment orders
-	response, err := h.ucase.GetPaymentOrders(ctx, requestIDs, status, orderBy, fromAddress, orderDirection, page, size)
+	response, err := h.ucase.GetPaymentOrders(
+		ctx, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, &timeFilterField, page, size,
+	)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment orders", err)
