@@ -718,6 +718,9 @@ const docTemplate = `{
                 "network": {
                     "type": "string"
                 },
+                "payment_address": {
+                    "type": "string"
+                },
                 "request_id": {
                     "type": "string"
                 },
@@ -735,9 +738,6 @@ const docTemplate = `{
                 },
                 "upcoming_block_height": {
                     "type": "integer"
-                },
-                "wallet_address": {
-                    "type": "string"
                 },
                 "webhook_url": {
                     "type": "string"

@@ -423,16 +423,16 @@ func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.Payment
 	var orderDTOs []dto.PaymentOrderDTOResponse
 	for _, order := range orders {
 		paymentOrderDTO := dto.PaymentOrderDTOResponse{
-			ID:            order.ID,
-			RequestID:     order.RequestID,
-			Network:       order.Network,
-			Amount:        order.Amount,
-			Transferred:   order.Transferred,
-			Status:        status,
-			WebhookURL:    order.WebhookURL,
-			Symbol:        order.Symbol,
-			WalletAddress: &order.PaymentAddress,
-			Expired:       uint64(order.ExpiredTime.Unix()),
+			ID:             order.ID,
+			RequestID:      order.RequestID,
+			Network:        order.Network,
+			Amount:         order.Amount,
+			Transferred:    order.Transferred,
+			Status:         status,
+			WebhookURL:     order.WebhookURL,
+			Symbol:         order.Symbol,
+			PaymentAddress: &order.PaymentAddress,
+			Expired:        uint64(order.ExpiredTime.Unix()),
 		}
 		orderDTOs = append(orderDTOs, paymentOrderDTO)
 	}

@@ -371,7 +371,7 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 		Symbol:              order.Symbol,
 		BlockHeight:         order.BlockHeight,
 		UpcomingBlockHeight: order.UpcomingBlockHeight,
-		WalletAddress:       &order.Wallet.Address,
+		PaymentAddress:      &order.Wallet.Address,
 		Expired:             uint64(order.ExpiredTime.Unix()),
 		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
 	}
@@ -401,7 +401,7 @@ func (u *paymentOrderUCase) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 			Status:         order.Status,
 			WebhookURL:     order.WebhookURL,
 			Symbol:         order.Symbol,
-			WalletAddress:  &order.Wallet.Address,
+			PaymentAddress: &order.Wallet.Address,
 			Expired:        uint64(order.ExpiredTime.Unix()),
 			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
 		}
@@ -437,7 +437,7 @@ func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requ
 		Symbol:              order.Symbol,
 		BlockHeight:         order.BlockHeight,
 		UpcomingBlockHeight: order.UpcomingBlockHeight,
-		WalletAddress:       &order.Wallet.Address,
+		PaymentAddress:      &order.Wallet.Address,
 		Expired:             uint64(order.ExpiredTime.Unix()),
 		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
 	}
