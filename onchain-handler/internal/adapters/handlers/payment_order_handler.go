@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 
@@ -211,6 +214,7 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 // @Param request_id path string true "Payment order request ID"
 // @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
 // @Failure 400 {object} response.GeneralError "Invalid request ID"
+// @Failure 404 {object} response.GeneralError "Payment order not found"
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-order/{request_id} [get]
 func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
@@ -225,6 +229,12 @@ func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 	// Delegate to the use case layer
 	response, err := h.ucase.GetPaymentOrderByRequestID(ctx, requestID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.GetLogger().Warnf("Payment order not found for request ID %s", requestID)
+			httpresponse.Error(ctx, http.StatusNotFound, "Payment order not found", nil)
+			return
+		}
+
 		logger.GetLogger().Errorf("Failed to retrieve payment order for request ID %s: %v", requestID, err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment order", err)
 		return

@@ -129,6 +129,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.GeneralError"
                         }
                     },
+                    "404": {
+                        "description": "Payment order not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {

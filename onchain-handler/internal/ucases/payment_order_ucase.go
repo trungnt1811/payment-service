@@ -2,6 +2,7 @@ package ucases
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -414,9 +415,14 @@ func (u *paymentOrderUCase) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 }
 
 func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error) {
+	// Fetch the payment order by request ID
 	order, err := u.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
 	if err != nil {
-		return dto.PaymentOrderDTOResponse{}, err
+		// Return a clean not found error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return dto.PaymentOrderDTOResponse{}, gorm.ErrRecordNotFound
+		}
+		return dto.PaymentOrderDTOResponse{}, fmt.Errorf("failed to retrieve payment order: %w", err)
 	}
 
 	// Map the order to a DTO
