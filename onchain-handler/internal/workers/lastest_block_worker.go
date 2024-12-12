@@ -117,7 +117,7 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 		if err != nil {
 			logger.GetLogger().Infof("Failed to update latest block in DB: %v", err)
 		}
-	}
 
-	logger.GetLogger().Infof("Latest block on network %s updated to: %d", string(w.network), latestBlock)
+		logger.GetLogger().Infof("Latest block on network %s updated to: %d", string(w.network), latestBlock)
+	}
 }

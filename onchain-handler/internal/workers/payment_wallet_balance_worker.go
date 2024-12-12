@@ -17,7 +17,7 @@ type paymentWalletBalanceWorker struct {
 	paymentWalletUCase   interfaces.PaymentWalletUCase
 	cacheRepo            infrainterfaces.CacheRepository
 	network              constants.NetworkType
-	rpcURL               string
+	rpcURLs              []string
 	tokenContractAddress string
 	tokenSymbol          string
 	isRunning            bool
@@ -28,14 +28,14 @@ func NewPaymentWalletBalanceWorker(
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	cacheRepo infrainterfaces.CacheRepository,
 	network constants.NetworkType,
-	rpcURL string,
+	rpcURLs []string,
 	tokenContractAddress string,
 	tokenSymbol string,
 ) interfaces.Worker {
 	return &paymentWalletBalanceWorker{
 		paymentWalletUCase:   paymentWalletUCase,
 		network:              network,
-		rpcURL:               rpcURL,
+		rpcURLs:              rpcURLs,
 		tokenContractAddress: tokenContractAddress,
 		tokenSymbol:          tokenSymbol,
 		cacheRepo:            cacheRepo,
@@ -91,14 +91,14 @@ func (w *paymentWalletBalanceWorker) run(ctx context.Context) {
 	}
 
 	// Fetch token balances
-	mapAddressesTokenBalances, err := blockchain.GetTokenBalances(w.rpcURL, w.tokenContractAddress, decimals, addresses)
+	mapAddressesTokenBalances, err := blockchain.GetTokenBalances(w.rpcURLs, w.tokenContractAddress, decimals, addresses)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to get USDT token (%s) balances on %s: %v", w.tokenContractAddress, w.network, err)
 		return
 	}
 
 	// Fetch native token balances
-	mapAddressesNativeTokenBalances, err := blockchain.GetNativeTokenBalances(w.rpcURL, addresses)
+	mapAddressesNativeTokenBalances, err := blockchain.GetNativeTokenBalances(w.rpcURLs, addresses)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to get native token balances on %s: %v", w.network, err)
 		return
