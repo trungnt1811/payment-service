@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -20,15 +19,6 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
-
-// validateURL ensures the URL is valid
-func validateURL(rawURL string) error {
-	_, err := url.ParseRequestURI(rawURL)
-	if err != nil {
-		return fmt.Errorf("invalid URL: %w", err)
-	}
-	return nil
-}
 
 // sendBatchRequestWithRetry sends a batch request with retry logic
 func sendBatchRequestWithRetry(rpcURL string, reqBody []byte) (*http.Response, error) {
@@ -52,14 +42,20 @@ func sendBatchRequestWithRetry(rpcURL string, reqBody []byte) (*http.Response, e
 }
 
 // GetTokenBalances sends a batch request for ERC-20 balances using `eth_call`, splitting into batches if necessary.
-func GetTokenBalances(rpcURL, tokenContractAddress string, tokenDecimals uint8, addresses []string) (map[string]string, error) {
-	// Validate the URL
-	if err := validateURL(rpcURL); err != nil {
-		return nil, err
-	}
-
+// It uses a list of RPC URLs for round-robin retry logic.
+func GetTokenBalances(rpcURLs []string, tokenContractAddress string, tokenDecimals uint8, addresses []string) (map[string]string, error) {
 	// Store the result of balances
 	balances := make(map[string]string)
+
+	// Initialize a counter for round-robin
+	var rpcCounter int
+
+	// Helper to get the next RPC URL in round-robin
+	getNextRPCURL := func() string {
+		url := rpcURLs[rpcCounter%len(rpcURLs)]
+		rpcCounter++
+		return url
+	}
 
 	// Split addresses into batches based on batchSize
 	for start := 0; start < len(addresses); start += constants.BatchSize {
@@ -94,10 +90,26 @@ func GetTokenBalances(rpcURL, tokenContractAddress string, tokenDecimals uint8, 
 			return nil, fmt.Errorf("error marshaling batch request: %v", err)
 		}
 
-		// Send batch request with retry logic
-		resp, err := sendBatchRequestWithRetry(rpcURL, reqBody)
+		// Retry logic for sending batch requests
+		var resp *http.Response
+		for attempt := 0; attempt < constants.MaxRetries; attempt++ {
+			rpcURL := getNextRPCURL()
+			logger.GetLogger().Debugf("Sending batch request to RPC endpoint: %s (attempt %d/%d)", rpcURL, attempt+1, constants.MaxRetries)
+
+			resp, err = sendBatchRequestWithRetry(rpcURL, reqBody)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				break // Success
+			}
+
+			logger.GetLogger().Warnf("Failed to send batch request to RPC endpoint: %s (attempt %d/%d). Error: %v", rpcURL, attempt+1, constants.MaxRetries, err)
+			if resp != nil {
+				resp.Body.Close()
+			}
+			time.Sleep(constants.RetryDelay)
+		}
+
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to send batch request after retries: %v", err)
 		}
 		defer resp.Body.Close()
 
@@ -129,15 +141,20 @@ func GetTokenBalances(rpcURL, tokenContractAddress string, tokenDecimals uint8, 
 	return balances, nil
 }
 
-// GetNativeTokenBalances retrieves the native token balances (e.g., AVAX, BNB) for a list of addresses.
-func GetNativeTokenBalances(rpcURL string, addresses []string) (map[string]string, error) {
-	// Validate the URL
-	if err := validateURL(rpcURL); err != nil {
-		return nil, err
-	}
-
+// GetNativeTokenBalances retrieves the native token balances (e.g., AVAX, BNB) for a list of addresses using round-robin retry logic.
+func GetNativeTokenBalances(rpcURLs, addresses []string) (map[string]string, error) {
 	// Store the result of balances
 	balances := make(map[string]string)
+
+	// Initialize a counter for round-robin
+	var rpcCounter int
+
+	// Helper to get the next RPC URL in round-robin
+	getNextRPCURL := func() string {
+		url := rpcURLs[rpcCounter%len(rpcURLs)]
+		rpcCounter++
+		return url
+	}
 
 	// Split addresses into batches based on batchSize
 	for start := 0; start < len(addresses); start += constants.BatchSize {
@@ -168,10 +185,26 @@ func GetNativeTokenBalances(rpcURL string, addresses []string) (map[string]strin
 			return nil, fmt.Errorf("error marshaling batch request: %v", err)
 		}
 
-		// Send batch request with retry logic
-		resp, err := sendBatchRequestWithRetry(rpcURL, reqBody)
+		// Retry logic for sending batch requests
+		var resp *http.Response
+		for attempt := 0; attempt < constants.MaxRetries; attempt++ {
+			rpcURL := getNextRPCURL()
+			logger.GetLogger().Debugf("Sending batch request to RPC endpoint: %s (attempt %d/%d)", rpcURL, attempt+1, constants.MaxRetries)
+
+			resp, err = sendBatchRequestWithRetry(rpcURL, reqBody)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				break // Success
+			}
+
+			logger.GetLogger().Warnf("Failed to send batch request to RPC endpoint: %s (attempt %d/%d). Error: %v", rpcURL, attempt+1, constants.MaxRetries, err)
+			if resp != nil {
+				resp.Body.Close()
+			}
+			time.Sleep(constants.RetryDelay)
+		}
+
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to send batch request after retries: %v", err)
 		}
 		defer resp.Body.Close()
 
