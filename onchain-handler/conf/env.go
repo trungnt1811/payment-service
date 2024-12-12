@@ -142,27 +142,32 @@ func loadDefaultConfigs() {
 	}
 }
 
-// init initializes and loads the configuration
 func init() {
 	envFile := os.Getenv("ENV_FILE")
 	if envFile == "" {
 		envFile = ".env"
 	}
 
-	// Setup Viper
-	viper.SetConfigFile(envFile)
+	viper.SetConfigFile("./.env")
 	viper.AutomaticEnv()
+
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Load default configurations
+	// Set defaults for critical configurations
 	loadDefaultConfigs()
 
-	// Attempt to read config file
 	if err := viper.ReadInConfig(); err != nil {
-		log.Warn().Msgf("Could not read config file \"%s\": %v. Using defaults and environment variables", envFile, err)
+		viper.SetConfigFile(fmt.Sprintf("../%s", envFile))
+		if err := viper.ReadInConfig(); err != nil {
+			log.Logger.Printf("Error reading config file \"%s\", %v", envFile, err)
+		}
 	}
 
-	// Unmarshal into the Configuration struct
+	err := viper.Unmarshal(&configuration)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("Error reading config file %v", err)
+	}
+
 	if err := viper.Unmarshal(&configuration); err != nil {
 		log.Fatal().Err(err).Msgf("Error unmarshalling configuration %v", err)
 	}
