@@ -44,7 +44,7 @@ type BlockchainConfiguration struct {
 }
 
 type AvaxNetworkConfiguration struct {
-	AvaxRpcUrls                   string `mapstructure:"AVAX_RPC_URLS"`
+	AvaxRpcUrl                    string `mapstructure:"AVAX_RPC_URL"`
 	AvaxChainID                   uint32 `mapstructure:"AVAX_CHAIN_ID"`
 	AvaxStartBlockListener        uint64 `mapstructure:"AVAX_START_BLOCK_LISTENER"`
 	AvaxUSDTContractAddress       string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
@@ -53,7 +53,7 @@ type AvaxNetworkConfiguration struct {
 }
 
 type BscNetworkConfiguration struct {
-	BscRpcUrls                   string `mapstructure:"BSC_RPC_URLS"`
+	BscRpcUrl                    string `mapstructure:"BSC_RPC_URL"`
 	BscChainID                   uint32 `mapstructure:"BSC_CHAIN_ID"`
 	BscStartBlockListener        uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
 	BscUSDTContractAddress       string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
@@ -113,13 +113,13 @@ var defaultConfigurations = map[string]any{
 	"PAYMENT_COVERING":                  1.2,
 	"MASTER_WALLET_ADDRESS":             "",
 	"PRIVATE_KEY_MASTER_WALLET":         "",
-	"AVAX_RPC_URLS":                     "", // Update for multiple RPCs
+	"AVAX_RPC_URL":                      "",
 	"AVAX_CHAIN_ID":                     0,
 	"AVAX_START_BLOCK_LISTENER":         0,
 	"AVAX_USDT_CONTRACT_ADDRESS":        "",
 	"AVAX_LIFE_POINT_CONTRACT_ADDRESS":  "",
 	"AVAX_BULK_SENDER_CONTRACT_ADDRESS": "",
-	"BSC_RPC_URLS":                      "", // Update for multiple RPCs
+	"BSC_RPC_URL":                       "",
 	"BSC_CHAIN_ID":                      0,
 	"BSC_START_BLOCK_LISTENER":          0,
 	"BSC_USDT_CONTRACT_ADDRESS":         "",
@@ -135,64 +135,43 @@ var defaultConfigurations = map[string]any{
 	"PRIVATE_KEY_LP_REVENUE":            "",
 }
 
-// loadDefaultConfigs sets default values for critical configurations
 func loadDefaultConfigs() {
 	for configKey, configValue := range defaultConfigurations {
 		viper.SetDefault(configKey, configValue)
 	}
 }
 
-// init initializes and loads the configuration
 func init() {
 	envFile := os.Getenv("ENV_FILE")
 	if envFile == "" {
 		envFile = ".env"
 	}
 
-	// Setup Viper
-	viper.SetConfigFile(envFile)
+	viper.SetConfigFile("./.env")
 	viper.AutomaticEnv()
+
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Load default configurations
+	// Set defaults for critical configurations
 	loadDefaultConfigs()
 
-	// Attempt to read config file
 	if err := viper.ReadInConfig(); err != nil {
-		log.Warn().Msgf("Could not read config file \"%s\": %v. Using defaults and environment variables", envFile, err)
+		viper.SetConfigFile(fmt.Sprintf("../%s", envFile))
+		if err := viper.ReadInConfig(); err != nil {
+			log.Logger.Printf("Error reading config file \"%s\", %v", envFile, err)
+		}
 	}
 
-	// Unmarshal into the Configuration struct
+	err := viper.Unmarshal(&configuration)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("Error reading config file %v", err)
+	}
+
 	if err := viper.Unmarshal(&configuration); err != nil {
 		log.Fatal().Err(err).Msgf("Error unmarshalling configuration %v", err)
 	}
 
 	log.Info().Msg("Configuration loaded successfully")
-}
-
-func GetRpcUrls(network constants.NetworkType) ([]string, error) {
-	var rpcUrls string
-
-	switch network {
-	case constants.Bsc:
-		rpcUrls = configuration.Blockchain.BscNetwork.BscRpcUrls
-	case constants.AvaxCChain:
-		rpcUrls = configuration.Blockchain.AvaxNetwork.AvaxRpcUrls
-	default:
-		return nil, fmt.Errorf("unsupported network type: %s", network)
-	}
-
-	if rpcUrls == "" {
-		return nil, fmt.Errorf("no RPC URLs configured for network: %s", network)
-	}
-
-	// Split the RPC URLs by comma and trim spaces for each URL
-	urls := strings.Split(rpcUrls, ",")
-	for i, url := range urls {
-		urls[i] = strings.TrimSpace(url)
-	}
-
-	return urls, nil
 }
 
 func GetConfiguration() *Configuration {

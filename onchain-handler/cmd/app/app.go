@@ -52,25 +52,11 @@ func RunApp(config *conf.Configuration) {
 	}
 
 	// Initialize AVAX C-Chain client
-	avaxRpcURLs, err := conf.GetRpcUrls(constants.AvaxCChain)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to get AVAX C-Chain RPC URLs: %v", err)
-	}
-	ethClientAvax, err := eth.NewRoundRobinClient(avaxRpcURLs)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to initialize AVAX C-Chain client: %v", err)
-	}
+	ethClientAvax := eth.NewClient(config.Blockchain.AvaxNetwork.AvaxRpcUrl)
 	defer ethClientAvax.Close()
 
 	// Initialize BSC client
-	bscRpcURLs, err := conf.GetRpcUrls(constants.Bsc)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to get BSC RPC URLs: %v", err)
-	}
-	ethClientBsc, err := eth.NewRoundRobinClient(bscRpcURLs)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to initialize BSC client: %v", err)
-	}
+	ethClientBsc := eth.NewClient(config.Blockchain.BscNetwork.BscRpcUrl)
 	defer ethClientBsc.Close()
 
 	// Initialize caching
@@ -107,7 +93,7 @@ func RunApp(config *conf.Configuration) {
 		ethClientAvax,
 		constants.AvaxCChain,
 		uint64(config.Blockchain.AvaxNetwork.AvaxChainID),
-		avaxRpcURLs,
+		config.Blockchain.AvaxNetwork.AvaxRpcUrl,
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
 		blockstateUcase,
 		tokenTransferUCase,
@@ -124,7 +110,7 @@ func RunApp(config *conf.Configuration) {
 		ethClientBsc,
 		constants.Bsc,
 		uint64(config.Blockchain.BscNetwork.BscChainID),
-		bscRpcURLs,
+		config.Blockchain.BscNetwork.BscRpcUrl,
 		config.Blockchain.BscNetwork.BscUSDTContractAddress,
 		blockstateUcase,
 		tokenTransferUCase,
@@ -273,8 +259,7 @@ func startWorkers(
 	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 	chainID uint64,
-	rpcURLs []string,
-	usdtContractAddress string,
+	rpcURL, usdtContractAddress string,
 	blockstateUcase interfaces.BlockStateUCase,
 	tokenTransferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
@@ -301,7 +286,7 @@ func startWorkers(
 		pkglogger.GetLogger().Fatalf("Failed to get token symbol: %v", err)
 	}
 	paymentWalletBalanceWorker := workers.NewPaymentWalletBalanceWorker(
-		paymentWalletUCase, cacheRepository, network, rpcURLs, usdtContractAddress, tokenSymbol,
+		paymentWalletUCase, cacheRepository, network, rpcURL, usdtContractAddress, tokenSymbol,
 	)
 	go paymentWalletBalanceWorker.Start(ctx)
 
