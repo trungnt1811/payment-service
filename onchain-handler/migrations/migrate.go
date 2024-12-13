@@ -26,17 +26,17 @@ func RunMigrations(db *gorm.DB) error {
 	log.Println("Running migrations...")
 
 	sqlScripts := []string{
-		"migrations/sql/01-onchain_token_transfer.sql",
-		"migrations/sql/02-block_state.sql",
-		"migrations/sql/03-payment_wallet.sql",
-		"migrations/sql/04-payment_order.sql",
-		"migrations/sql/05-payment_event_history.sql",
-		"migrations/sql/06-user_wallet.sql",
-		"migrations/sql/07-payment_wallet_balance.sql",
-		"migrations/sql/08-blockchain_network_metadata.sql",
-		"migrations/sql/09-add_upcoming_block_height_to_payment_order.sql",
-		"migrations/sql/10-add_index_for_from_address_in_payment_event_history.sql",
-		"migrations/sql/11-add-index-created-at-succeeded-at-payment-order.sql",
+		"migrations/sql/01_onchain_token_transfer.sql",
+		"migrations/sql/02_block_state.sql",
+		"migrations/sql/03_payment_wallet.sql",
+		"migrations/sql/04_payment_order.sql",
+		"migrations/sql/05_payment_event_history.sql",
+		"migrations/sql/06_user_wallet.sql",
+		"migrations/sql/07_payment_wallet_balance.sql",
+		"migrations/sql/08_blockchain_network_metadata.sql",
+		"migrations/sql/09_add_upcoming_block_height_to_payment_order.sql",
+		"migrations/sql/10_add_index_for_from_address_in_payment_event_history.sql",
+		"migrations/sql/11_addition_indexes_for_payment_order.sql",
 	}
 
 	for _, script := range sqlScripts {
