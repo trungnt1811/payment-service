@@ -10,7 +10,3 @@ CREATE INDEX IF NOT EXISTS payment_order_status_succeeded_at_idx ON payment_orde
 CREATE INDEX IF NOT EXISTS payment_order_status_expired_time_idx ON payment_order (status, expired_time);
 CREATE INDEX IF NOT EXISTS payment_order_network_created_at_idx ON payment_order (network, created_at);
 CREATE INDEX IF NOT EXISTS payment_order_network_succeeded_at_idx ON payment_order (network, succeeded_at);
-
--- Subquery optimization
-CREATE INDEX IF NOT EXISTS payment_event_history_from_address_idx 
-ON payment_event_history (from_address, payment_order_id);
