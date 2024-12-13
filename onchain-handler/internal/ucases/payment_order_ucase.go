@@ -319,22 +319,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 		if i >= size { // Stop if we reach the requested page size
 			break
 		}
-		orderDTO := dto.PaymentOrderDTOResponse{
-			ID:          order.ID,
-			RequestID:   order.RequestID,
-			Network:     order.Network,
-			Amount:      order.Amount,
-			Symbol:      order.Symbol,
-			BlockHeight: order.BlockHeight,
-			WebhookURL:  order.WebhookURL,
-			Transferred: order.Transferred,
-			CreatedAt:   order.CreatedAt,
-			Status:      order.Status,
-		}
-		if order.Status == constants.Success {
-			orderDTO.SucceededAt = &order.SucceededAt
-		}
-		orderHistoriesDTO = append(orderHistoriesDTO, orderDTO)
+		orderHistoriesDTO = append(orderHistoriesDTO, mapOrderToDTO(order))
 	}
 
 	// Determine if there's a next page
@@ -360,24 +345,7 @@ func (u *paymentOrderUCase) GetPaymentOrderByID(ctx context.Context, id uint64) 
 	}
 
 	// Map the order to a DTO
-	orderDTO := dto.PaymentOrderDTOResponse{
-		ID:                  order.ID,
-		RequestID:           order.RequestID,
-		Network:             order.Network,
-		Amount:              order.Amount,
-		Transferred:         order.Transferred,
-		Status:              order.Status,
-		WebhookURL:          order.WebhookURL,
-		Symbol:              order.Symbol,
-		BlockHeight:         order.BlockHeight,
-		UpcomingBlockHeight: order.UpcomingBlockHeight,
-		PaymentAddress:      &order.Wallet.Address,
-		Expired:             uint64(order.ExpiredTime.Unix()),
-		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
-	}
-	if order.Status == constants.Success {
-		orderDTO.SucceededAt = &order.SucceededAt
-	}
+	orderDTO := mapOrderToDTO(*order)
 
 	return orderDTO, nil
 }
@@ -392,23 +360,7 @@ func (u *paymentOrderUCase) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 	// Map orders to DTOs
 	var orderDTOs []dto.PaymentOrderDTOResponse
 	for _, order := range orders {
-		orderDTO := dto.PaymentOrderDTOResponse{
-			ID:             order.ID,
-			RequestID:      order.RequestID,
-			Network:        order.Network,
-			Amount:         order.Amount,
-			Transferred:    order.Transferred,
-			Status:         order.Status,
-			WebhookURL:     order.WebhookURL,
-			Symbol:         order.Symbol,
-			PaymentAddress: &order.Wallet.Address,
-			Expired:        uint64(order.ExpiredTime.Unix()),
-			EventHistories: mapEventHistoriesToDTO(order.PaymentEventHistories),
-		}
-		if order.Status == constants.Success {
-			orderDTO.SucceededAt = &order.SucceededAt
-		}
-		orderDTOs = append(orderDTOs, orderDTO)
+		orderDTOs = append(orderDTOs, mapOrderToDTO(order))
 	}
 
 	return orderDTOs, nil
@@ -426,7 +378,14 @@ func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	// Map the order to a DTO
-	orderDTO := dto.PaymentOrderDTOResponse{
+	orderDTO := mapOrderToDTO(*order)
+
+	return orderDTO, nil
+}
+
+// Helper function to map PaymentOrder to PaymentOrderDTOResponse
+func mapOrderToDTO(order domain.PaymentOrder) dto.PaymentOrderDTOResponse {
+	dto := dto.PaymentOrderDTOResponse{
 		ID:                  order.ID,
 		RequestID:           order.RequestID,
 		Network:             order.Network,
@@ -438,14 +397,14 @@ func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requ
 		BlockHeight:         order.BlockHeight,
 		UpcomingBlockHeight: order.UpcomingBlockHeight,
 		PaymentAddress:      &order.Wallet.Address,
+		CreatedAt:           order.CreatedAt,
 		Expired:             uint64(order.ExpiredTime.Unix()),
 		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
 	}
 	if order.Status == constants.Success {
-		orderDTO.SucceededAt = &order.SucceededAt
+		dto.SucceededAt = &order.SucceededAt
 	}
-
-	return orderDTO, nil
+	return dto
 }
 
 // Helper function to map PaymentEventHistory to PaymentHistoryDTO
