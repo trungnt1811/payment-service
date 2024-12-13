@@ -38,6 +38,7 @@ func RunMigrations(db *gorm.DB) error {
 		"migrations/sql/10_add_index_for_from_address_in_payment_event_history.sql",
 		"migrations/sql/11_addition_indexes_for_payment_order.sql",
 		"migrations/sql/12_add_vendor_id_to_payment_order.sql",
+		"migrations/sql/13_alter_payment_order_composite_unique.sql",
 	}
 
 	for _, script := range sqlScripts {
