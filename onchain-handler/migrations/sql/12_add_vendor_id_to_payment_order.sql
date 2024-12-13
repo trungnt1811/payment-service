@@ -9,11 +9,11 @@ BEGIN
     ) THEN
         -- Add the column with a temporary default value
         ALTER TABLE payment_order
-        ADD COLUMN vendor_id VARCHAR(33) DEFAULT '97d74e55e41e48afbd29f9553154bf77';
+        ADD COLUMN vendor_id VARCHAR(33) DEFAULT '';
 
         -- Update existing rows to ensure the column has no NULL values
         UPDATE payment_order
-        SET vendor_id = '97d74e55e41e48afbd29f9553154bf77'
+        SET vendor_id = ''
         WHERE vendor_id IS NULL;
 
         -- Alter the column to set it as NOT NULL
