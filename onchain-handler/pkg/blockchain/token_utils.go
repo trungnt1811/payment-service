@@ -311,3 +311,15 @@ func GetTokenDecimalsFromCache(
 
 	return 0, fmt.Errorf("token decimals not found in cache. Token: %s, Network: %s", tokenContractAddress, network)
 }
+
+// GetNativeTokenSymbol returns the symbol of the native token for the given network
+func GetNativeTokenSymbol(network constants.NetworkType) (string, error) {
+	switch network {
+	case constants.AvaxCChain:
+		return "AVAX", nil
+	case constants.Bsc:
+		return "BNB", nil
+	default:
+		return "", fmt.Errorf("unsupported network type: %s", network)
+	}
+}

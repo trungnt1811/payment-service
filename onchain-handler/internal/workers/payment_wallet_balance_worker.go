@@ -10,7 +10,6 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
-	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type paymentWalletBalanceWorker struct {
@@ -121,7 +120,7 @@ func (w *paymentWalletBalanceWorker) run(ctx context.Context) {
 	}
 
 	// Get native token symbol
-	nativeTokenSymbol, err := utils.GetNativeTokenSymbol(w.network)
+	nativeTokenSymbol, err := blockchain.GetNativeTokenSymbol(w.network)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to get native token symbol: %v", err)
 		return

@@ -119,7 +119,7 @@ func (w *paymentWalletWithdrawWorker) run(ctx context.Context) {
 }
 
 func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
-	nativeTokenSymbol, err := utils.GetNativeTokenSymbol(w.network)
+	nativeTokenSymbol, err := blockchain.GetNativeTokenSymbol(w.network)
 	if err != nil {
 		return err
 	}
