@@ -113,13 +113,13 @@ var defaultConfigurations = map[string]any{
 	"PAYMENT_COVERING":                  1.2,
 	"MASTER_WALLET_ADDRESS":             "",
 	"PRIVATE_KEY_MASTER_WALLET":         "",
-	"AVAX_RPC_URLS":                     "", // Update for multiple RPCs
+	"AVAX_RPC_URLS":                     "",
 	"AVAX_CHAIN_ID":                     0,
 	"AVAX_START_BLOCK_LISTENER":         0,
 	"AVAX_USDT_CONTRACT_ADDRESS":        "",
 	"AVAX_LIFE_POINT_CONTRACT_ADDRESS":  "",
 	"AVAX_BULK_SENDER_CONTRACT_ADDRESS": "",
-	"BSC_RPC_URLS":                      "", // Update for multiple RPCs
+	"BSC_RPC_URLS":                      "",
 	"BSC_CHAIN_ID":                      0,
 	"BSC_START_BLOCK_LISTENER":          0,
 	"BSC_USDT_CONTRACT_ADDRESS":         "",
