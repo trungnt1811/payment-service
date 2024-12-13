@@ -34,10 +34,10 @@ const (
 // Global cache key
 const (
 	LatestBlockCacheKey  = "latest_block_"
-	LatestBlockCacheTime = 30 * time.Second
+	LatestBlockCacheTime = 1 * time.Minute
 
 	LastProcessedBlockCacheKey  = "last_processed_block_"
-	LastProcessedBlockCacheTime = 5 * time.Minute
+	LastProcessedBlockCacheTime = 1 * time.Minute
 
 	TokenDecimals = "token_decimals_"
 )
