@@ -52,6 +52,7 @@ func NewPaymentOrderUCase(
 func (u *paymentOrderUCase) CreatePaymentOrders(
 	ctx context.Context,
 	payloads []dto.PaymentOrderPayloadDTO,
+	vendorID string,
 	expiredOrderTime time.Duration,
 ) ([]dto.CreatedPaymentOrderDTO, error) {
 	// Group payloads by network
@@ -113,7 +114,7 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 			}
 
 			// Save the created payment orders to the database within the transaction
-			orders, err = u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders)
+			orders, err = u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders, vendorID)
 			if err != nil {
 				return fmt.Errorf("failed to create payment orders: %w", err)
 			}
@@ -293,6 +294,7 @@ func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, o
 
 func (u *paymentOrderUCase) GetPaymentOrders(
 	ctx context.Context,
+	vendorID string,
 	requestIDs []string,
 	status, orderBy, fromAddress, network *string,
 	orderDirection constants.OrderDirection,
@@ -306,7 +308,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 
 	// Fetch the orders with event histories from the repository
 	orders, err := u.paymentOrderRepository.GetPaymentOrders(
-		ctx, limit, offset, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField,
+		ctx, limit, offset, vendorID, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField,
 	)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err

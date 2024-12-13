@@ -24,10 +24,15 @@ func NewPaymentOrderRepository(db *gorm.DB) *PaymentOrderRepository {
 	}
 }
 
-func (r *PaymentOrderRepository) CreatePaymentOrders(tx *gorm.DB, ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error) {
+func (r *PaymentOrderRepository) CreatePaymentOrders(tx *gorm.DB, ctx context.Context, orders []domain.PaymentOrder, vendorID string) ([]domain.PaymentOrder, error) {
 	// Validate input
 	if len(orders) == 0 {
 		return nil, fmt.Errorf("no orders to create")
+	}
+
+	// Add the vendorID to each order
+	for i := range orders {
+		orders[i].VendorID = vendorID
 	}
 
 	// Insert the payment orders in the current transaction
@@ -37,7 +42,7 @@ func (r *PaymentOrderRepository) CreatePaymentOrders(tx *gorm.DB, ctx context.Co
 	}
 
 	// Log the success
-	logger.GetLogger().Infof("Successfully created %d payment orders", len(orders))
+	logger.GetLogger().Infof("Successfully created %d payment orders for vendor: %s", len(orders), vendorID)
 	return orders, nil
 }
 
@@ -340,6 +345,7 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 func (r *PaymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
+	vendorID string,
 	requestIDs []string,
 	status, orderBy, fromAddress, network *string,
 	orderDirection constants.OrderDirection,
@@ -359,6 +365,7 @@ func (r *PaymentOrderRepository) GetPaymentOrders(
 	}
 
 	query := r.db.WithContext(ctx).
+		Where("vendor_id = ?", vendorID). // Always filter by vendorID
 		Limit(limit).
 		Offset(offset).
 		Order(fmt.Sprintf("%s %s", orderColumn, orderDir))

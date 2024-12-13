@@ -12,7 +12,11 @@ import (
 )
 
 type PaymentOrderRepository interface {
-	CreatePaymentOrders(tx *gorm.DB, ctx context.Context, orders []domain.PaymentOrder) ([]domain.PaymentOrder, error)
+	CreatePaymentOrders(tx *gorm.DB,
+		ctx context.Context,
+		orders []domain.PaymentOrder,
+		vendorID string,
+	) ([]domain.PaymentOrder, error)
 	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
 	UpdateOrderNetwork(ctx context.Context, requestID, network string) error
@@ -24,6 +28,7 @@ type PaymentOrderRepository interface {
 	GetPaymentOrders(
 		ctx context.Context,
 		limit, offset int,
+		vendorID string,
 		requestIDs []string,
 		status, orderBy, fromAddress, network *string,
 		orderDirection constants.OrderDirection,
@@ -40,6 +45,7 @@ type PaymentOrderUCase interface {
 	CreatePaymentOrders(
 		ctx context.Context,
 		payloads []dto.PaymentOrderPayloadDTO,
+		vendorID string,
 		expiredOrderTime time.Duration,
 	) ([]dto.CreatedPaymentOrderDTO, error)
 	UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error)
@@ -57,6 +63,7 @@ type PaymentOrderUCase interface {
 	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
 	GetPaymentOrders(
 		ctx context.Context,
+		vendorID string,
 		requestIDs []string,
 		status, orderBy, fromAddress, network *string,
 		orderDirection constants.OrderDirection,

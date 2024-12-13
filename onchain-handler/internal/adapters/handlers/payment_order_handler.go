@@ -50,6 +50,9 @@ func NewPaymentOrderHandler(
 func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	var req []dto.PaymentOrderPayloadDTO
 
+	// Get the Vendor-Id from the header
+	vendorID := ctx.GetHeader("Vendor-Id")
+
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.GetLogger().Errorf("Invalid payload: %v", err)
@@ -72,7 +75,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	}
 
 	// Call the use case to create the payment orders
-	response, err := h.ucase.CreatePaymentOrders(ctx, req, h.config.GetExpiredOrderTime())
+	response, err := h.ucase.CreatePaymentOrders(ctx, req, vendorID, h.config.GetExpiredOrderTime())
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to create payment orders: %v", err)
 		if postgresql.IsUniqueViolation(err) {
@@ -112,6 +115,9 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders [get]
 func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
+	// Get the Vendor-Id from the header
+	vendorID := ctx.GetHeader("Vendor-Id")
+
 	// Parse pagination parameters
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
@@ -198,7 +204,7 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 
 	// Call the use case to get payment orders
 	response, err := h.ucase.GetPaymentOrders(
-		ctx, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, &timeFilterField, page, size,
+		ctx, vendorID, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, &timeFilterField, page, size,
 	)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment orders: %v", err)

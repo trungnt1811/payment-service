@@ -46,14 +46,20 @@ func (c *paymentOrderCache) CreatePaymentOrders(
 	tx *gorm.DB,
 	ctx context.Context,
 	orders []domain.PaymentOrder,
+	vendorID string,
 ) ([]domain.PaymentOrder, error) {
 	// Validate input
 	if len(orders) == 0 {
 		return nil, fmt.Errorf("no orders to create")
 	}
 
+	// Add the vendorID to each order before creation
+	for i := range orders {
+		orders[i].VendorID = vendorID
+	}
+
 	// Create orders in the repository (DB)
-	createdOrders, err := c.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders)
+	createdOrders, err := c.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders, vendorID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payment orders in repository: %w", err)
 	}
@@ -379,17 +385,18 @@ func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]
 func (c *paymentOrderCache) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
+	vendorID string,
 	requestIDs []string,
 	status, orderBy, fromAddress, network *string,
 	orderDirection constants.OrderDirection,
 	startTime, endTime *time.Time,
 	timeFilterField *string,
 ) ([]domain.PaymentOrder, error) {
-	// Generate the cache key based on input parameters, including fromAddress
+	// Generate a unique cache key based on input parameters
 	requestIDsKey := strings.Join(requestIDs, ",")
 	cacheKey := &caching.Keyer{
-		Raw: fmt.Sprintf("%sGetPaymentOrders_limit:%d_offset:%d_requestIDs:%s_status:%v_orderBy:%v_fromAddress:%v_orderDirection:%v",
-			keyPrefixPaymentOrder, limit, offset, requestIDsKey, status, orderBy, fromAddress, orderDirection),
+		Raw: fmt.Sprintf("%sGetPaymentOrders_vendorID:%s_limit:%d_offset:%d_requestIDs:%s_status:%v_orderBy:%v_fromAddress:%v_network:%v_orderDirection:%v_startTime:%v_endTime:%v_timeFilterField:%v",
+			keyPrefixPaymentOrder, vendorID, limit, offset, requestIDsKey, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField),
 	}
 
 	// Attempt to retrieve the data from the cache
@@ -401,7 +408,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 
 	// Cache miss: fetch from the repository (DB)
 	paymentOrders, err := c.paymentOrderRepository.GetPaymentOrders(
-		ctx, limit, offset, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField,
+		ctx, limit, offset, vendorID, requestIDs, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch payment orders from repository: %w", err)
@@ -409,7 +416,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 
 	// Store the fetched data in the cache for future use
 	if cacheErr := c.cache.SaveItem(cacheKey, paymentOrders, defaultCacheTimePaymentOrder); cacheErr != nil {
-		logger.GetLogger().Warnf("Failed to cache payment orders for limit %d, offset %d: %v", limit, offset, cacheErr)
+		logger.GetLogger().Warnf("Failed to cache payment orders for vendorID %s, limit %d, offset %d: %v", vendorID, limit, offset, cacheErr)
 	}
 
 	return paymentOrders, nil

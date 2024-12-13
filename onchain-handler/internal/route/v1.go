@@ -10,6 +10,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/internal/adapters/handlers"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/middleware"
 )
 
 func RegisterRoutes(
@@ -33,8 +34,8 @@ func RegisterRoutes(
 
 	// SECTION: payment order
 	paymentOrderHandler := handlers.NewPaymentOrderHandler(paymentOrderUCase, config)
-	appRouter.POST("/payment-orders", paymentOrderHandler.CreateOrders)
-	appRouter.GET("/payment-orders", paymentOrderHandler.GetPaymentOrders)
+	appRouter.POST("/payment-orders", middleware.ValidateVendorID(), paymentOrderHandler.CreateOrders)
+	appRouter.GET("/payment-orders", middleware.ValidateVendorID(), paymentOrderHandler.GetPaymentOrders)
 	appRouter.GET("/payment-order/:request_id", paymentOrderHandler.GetPaymentOrderByRequestID)
 	appRouter.PUT("/payment-order/network", paymentOrderHandler.UpdatePaymentOrderNetwork)
 

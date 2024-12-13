@@ -9,6 +9,7 @@ import (
 type PaymentOrder struct {
 	ID                    uint64                `json:"id" gorm:"primaryKey;autoIncrement"`
 	RequestID             string                `json:"request_id"`
+	VendorID              string                `json:"vendor_id"`
 	WalletID              uint64                `json:"wallet_id"`
 	Wallet                PaymentWallet         `gorm:"foreignKey:WalletID"`
 	BlockHeight           uint64                `json:"block_height"`
