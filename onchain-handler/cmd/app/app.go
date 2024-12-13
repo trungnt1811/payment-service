@@ -378,7 +378,9 @@ func startServer(
 		})
 	})
 
-	r.GET("/swagger/*any", ginswagger.WrapHandler(swaggerfiles.Handler))
+	if config.Env != "PROD" {
+		r.GET("/swagger/*any", ginswagger.WrapHandler(swaggerfiles.Handler))
+	}
 
 	go func() {
 		if err := r.Run(fmt.Sprintf("0.0.0.0:%v", config.AppPort)); err != nil {
