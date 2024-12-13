@@ -148,8 +148,13 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	status := utils.ParseOptionalQuery(ctx.Query("status"))
 	fromAddress := utils.ParseOptionalQuery(ctx.Query("from_address"))
 	if fromAddress != nil && !utils.IsValidEthAddress(*fromAddress) {
-		logger.GetLogger().Errorf("Invalid from_address: %s", *fromAddress)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid from_address", nil)
+		emptyResponse := dto.PaginationDTOResponse{
+			Page:     page,
+			Size:     size,
+			NextPage: page,
+			Data:     nil,
+		}
+		ctx.JSON(http.StatusOK, emptyResponse)
 		return
 	}
 	network := utils.ParseOptionalQuery(ctx.Query("network"))
