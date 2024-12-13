@@ -263,6 +263,11 @@ paths:
       description: This endpoint retrieves payment orders based on optional filters
         such as status, from_address, network, and sorting options.
       parameters:
+      - description: Vendor ID for authentication
+        in: header
+        name: Vendor-Id
+        required: true
+        type: string
       - description: Page number, default is 1
         in: query
         name: page
@@ -331,6 +336,11 @@ paths:
       - application/json
       description: This endpoint allows creating payment orders for users.
       parameters:
+      - description: Vendor ID for authentication
+        in: header
+        name: Vendor-Id
+        required: true
+        type: string
       - description: List of payment orders. Each order must include request id, amount,
           symbol (USDT) and network (AVAX C-Chain or BSC).
         in: body

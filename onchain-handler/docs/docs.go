@@ -159,6 +159,13 @@ const docTemplate = `{
                 "summary": "Retrieve payment orders",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Vendor ID for authentication",
+                        "name": "Vendor-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number, default is 1",
                         "name": "page",
@@ -257,6 +264,13 @@ const docTemplate = `{
                 ],
                 "summary": "Create payment orders",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vendor ID for authentication",
+                        "name": "Vendor-Id",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC).",
                         "name": "payload",

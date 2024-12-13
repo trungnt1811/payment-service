@@ -41,6 +41,7 @@ func NewPaymentOrderHandler(
 // @Tags payment-order
 // @Accept json
 // @Produce json
+// @Param Vendor-Id header string true "Vendor ID for authentication"
 // @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC)."
 // @Success 201 {object} map[string]interface{} "Success created: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}"
 // @Failure 400 {object} response.GeneralError "Invalid payload"
@@ -100,6 +101,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Tags payment-order
 // @Accept json
 // @Produce json
+// @Param Vendor-Id header string true "Vendor ID for authentication"
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
 // @Param request_ids query []string false "List of request IDs to filter (maximum 50)"
