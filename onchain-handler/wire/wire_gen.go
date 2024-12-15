@@ -31,7 +31,8 @@ func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo interfaces2.CacheReposit
 	interfacesPaymentOrderRepository := repositories.NewPaymentOrderCacheRepository(paymentOrderRepository, cacheRepo, config)
 	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
 	blockStateRepository := repositories.NewBlockstateRepository(db)
-	paymentOrderUCase := ucases.NewPaymentOrderUCase(db, interfacesPaymentOrderRepository, paymentWalletRepository, blockStateRepository, cacheRepo, config)
+	paymentStatisticsRepository := repositories.NewPaymentStatisticsRepository(db)
+	paymentOrderUCase := ucases.NewPaymentOrderUCase(db, interfacesPaymentOrderRepository, paymentWalletRepository, blockStateRepository, paymentStatisticsRepository, cacheRepo, config)
 	return paymentOrderUCase
 }
 
@@ -68,12 +69,18 @@ func InitializeNetworkMetadataUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepo
 	return networkMetadataUCase
 }
 
+func InitializePaymentStatisticsUCase(db *gorm.DB) interfaces.PaymentStatisticsUCase {
+	paymentStatisticsRepository := repositories.NewPaymentStatisticsRepository(db)
+	paymentStatisticsUCase := ucases.NewPaymentStatisticsCase(paymentStatisticsRepository)
+	return paymentStatisticsUCase
+}
+
 // wire.go:
 
 // UCase set
 var blockStateUCaseSet = wire.NewSet(repositories.NewBlockstateRepository, ucases.NewBlockStateUCase)
 
-var paymentOrderUCaseSet = wire.NewSet(repositories.NewPaymentOrderRepository, repositories.NewPaymentOrderCacheRepository, repositories.NewPaymentWalletRepository, repositories.NewBlockstateRepository, ucases.NewPaymentOrderUCase)
+var paymentOrderUCaseSet = wire.NewSet(repositories.NewPaymentOrderRepository, repositories.NewPaymentOrderCacheRepository, repositories.NewPaymentWalletRepository, repositories.NewBlockstateRepository, repositories.NewPaymentStatisticsRepository, ucases.NewPaymentOrderUCase)
 
 var tokenTransferUCaseSet = wire.NewSet(repositories.NewTokenTransferRepository, ucases.NewTokenTransferUCase)
 
@@ -84,3 +91,5 @@ var paymentWalletUCaseSet = wire.NewSet(repositories.NewPaymentWalletRepository,
 var userWalletUCaseSet = wire.NewSet(repositories.NewUserWalletRepository, ucases.NewUserWalletUCase)
 
 var networkMetadataUCaseSet = wire.NewSet(repositories.NewNetworkMetadataRepository, repositories.NewNetworkMetadataCacheRepository, ucases.NewNetworkMetadataUCase)
+
+var paymentStatisticsUCaseSet = wire.NewSet(repositories.NewPaymentStatisticsRepository, ucases.NewPaymentStatisticsCase)

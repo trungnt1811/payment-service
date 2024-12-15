@@ -14,3 +14,22 @@ CREATE TABLE IF NOT EXISTS payment_event_history (
 
 CREATE INDEX IF NOT EXISTS payment_event_history_payment_order_id_idx ON payment_event_history (payment_order_id);
 CREATE INDEX IF NOT EXISTS payment_event_history_from_address_idx ON payment_event_history (from_address, payment_order_id);
+
+-- Add the updated_at trigger for the payment_event_history table
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'update_payment_event_history_updated_at'
+          AND tgrelid = 'payment_event_history'::regclass
+    ) THEN
+        DROP TRIGGER update_payment_event_history_updated_at ON payment_event_history;
+    END IF;
+
+    CREATE TRIGGER update_payment_event_history_updated_at
+    BEFORE UPDATE ON payment_event_history
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+END;
+$$;

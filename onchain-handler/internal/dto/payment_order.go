@@ -5,6 +5,7 @@ import "time"
 type PaymentOrderDTO struct {
 	ID                  uint64           `json:"id"`
 	RequestID           string           `json:"request_id"`
+	VendorID            string           `json:"vendor_id"`
 	PaymentAddress      string           `json:"payment_address"`
 	Wallet              PaymentWalletDTO `json:"wallet"`
 	BlockHeight         uint64           `json:"block_height"`

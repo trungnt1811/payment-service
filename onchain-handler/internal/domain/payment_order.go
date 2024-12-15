@@ -35,6 +35,7 @@ func (m *PaymentOrder) ToDto() dto.PaymentOrderDTO {
 	return dto.PaymentOrderDTO{
 		ID:                  m.ID,
 		RequestID:           m.RequestID,
+		VendorID:            m.VendorID,
 		PaymentAddress:      m.Wallet.Address,
 		Wallet:              m.Wallet.ToDto(),
 		BlockHeight:         m.BlockHeight,

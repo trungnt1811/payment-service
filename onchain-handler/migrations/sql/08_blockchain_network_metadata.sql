@@ -30,3 +30,22 @@ BEGIN
 END;    
 $$;
 
+-- Add the updated_at trigger for the blockchain_network_metadata table
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'update_blockchain_network_metadata_updated_at'
+          AND tgrelid = 'blockchain_network_metadata'::regclass
+    ) THEN
+        DROP TRIGGER update_blockchain_network_metadata_updated_at ON blockchain_network_metadata;
+    END IF;
+
+    CREATE TRIGGER update_blockchain_network_metadata_updated_at
+    BEFORE UPDATE ON blockchain_network_metadata
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+END;
+$$;
+

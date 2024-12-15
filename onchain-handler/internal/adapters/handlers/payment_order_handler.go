@@ -181,7 +181,6 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid time_filter_field. Use 'created_at' or 'succeeded_at'.", nil)
 		return
 	}
-
 	startTime, err := utils.ParseOptionalUnixTimestamp(ctx.Query("start_time"))
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid start_time: %v", err)
@@ -192,6 +191,10 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid end_time: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid end_time. Provide a valid UNIX timestamp.", err)
+		return
+	}
+	if startTime != nil && endTime != nil && startTime.After(*endTime) {
+		httpresponse.Error(ctx, http.StatusBadRequest, "start_time must be earlier than end_time", nil)
 		return
 	}
 

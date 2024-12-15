@@ -16,15 +16,17 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type paymentOrderUCase struct {
-	db                      *gorm.DB                           // Gorm DB instance for transaction handling
-	paymentOrderRepository  interfaces.PaymentOrderRepository  // Repository to interact with payment orders
-	paymentWalletRepository interfaces.PaymentWalletRepository // Repository to interact with payment wallets
-	blockStateRepo          interfaces.BlockStateRepository    // Repository to fetch the latest block state
-	cacheRepo               infrainterfaces.CacheRepository    // Cache repository to retrieve and store block information
-	config                  *conf.Configuration
+	db                          *gorm.DB                               // Gorm DB instance for transaction handling
+	paymentOrderRepository      interfaces.PaymentOrderRepository      // Repository to interact with payment orders
+	paymentWalletRepository     interfaces.PaymentWalletRepository     // Repository to interact with payment wallets
+	blockStateRepo              interfaces.BlockStateRepository        // Repository to fetch the latest block state
+	paymentStatisticsRepository interfaces.PaymentStatisticsRepository // Repository to interact with payment statistics
+	cacheRepo                   infrainterfaces.CacheRepository        // Cache repository to retrieve and store block information
+	config                      *conf.Configuration
 }
 
 // NewPaymentOrderUCase constructs a new paymentOrderUCase with the provided dependencies.
@@ -33,16 +35,18 @@ func NewPaymentOrderUCase(
 	paymentOrderRepository interfaces.PaymentOrderRepository,
 	paymentWalletRepository interfaces.PaymentWalletRepository,
 	blockStateRepo interfaces.BlockStateRepository,
+	paymentStatisticsRepository interfaces.PaymentStatisticsRepository,
 	cacheRepo infrainterfaces.CacheRepository,
 	config *conf.Configuration,
 ) interfaces.PaymentOrderUCase {
 	return &paymentOrderUCase{
-		db:                      db,
-		paymentOrderRepository:  paymentOrderRepository,
-		paymentWalletRepository: paymentWalletRepository,
-		blockStateRepo:          blockStateRepo,
-		cacheRepo:               cacheRepo,
-		config:                  config,
+		db:                          db,
+		paymentOrderRepository:      paymentOrderRepository,
+		paymentWalletRepository:     paymentWalletRepository,
+		blockStateRepo:              blockStateRepo,
+		paymentStatisticsRepository: paymentStatisticsRepository,
+		cacheRepo:                   cacheRepo,
+		config:                      config,
 	}
 }
 
@@ -60,85 +64,127 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 	for _, payload := range payloads {
 		networkPayloads[payload.Network] = append(networkPayloads[payload.Network], payload)
 	}
-
 	var response []dto.CreatedPaymentOrderDTO
 
 	// Process each network's payloads
 	for network, groupedPayloads := range networkPayloads {
-		cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network} // Cache key for the latest block
-
-		// Try to retrieve the latest block from cache
+		// Retrieve the latest block
+		cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network}
 		var latestBlock uint64
+
+		// Attempt to retrieve the latest block from cache
 		err := u.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
 		if err != nil {
-			// If cache is empty, load from the database
+			// If not in cache, retrieve from the database
 			latestBlock, err = u.blockStateRepo.GetLatestBlock(ctx, network)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve latest block from database: %w", err)
 			}
 		}
 
-		// Track claimed wallet IDs to roll back if needed
-		var claimedWalletIDs []uint64
-
-		// Begin a new transaction
-		err = u.db.Transaction(func(tx *gorm.DB) error {
-			var orders []domain.PaymentOrder
-
-			// Convert each payload to a PaymentOrder model, associating it with the latest block
-			for _, payload := range groupedPayloads {
-				// Try to claim an available wallet
-				assignWallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(tx, ctx)
-				if err != nil {
-					return fmt.Errorf("failed to claim available wallet: %w", err)
-				}
-
-				// Track claimed wallet ID for potential rollback
-				claimedWalletIDs = append(claimedWalletIDs, assignWallet.ID)
-
-				// Create the PaymentOrder model for the current payload
-				order := domain.PaymentOrder{
-					Amount:      payload.Amount,
-					WalletID:    assignWallet.ID, // Associate the order with the claimed wallet
-					Wallet:      *assignWallet,
-					Transferred: "0", // Default transferred status
-					RequestID:   payload.RequestID,
-					Symbol:      payload.Symbol,
-					Network:     payload.Network,
-					WebhookURL:  payload.WebhookURL,
-					BlockHeight: latestBlock,       // Use the latest block height
-					Status:      constants.Pending, // Set order status to pending
-					ExpiredTime: time.Now().UTC().Add(expiredOrderTime),
-				}
-				orders = append(orders, order)
-			}
-
-			// Save the created payment orders to the database within the transaction
-			orders, err = u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders, vendorID)
-			if err != nil {
-				return fmt.Errorf("failed to create payment orders: %w", err)
-			}
-
-			// Mappping order id and sign payload
-			responseWithSignature, err := u.mapOrderIDsAndSignPayloads(orders)
-			if err != nil {
-				return err
-			}
-			response = append(response, responseWithSignature...)
-			return nil
-		})
-		// Check if there was an error within the transaction
+		// Begin transaction and process orders
+		err = u.processOrderPayloads(ctx, groupedPayloads, latestBlock, vendorID, expiredOrderTime, &response)
 		if err != nil {
-			// Rollback claimed wallets
-			rollbackErr := u.paymentWalletRepository.ReleaseWalletsByIDs(ctx, claimedWalletIDs)
-			if rollbackErr != nil {
-				return nil, fmt.Errorf("transaction failed, and rollback also failed: %w", rollbackErr)
-			}
+			return nil, err
+		}
+
+		// Update payment statistics
+		err = u.updatePaymentStatistics(ctx, groupedPayloads, vendorID)
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	return response, nil
+}
+
+func (u *paymentOrderUCase) updatePaymentStatistics(
+	ctx context.Context,
+	payloads []dto.PaymentOrderPayloadDTO,
+	vendorID string,
+) error {
+	granularity := string(constants.Daily)
+	periodStart := utils.GetPeriodStart(granularity, time.Now())
+
+	for _, payload := range payloads {
+		err := u.paymentStatisticsRepository.IncrementStatistics(
+			ctx,
+			granularity,
+			periodStart.UTC(),
+			&payload.Amount,
+			nil, // Transferred value is not updated here
+			payload.Symbol,
+			vendorID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to increment payment statistics: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (u *paymentOrderUCase) processOrderPayloads(
+	ctx context.Context,
+	payloads []dto.PaymentOrderPayloadDTO,
+	latestBlock uint64,
+	vendorID string,
+	expiredOrderTime time.Duration,
+	response *[]dto.CreatedPaymentOrderDTO,
+) error {
+	var claimedWalletIDs []uint64
+
+	// Begin transaction
+	return u.db.Transaction(func(tx *gorm.DB) error {
+		var orders []domain.PaymentOrder
+
+		for _, payload := range payloads {
+			// Claim an available wallet
+			wallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(tx, ctx)
+			if err != nil {
+				return fmt.Errorf("failed to claim available wallet: %w", err)
+			}
+
+			// Track claimed wallet IDs
+			claimedWalletIDs = append(claimedWalletIDs, wallet.ID)
+
+			// Create a new payment order
+			order := domain.PaymentOrder{
+				Amount:      payload.Amount,
+				WalletID:    wallet.ID,
+				Wallet:      *wallet,
+				Transferred: "0",
+				RequestID:   payload.RequestID,
+				Symbol:      payload.Symbol,
+				Network:     payload.Network,
+				WebhookURL:  payload.WebhookURL,
+				BlockHeight: latestBlock,
+				Status:      constants.Pending,
+				ExpiredTime: time.Now().UTC().Add(expiredOrderTime),
+			}
+			orders = append(orders, order)
+		}
+
+		// Save orders to the database
+		createdOrders, err := u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders, vendorID)
+		if err != nil {
+			// Rollback claimed wallets if order creation fails
+			rollbackErr := u.paymentWalletRepository.ReleaseWalletsByIDs(ctx, claimedWalletIDs)
+			if rollbackErr != nil {
+				return fmt.Errorf("failed to rollback wallets: %w", rollbackErr)
+			}
+			return fmt.Errorf("failed to create payment orders: %w", err)
+		}
+
+		// Map order IDs and sign payloads
+		responseWithSignature, err := u.mapOrderIDsAndSignPayloads(createdOrders)
+		if err != nil {
+			return fmt.Errorf("failed to map order IDs and sign payloads: %w", err)
+		}
+
+		*response = append(*response, responseWithSignature...)
+		return nil
+	})
 }
 
 // mapOrderIDsAndSignPayloads maps order IDs and signs payloads.

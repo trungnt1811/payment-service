@@ -31,6 +31,7 @@ type tokenTransferListener struct {
 	baseEventListener        interfaces.BaseEventListener
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
+	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
 	network                  constants.NetworkType
 	tokenContractAddress     string
 	tokenDecimals            uint8
@@ -47,6 +48,7 @@ func NewTokenTransferListener(
 	baseEventListener interfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
+	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	network constants.NetworkType,
 	tokenContractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
@@ -68,6 +70,7 @@ func NewTokenTransferListener(
 		baseEventListener:        baseEventListener,
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
+		paymentStatisticsUCase:   paymentStatisticsUCase,
 		network:                  network,
 		tokenContractAddress:     tokenContractAddress,
 		tokenDecimals:            decimals,
@@ -232,6 +235,23 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 				logger.GetLogger().Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
 			}
+			// Increment payment statistics
+			granularity := string(constants.Daily)
+			for _, payload := range payloads {
+				if err := listener.paymentStatisticsUCase.IncrementStatistics(
+					listener.ctx,
+					granularity,
+					utils.GetPeriodStart(granularity, time.Now()),
+					nil,
+					&payload.Amount,
+					payload.TokenSymbol,
+					order.VendorID,
+				); err != nil {
+					logger.GetLogger().Errorf("Failed to increment payment statistics on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+					continue
+				}
+			}
+
 		}
 
 		// Get the processed order
@@ -254,7 +274,10 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 // processOrderPayment handles the payment for an order based on the transfer event details.
 // It updates the order status and wallet usage based on the payment amount.
 func (listener *tokenTransferListener) processOrderPayment(
-	itemIndex int, order dto.PaymentOrderDTO, transferEvent blockchain.TransferEvent, blockHeight uint64,
+	itemIndex int,
+	order dto.PaymentOrderDTO,
+	transferEvent blockchain.TransferEvent,
+	blockHeight uint64,
 ) (bool, error) {
 	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, listener.tokenDecimals)
 	if err != nil {

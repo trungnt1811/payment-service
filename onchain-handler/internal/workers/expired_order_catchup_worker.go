@@ -29,6 +29,7 @@ type expiredOrderCatchupWorker struct {
 	config                   *conf.Configuration
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
+	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
 	cacheRepo                infrainterfaces.CacheRepository
 	tokenContractAddress     string
 	tokenDecimals            uint8
@@ -44,6 +45,7 @@ func NewExpiredOrderCatchupWorker(
 	config *conf.Configuration,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
+	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	cacheRepo infrainterfaces.CacheRepository,
 	tokenContractAddress string,
 	ethClient pkginterfaces.Client,
@@ -65,6 +67,7 @@ func NewExpiredOrderCatchupWorker(
 		config:                   config,
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
+		paymentStatisticsUCase:   paymentStatisticsUCase,
 		cacheRepo:                cacheRepo,
 		tokenContractAddress:     tokenContractAddress,
 		tokenDecimals:            decimals,
@@ -261,8 +264,15 @@ func (w *expiredOrderCatchupWorker) processLog(
 			continue
 		}
 
+		// Convert the transfer event value to ETH
+		transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), w.tokenDecimals)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
+			return err
+		}
+
 		// Create payment event history for the order
-		if err := w.createPaymentEventHistory(ctx, order, transferEvent, tokenSymbol, vLog.Address.Hex(), vLog.TxHash.Hex()); err != nil {
+		if err := w.createPaymentEventHistory(ctx, order, transferEventValueInEth, transferEvent, tokenSymbol, vLog.Address.Hex(), vLog.TxHash.Hex()); err != nil {
 			return fmt.Errorf("failed to create payment event history for order ID %d on network %s: %w", order.ID, string(w.network), err)
 		}
 		logger.GetLogger().Infof("Successfully processed order ID: %d on network %s with transferred amount: %s", order.ID, string(w.network), transferEvent.Value.String())
@@ -271,6 +281,20 @@ func (w *expiredOrderCatchupWorker) processLog(
 		paymentOrderDTO, err := w.paymentOrderUCase.GetPaymentOrderByID(ctx, order.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get payment order by ID %d on network %s: %w", order.ID, string(w.network), err)
+		}
+
+		// Increment payment statistics
+		granularity := string(constants.Daily)
+		if err = w.paymentStatisticsUCase.IncrementStatistics(
+			ctx,
+			granularity,
+			utils.GetPeriodStart(granularity, time.Now()),
+			nil,
+			&transferEventValueInEth,
+			order.Symbol,
+			order.VendorID,
+		); err != nil {
+			logger.GetLogger().Errorf("Failed to increment payment statistics for order ID %d on network %s: %v", order.ID, string(w.network), err)
 		}
 
 		// Send webhook if webhook URL is present
@@ -303,15 +327,10 @@ func (w *expiredOrderCatchupWorker) isMatchingOrder(order dto.PaymentOrderDTO, t
 func (w *expiredOrderCatchupWorker) createPaymentEventHistory(
 	ctx context.Context,
 	order dto.PaymentOrderDTO,
+	transferEventValueInEth string,
 	transferEvent blockchain.TransferEvent,
 	tokenSymbol, contractAddress, txHash string,
 ) error {
-	transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), w.tokenDecimals)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
-		return err
-	}
-
 	payloads := []dto.PaymentEventPayloadDTO{
 		{
 			PaymentOrderID:  order.ID,

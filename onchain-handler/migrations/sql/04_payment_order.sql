@@ -22,3 +22,23 @@ CREATE TABLE IF NOT EXISTS payment_order (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create a trigger for the payment_order table to update 'updated_at'
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'update_payment_order_updated_at'
+          AND tgrelid = 'payment_order'::regclass
+    ) THEN
+        DROP TRIGGER update_payment_order_updated_at ON payment_order;
+    END IF;
+
+    CREATE TRIGGER update_payment_order_updated_at
+    BEFORE UPDATE ON payment_order
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+END;
+$$;
+

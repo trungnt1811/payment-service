@@ -313,6 +313,74 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/payment-statistics": {
+            "get": {
+                "description": "This endpoint retrieves payment statistics based on granularity and time range.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-statistics"
+                ],
+                "summary": "Retrieve payment statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vendor ID for authentication",
+                        "name": "Vendor-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Granularity (DAILY, WEEKLY, MONTHLY, YEARLY)",
+                        "name": "granularity",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start time in UNIX timestamp format",
+                        "name": "start_time",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End time in UNIX timestamp format",
+                        "name": "end_time",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment statistics retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PaymentStatistics"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-wallet/{address}": {
             "get": {
                 "description": "Retrieves a payment wallet by its address.",
@@ -785,6 +853,32 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentStatistics": {
+            "type": "object",
+            "properties": {
+                "granularity": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "period_start": {
+                    "type": "integer"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "string"
+                },
+                "total_orders": {
+                    "type": "integer"
+                },
+                "total_transferred": {
                     "type": "string"
                 }
             }

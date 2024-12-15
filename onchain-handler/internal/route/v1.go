@@ -23,6 +23,7 @@ func RegisterRoutes(
 	userWalletUCase interfaces.UserWalletUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	networkMetadataUCase interfaces.NetworkMetadataUCase,
+	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 ) {
 	v1 := r.Group("/api/v1")
 	appRouter := v1.Group("")
@@ -52,4 +53,8 @@ func RegisterRoutes(
 	// SECTION: metadata
 	metadataHandler := handlers.NewMetadataHandler(networkMetadataUCase)
 	appRouter.GET("/metadata/networks", metadataHandler.GetNetworksMetadata)
+
+	// SECTION: payment statistics
+	paymentStatisticsHandler := handlers.NewPaymentStatisticsHandler(paymentStatisticsUCase)
+	appRouter.GET("payment-statistics", paymentStatisticsHandler.GetPaymentStatistics)
 }

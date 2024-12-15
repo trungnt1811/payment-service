@@ -105,6 +105,23 @@ definitions:
       webhook_url:
         type: string
     type: object
+  dto.PaymentStatistics:
+    properties:
+      granularity:
+        type: string
+      id:
+        type: integer
+      period_start:
+        type: integer
+      symbol:
+        type: string
+      total_amount:
+        type: string
+      total_orders:
+        type: integer
+      total_transferred:
+        type: string
+    type: object
   dto.PaymentWalletBalanceDTO:
     properties:
       address:
@@ -373,6 +390,53 @@ paths:
       summary: Create payment orders
       tags:
       - payment-order
+  /api/v1/payment-statistics:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves payment statistics based on granularity
+        and time range.
+      parameters:
+      - description: Vendor ID for authentication
+        in: header
+        name: Vendor-Id
+        required: true
+        type: string
+      - description: Granularity (DAILY, WEEKLY, MONTHLY, YEARLY)
+        in: query
+        name: granularity
+        required: true
+        type: string
+      - description: Start time in UNIX timestamp format
+        in: query
+        name: start_time
+        required: true
+        type: integer
+      - description: End time in UNIX timestamp format
+        in: query
+        name: end_time
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment statistics retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/dto.PaymentStatistics'
+            type: array
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Retrieve payment statistics
+      tags:
+      - payment-statistics
   /api/v1/payment-wallet/{address}:
     get:
       consumes:

@@ -88,6 +88,7 @@ func RunApp(config *conf.Configuration) {
 	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
 	tokenTransferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
 	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
+	paymentStatisticsUCase := wire.InitializePaymentStatisticsUCase(db)
 
 	// Initialize payment order queue
 	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrders)
@@ -98,6 +99,10 @@ func RunApp(config *conf.Configuration) {
 	// Start order clean worker
 	releaseWalletWorker := workers.NewOrderCleanWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
+
+	// Start payment statistics worker
+	paymentStatisticsWorker := workers.NewPaymentStatisticsWorker(paymentStatisticsUCase)
+	go paymentStatisticsWorker.Start(ctx)
 
 	// Start AVAX workers
 	startWorkers(
@@ -113,6 +118,7 @@ func RunApp(config *conf.Configuration) {
 		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
+		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
 	)
 
@@ -130,6 +136,7 @@ func RunApp(config *conf.Configuration) {
 		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
+		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
 	)
 
@@ -144,6 +151,7 @@ func RunApp(config *conf.Configuration) {
 		cacheRepository,
 		blockstateUcase,
 		paymentOrderUCase,
+		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
 		paymentOrderQueue,
 	)
@@ -159,12 +167,24 @@ func RunApp(config *conf.Configuration) {
 		cacheRepository,
 		blockstateUcase,
 		paymentOrderUCase,
+		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
 		paymentOrderQueue,
 	)
 
 	// Register routes
-	routev1.RegisterRoutes(ctx, r, config, db, tokenTransferUCase, paymentOrderUCase, userWalletUCase, paymentWalletUCase, networkMetadataUCase)
+	routev1.RegisterRoutes(
+		ctx,
+		r,
+		config,
+		db,
+		tokenTransferUCase,
+		paymentOrderUCase,
+		userWalletUCase,
+		paymentWalletUCase,
+		networkMetadataUCase,
+		paymentStatisticsUCase,
+	)
 
 	// Start server
 	startServer(r, config)
@@ -279,6 +299,7 @@ func startWorkers(
 	tokenTransferUCase interfaces.TokenTransferUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
+	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 ) {
 	latestBlockWorker := workers.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient, network)
@@ -288,6 +309,7 @@ func startWorkers(
 		config,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
+		paymentStatisticsUCase,
 		cacheRepository,
 		usdtContractAddress,
 		ethClient,
@@ -334,6 +356,7 @@ func startEventListeners(
 	cacheRepository infrainterfaces.CacheRepository,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
+	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) {
@@ -352,6 +375,7 @@ func startEventListeners(
 		baseEventListener,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
+		paymentStatisticsUCase,
 		network,
 		usdtContractAddress,
 		paymentOrderQueue,
