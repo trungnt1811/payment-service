@@ -19,7 +19,7 @@ type PaymentOrderRepository interface {
 	) ([]domain.PaymentOrder, error)
 	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *domain.PaymentOrder) error
-	UpdateOrderNetwork(ctx context.Context, requestID, network string) error
+	UpdateOrderNetwork(ctx context.Context, requestID, network string, blockHeight uint64) error
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error)

@@ -15,6 +15,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -298,6 +299,7 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID st
 	if err != nil {
 		return fmt.Errorf("failed to retrieve payment order id with request id %s: %w", requestID, err)
 	}
+
 	// Retrieve the payment order by ID
 	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
 	if err != nil {
@@ -306,7 +308,14 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID st
 	if order.Status != constants.Pending {
 		return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
 	}
-	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, string(network))
+
+	// Fetch the latest block height for the given network
+	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, string(network), u.cacheRepo)
+	if err != nil {
+		return fmt.Errorf("failed to get latest block from cache: %w", err)
+	}
+
+	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, string(network), latestBlock)
 }
 
 func (u *paymentOrderUCase) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {

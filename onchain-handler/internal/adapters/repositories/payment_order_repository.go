@@ -9,18 +9,21 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type PaymentOrderRepository struct {
-	db *gorm.DB
+	db     *gorm.DB
+	config *conf.Configuration
 }
 
-func NewPaymentOrderRepository(db *gorm.DB) *PaymentOrderRepository {
+func NewPaymentOrderRepository(db *gorm.DB, config *conf.Configuration) *PaymentOrderRepository {
 	return &PaymentOrderRepository{
-		db: db,
+		db:     db,
+		config: config,
 	}
 }
 
@@ -221,8 +224,10 @@ func (r *PaymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Contex
 }
 
 // GetExpiredPaymentOrders retrieves orders for a specific network that are expired within a day.
-func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string, orderCutoffTime time.Duration) ([]domain.PaymentOrder, error) {
+func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
+
+	orderCutoffTime := r.config.GetOrderCutoffTime()
 
 	// Calculate the time range for the past day
 	now := time.Now().UTC()
@@ -244,7 +249,8 @@ func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, ne
 
 // UpdateExpiredOrdersToFailed updates all expired orders to "Failed" and sets their associated wallets' "in_use" status to false.
 // It returns the IDs of the updated orders.
-func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context, orderCutoffTime time.Duration) ([]uint64, error) {
+func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
+	orderCutoffTime := r.config.GetOrderCutoffTime()
 	cutoffTime := time.Now().UTC().Add(-orderCutoffTime)
 
 	var allUpdatedIDs []uint64
@@ -304,7 +310,9 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 }
 
 // UpdateActiveOrdersToExpired updates all active orders to "Expired" and returns their IDs.
-func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context, orderCutoffTime time.Duration) ([]uint64, error) {
+func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
+	orderCutoffTime := r.config.GetOrderCutoffTime()
+
 	currentTime := time.Now().UTC()
 	cutoffTime := currentTime.Add(-orderCutoffTime)
 

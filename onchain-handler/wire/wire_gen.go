@@ -27,7 +27,7 @@ func InitializeBlockStateUCase(db *gorm.DB) interfaces.BlockStateUCase {
 }
 
 func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo interfaces2.CacheRepository, config *conf.Configuration) interfaces.PaymentOrderUCase {
-	paymentOrderRepository := repositories.NewPaymentOrderRepository(db)
+	paymentOrderRepository := repositories.NewPaymentOrderRepository(db, config)
 	interfacesPaymentOrderRepository := repositories.NewPaymentOrderCacheRepository(paymentOrderRepository, cacheRepo, config)
 	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
 	blockStateRepository := repositories.NewBlockstateRepository(db)

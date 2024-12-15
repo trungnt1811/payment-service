@@ -15,7 +15,6 @@ import (
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -178,17 +177,10 @@ func mergePaymentOrderFields(dst, src *domain.PaymentOrder) {
 }
 
 func (c *paymentOrderCache) UpdateOrderNetwork(
-	ctx context.Context,
-	requestID, network string,
+	ctx context.Context, requestID, network string, blockHeight uint64,
 ) error {
-	// Fetch the latest block height for the given network
-	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network, c.cache)
-	if err != nil {
-		return fmt.Errorf("failed to get latest block from cache: %w", err)
-	}
-
 	// Update the database (source of truth) first
-	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, network, latestBlock); err != nil {
+	if err := c.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, network, blockHeight); err != nil {
 		return fmt.Errorf("failed to update payment order network in repository: %w", err)
 	}
 
@@ -207,7 +199,7 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	if cacheErr == nil {
 		// Update the network in the cached order
 		cachedOrder.Network = network
-		cachedOrder.BlockHeight = latestBlock
+		cachedOrder.BlockHeight = blockHeight
 
 		// Save the updated order back into the cache
 		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
@@ -307,7 +299,7 @@ func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network
 	}
 
 	// Cache miss: fetch from repository
-	paymentOrders, err := c.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network, c.config.GetOrderCutoffTime())
+	paymentOrders, err := c.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch expired payment orders: %w", err)
 	}
@@ -322,7 +314,7 @@ func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network
 
 func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
 	// Call the repository to update expired orders to "Failed" and get the updated IDs
-	updatedIDs, err := c.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx, c.config.GetOrderCutoffTime())
+	updatedIDs, err := c.paymentOrderRepository.UpdateExpiredOrdersToFailed(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update expired orders to failed in repository: %w", err)
 	}
@@ -353,7 +345,7 @@ func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) ([]
 
 func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
 	// Call repository to update active orders to expired and get the updated IDs
-	updatedIDs, err := c.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx, c.config.GetOrderCutoffTime())
+	updatedIDs, err := c.paymentOrderRepository.UpdateActiveOrdersToExpired(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update active orders to expired in repository: %w", err)
 	}
