@@ -27,8 +27,6 @@ func (m *PaymentStatistics) TableName() string {
 
 func (m *PaymentStatistics) ToDto() dto.PaymentStatistics {
 	return dto.PaymentStatistics{
-		ID:               m.ID,
-		Granularity:      m.Granularity,
 		PeriodStart:      uint64(m.PeriodStart.UTC().Unix()),
 		TotalOrders:      m.TotalOrders,
 		TotalAmount:      m.TotalAmount,

@@ -32,10 +32,6 @@ func (u *paymentStatisticsUCase) IncrementStatistics(
 	)
 }
 
-func (u *paymentStatisticsUCase) AggregateToHigherGranularities(ctx context.Context) error {
-	return u.paymentStatisticsRepository.AggregateToHigherGranularities(ctx)
-}
-
 // GetStatisticsByTimeRangeAndGranularity retrieves payment statistics by time range and granularity.
 func (u *paymentStatisticsUCase) GetStatisticsByTimeRangeAndGranularity(
 	ctx context.Context,

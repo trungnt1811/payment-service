@@ -161,26 +161,9 @@ const (
 )
 
 // Granularity constants
-type Granularity string
-
 const (
-	Daily   Granularity = "DAILY"
-	Weekly  Granularity = "WEEKLY"
-	Monthly Granularity = "MONTHLY"
-	Yearly  Granularity = "YEARLY"
+	Daily   = "DAILY"
+	Weekly  = "WEEKLY"
+	Monthly = "MONTHLY"
+	Yearly  = "YEARLY"
 )
-
-func (g Granularity) ToDateTruncUnit() string {
-	switch g {
-	case Daily:
-		return "day"
-	case Weekly:
-		return "week"
-	case Monthly:
-		return "month"
-	case Yearly:
-		return "year"
-	default:
-		return "day"
-	}
-}

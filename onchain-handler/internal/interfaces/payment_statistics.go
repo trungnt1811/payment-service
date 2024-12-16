@@ -16,7 +16,6 @@ type PaymentStatisticsRepository interface {
 		amount, transferred *string,
 		symbol, vendorID string,
 	) error
-	AggregateToHigherGranularities(ctx context.Context) error
 	GetStatisticsByTimeRangeAndGranularity(
 		ctx context.Context,
 		granularity string,
@@ -33,7 +32,6 @@ type PaymentStatisticsUCase interface {
 		amount, transferred *string,
 		symbol, vendorID string,
 	) error
-	AggregateToHigherGranularities(ctx context.Context) error
 	GetStatisticsByTimeRangeAndGranularity(
 		ctx context.Context,
 		granularity string,

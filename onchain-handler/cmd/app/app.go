@@ -100,10 +100,6 @@ func RunApp(config *conf.Configuration) {
 	releaseWalletWorker := workers.NewOrderCleanWorker(paymentOrderUCase)
 	go releaseWalletWorker.Start(ctx)
 
-	// Start payment statistics worker
-	paymentStatisticsWorker := workers.NewPaymentStatisticsWorker(paymentStatisticsUCase)
-	go paymentStatisticsWorker.Start(ctx)
-
 	// Start AVAX workers
 	startWorkers(
 		ctx,
