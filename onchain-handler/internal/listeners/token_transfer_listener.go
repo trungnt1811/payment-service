@@ -462,7 +462,7 @@ func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.Payment
 			Status:         status,
 			WebhookURL:     order.WebhookURL,
 			Symbol:         order.Symbol,
-			PaymentAddress: &order.PaymentAddress,
+			PaymentAddress: order.PaymentAddress,
 			Expired:        uint64(order.ExpiredTime.Unix()),
 		}
 		orderDTOs = append(orderDTOs, paymentOrderDTO)

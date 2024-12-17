@@ -27,7 +27,7 @@ type PaymentOrderDTOResponse struct {
 	Symbol              string              `json:"symbol"`
 	BlockHeight         uint64              `json:"block_height"`
 	UpcomingBlockHeight uint64              `json:"upcoming_block_height,omitempty"`
-	PaymentAddress      *string             `json:"payment_address,omitempty"`
+	PaymentAddress      string              `json:"payment_address,omitempty"`
 	SucceededAt         *time.Time          `json:"succeeded_at,omitempty"`
 	CreatedAt           time.Time           `json:"created_at"`
 	Expired             uint64              `json:"expired,omitempty"`

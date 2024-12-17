@@ -453,7 +453,7 @@ func mapOrderToDTO(order domain.PaymentOrder) dto.PaymentOrderDTOResponse {
 		Symbol:              order.Symbol,
 		BlockHeight:         order.BlockHeight,
 		UpcomingBlockHeight: order.UpcomingBlockHeight,
-		PaymentAddress:      &order.Wallet.Address,
+		PaymentAddress:      order.Wallet.Address,
 		CreatedAt:           order.CreatedAt,
 		Expired:             uint64(order.ExpiredTime.Unix()),
 		EventHistories:      mapEventHistoriesToDTO(order.PaymentEventHistories),
