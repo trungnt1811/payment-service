@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -43,8 +42,7 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 		err := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance":    gorm.Expr("payment_wallet_balance.balance + ?", newBalance),
-				"updated_at": time.Now().UTC(),
+				"balance": gorm.Expr("payment_wallet_balance.balance + ?", newBalance),
 			}),
 		}).Create(&walletBalance).Error
 		if err != nil {
@@ -75,8 +73,7 @@ func (r *paymentWalletBalanceRepository) SubtractPaymentWalletBalance(
 		err := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance":    gorm.Expr("GREATEST(payment_wallet_balance.balance - ?, 0)", amountToSubtract),
-				"updated_at": time.Now().UTC(),
+				"balance": gorm.Expr("GREATEST(payment_wallet_balance.balance - ?, 0)", amountToSubtract),
 			}),
 		}).Create(&walletBalance).Error
 		if err != nil {
