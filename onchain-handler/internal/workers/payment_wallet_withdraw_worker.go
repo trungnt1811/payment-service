@@ -205,6 +205,11 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		logger.GetLogger().Errorf("Failed to convert native token amount: %v", err)
 		return err
 	}
+	// Upsert payment wallet balances
+	if err = w.paymentWalletUCase.UpsertPaymentWalletBalance(ctx, walletInfo.ID, nativeAmount, w.network, nativeTokenSymbol); err != nil {
+		logger.GetLogger().Errorf("Failed to upsert payment wallet balance: %v", err)
+		return err
+	}
 	payloads = append(payloads, dto.TokenTransferHistoryDTO{
 		Network:         string(w.network),
 		TransactionHash: txHash.Hex(),
@@ -228,6 +233,11 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	tokenAmount, err := utils.ConvertSmallestUnitToFloatToken(walletInfo.TokenAmount.String(), decimals)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to convert native token amount: %v", err)
+		return err
+	}
+	// Subtract payment wallet balances
+	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmount, w.network, constants.USDT); err != nil {
+		logger.GetLogger().Errorf("Failed to subtract payment wallet balance: %v", err)
 		return err
 	}
 	payloads = append(payloads, dto.TokenTransferHistoryDTO{

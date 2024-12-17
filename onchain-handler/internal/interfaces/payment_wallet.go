@@ -24,10 +24,17 @@ type PaymentWalletUCase interface {
 	CreateAndGenerateWallet(ctx context.Context, mnemonic, passphrase, salt string, inUse bool) error
 	IsRowExist(ctx context.Context) (bool, error)
 	GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletDTO, error)
-	UpsertPaymentWalletBalances(
+	UpsertPaymentWalletBalance(
 		ctx context.Context,
-		walletIDs []uint64,
-		newBalances []string,
+		walletID uint64,
+		newBalance string,
+		network constants.NetworkType,
+		symbol string,
+	) error
+	SubtractPaymentWalletBalance(
+		ctx context.Context,
+		walletID uint64,
+		amountToSubtract string,
 		network constants.NetworkType,
 		symbol string,
 	) error

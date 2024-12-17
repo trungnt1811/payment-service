@@ -53,14 +53,24 @@ func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, addr
 	return wallet.ToDto(), nil
 }
 
-func (u *paymentWalletUCase) UpsertPaymentWalletBalances(
+func (u *paymentWalletUCase) UpsertPaymentWalletBalance(
 	ctx context.Context,
-	walletIDs []uint64,
-	newBalances []string,
+	walletID uint64,
+	newBalance string,
 	network constants.NetworkType,
 	symbol string,
 ) error {
-	return u.paymentWalletBalanceRepository.UpsertPaymentWalletBalances(ctx, walletIDs, newBalances, string(network), symbol)
+	return u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, newBalance, string(network), symbol)
+}
+
+func (u *paymentWalletUCase) SubtractPaymentWalletBalance(
+	ctx context.Context,
+	walletID uint64,
+	amountToSubtract string,
+	network constants.NetworkType,
+	symbol string,
+) error {
+	return u.paymentWalletBalanceRepository.SubtractPaymentWalletBalance(ctx, walletID, amountToSubtract, string(network), symbol)
 }
 
 func (u *paymentWalletUCase) GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error) {

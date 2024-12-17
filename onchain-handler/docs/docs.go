@@ -860,12 +860,6 @@ const docTemplate = `{
         "dto.PaymentStatistics": {
             "type": "object",
             "properties": {
-                "granularity": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
                 "period_start": {
                     "type": "integer"
                 },

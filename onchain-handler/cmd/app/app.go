@@ -108,7 +108,6 @@ func RunApp(config *conf.Configuration) {
 		ethClientAvax,
 		constants.AvaxCChain,
 		uint64(config.Blockchain.AvaxNetwork.AvaxChainID),
-		avaxRpcUrls,
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
 		blockstateUcase,
 		tokenTransferUCase,
@@ -126,7 +125,6 @@ func RunApp(config *conf.Configuration) {
 		ethClientBsc,
 		constants.Bsc,
 		uint64(config.Blockchain.BscNetwork.BscChainID),
-		bscRpcUrls,
 		config.Blockchain.BscNetwork.BscUSDTContractAddress,
 		blockstateUcase,
 		tokenTransferUCase,
@@ -149,6 +147,7 @@ func RunApp(config *conf.Configuration) {
 		paymentOrderUCase,
 		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
+		paymentWalletUCase,
 		paymentOrderQueue,
 	)
 
@@ -165,6 +164,7 @@ func RunApp(config *conf.Configuration) {
 		paymentOrderUCase,
 		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
+		paymentWalletUCase,
 		paymentOrderQueue,
 	)
 
@@ -289,7 +289,6 @@ func startWorkers(
 	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 	chainID uint64,
-	rpcURLs []string,
 	usdtContractAddress string,
 	blockstateUcase interfaces.BlockStateUCase,
 	tokenTransferUCase interfaces.TokenTransferUCase,
@@ -306,22 +305,13 @@ func startWorkers(
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
 		paymentStatisticsUCase,
+		paymentWalletUCase,
 		cacheRepository,
 		usdtContractAddress,
 		ethClient,
 		network,
 	)
 	go expiredOrderCatchupWorker.Start(ctx)
-
-	// Start payment wallet balance worker
-	tokenSymbol, err := config.GetTokenSymbol(usdtContractAddress)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to get token symbol: %v", err)
-	}
-	paymentWalletBalanceWorker := workers.NewPaymentWalletBalanceWorker(
-		paymentWalletUCase, cacheRepository, network, rpcURLs, usdtContractAddress, tokenSymbol,
-	)
-	go paymentWalletBalanceWorker.Start(ctx)
 
 	// Start payment wallet withdraw worker
 	paymentWalletWithdrawWorker := workers.NewPaymentWalletWithdrawWorker(
@@ -354,6 +344,7 @@ func startEventListeners(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
 	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 ) {
 	baseEventListener := listeners.NewBaseEventListener(
@@ -372,6 +363,7 @@ func startEventListeners(
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
 		paymentStatisticsUCase,
+		paymentWalletUCase,
 		network,
 		usdtContractAddress,
 		paymentOrderQueue,

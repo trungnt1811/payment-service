@@ -3,8 +3,10 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -20,50 +22,65 @@ func NewPaymentWalletBalanceRepository(db *gorm.DB) interfaces.PaymentWalletBala
 	}
 }
 
-// UpsertPaymentWalletBalances updates or inserts the balances of multiple wallets by their WalletIDs.
-func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalances(
+// UpsertPaymentWalletBalance upserts the balance of a payment wallet.
+func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 	ctx context.Context,
-	walletIDs []uint64,
-	newBalances []string,
+	walletID uint64,
+	newBalance string,
 	network string,
 	symbol string,
 ) error {
-	// Check if the lengths of walletIDs and newBalances match
-	if len(walletIDs) != len(newBalances) {
-		return fmt.Errorf("the number of wallet IDs and balances must be the same")
-	}
-
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Loop through each wallet and either insert or update
-		for i, walletID := range walletIDs {
-			var existingCount int64
-			// Step 1: Check if the record exists
-			if err := tx.Table("payment_wallet_balance").
-				Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
-				Count(&existingCount).Error; err != nil {
-				return fmt.Errorf("failed to check for existing record: %w", err)
-			}
+		// Prepare the wallet balance record
+		walletBalance := domain.PaymentWalletBalance{
+			WalletID: walletID,
+			Network:  network,
+			Symbol:   symbol,
+			Balance:  newBalance,
+		}
 
-			if existingCount > 0 {
-				// Step 2: If record exists, update it
-				if err := tx.Model(&domain.PaymentWalletBalance{}).
-					Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
-					Updates(map[string]interface{}{
-						"balance": newBalances[i],
-					}).Error; err != nil {
-					return fmt.Errorf("failed to update wallet balance: %w", err)
-				}
-			} else {
-				// Step 3: If record does not exist, insert it
-				if err := tx.Create(&domain.PaymentWalletBalance{
-					WalletID: walletID,
-					Network:  network,
-					Symbol:   symbol,
-					Balance:  newBalances[i],
-				}).Error; err != nil {
-					return fmt.Errorf("failed to insert wallet balance: %w", err)
-				}
-			}
+		// Use ON CONFLICT clause to perform upsert
+		err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"balance":    gorm.Expr("payment_wallet_balance.balance + ?", newBalance),
+				"updated_at": time.Now().UTC(),
+			}),
+		}).Create(&walletBalance).Error
+		if err != nil {
+			return fmt.Errorf("failed to upsert wallet balance: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (r *paymentWalletBalanceRepository) SubtractPaymentWalletBalance(
+	ctx context.Context,
+	walletID uint64,
+	amountToSubtract string,
+	network string,
+	symbol string,
+) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Prepare the wallet balance record
+		walletBalance := domain.PaymentWalletBalance{
+			WalletID: walletID,
+			Network:  network,
+			Symbol:   symbol,
+			Balance:  "0", // Default balance for new records
+		}
+
+		// Use ON CONFLICT clause to perform upsert with subtraction
+		err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"balance":    gorm.Expr("GREATEST(payment_wallet_balance.balance - ?, 0)", amountToSubtract),
+				"updated_at": time.Now().UTC(),
+			}),
+		}).Create(&walletBalance).Error
+		if err != nil {
+			return fmt.Errorf("failed to subtract wallet balance: %w", err)
 		}
 
 		return nil

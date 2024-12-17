@@ -107,10 +107,6 @@ definitions:
     type: object
   dto.PaymentStatistics:
     properties:
-      granularity:
-        type: string
-      id:
-        type: integer
       period_start:
         type: integer
       symbol:

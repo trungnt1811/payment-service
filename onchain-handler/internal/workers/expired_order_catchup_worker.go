@@ -30,6 +30,7 @@ type expiredOrderCatchupWorker struct {
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
 	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
+	paymentWalletUCase       interfaces.PaymentWalletUCase
 	cacheRepo                infrainterfaces.CacheRepository
 	tokenContractAddress     string
 	tokenDecimals            uint8
@@ -46,6 +47,7 @@ func NewExpiredOrderCatchupWorker(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
 	cacheRepo infrainterfaces.CacheRepository,
 	tokenContractAddress string,
 	ethClient pkginterfaces.Client,
@@ -68,6 +70,7 @@ func NewExpiredOrderCatchupWorker(
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
 		paymentStatisticsUCase:   paymentStatisticsUCase,
+		paymentWalletUCase:       paymentWalletUCase,
 		cacheRepo:                cacheRepo,
 		tokenContractAddress:     tokenContractAddress,
 		tokenDecimals:            decimals,
@@ -295,6 +298,12 @@ func (w *expiredOrderCatchupWorker) processLog(
 			order.VendorID,
 		); err != nil {
 			logger.GetLogger().Errorf("Failed to increment payment statistics for order ID %d on network %s: %v", order.ID, string(w.network), err)
+		}
+
+		// Upsert payment wallet balances
+		if err = w.paymentWalletUCase.UpsertPaymentWalletBalance(ctx, order.Wallet.ID, transferEventValueInEth, w.network, order.Symbol); err != nil {
+			logger.GetLogger().Errorf("Failed to upsert payment wallet balance on network %s for order ID %d, error: %v", string(w.network), order.ID, err)
+			continue
 		}
 
 		// Send webhook if webhook URL is present

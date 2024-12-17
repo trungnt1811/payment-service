@@ -32,6 +32,7 @@ type tokenTransferListener struct {
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
 	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
+	paymentWalletUCase       interfaces.PaymentWalletUCase
 	network                  constants.NetworkType
 	tokenContractAddress     string
 	tokenDecimals            uint8
@@ -49,6 +50,7 @@ func NewTokenTransferListener(
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
+	paymentWalletUCase interfaces.PaymentWalletUCase,
 	network constants.NetworkType,
 	tokenContractAddress string,
 	orderQueue *queue.Queue[dto.PaymentOrderDTO],
@@ -71,6 +73,7 @@ func NewTokenTransferListener(
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
 		paymentStatisticsUCase:   paymentStatisticsUCase,
+		paymentWalletUCase:       paymentWalletUCase,
 		network:                  network,
 		tokenContractAddress:     tokenContractAddress,
 		tokenDecimals:            decimals,
@@ -235,9 +238,10 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 				logger.GetLogger().Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 				return nil, err
 			}
-			// Increment payment statistics
+
 			granularity := string(constants.Daily)
 			for _, payload := range payloads {
+				// Increment payment statistics
 				if err := listener.paymentStatisticsUCase.IncrementStatistics(
 					listener.ctx,
 					granularity,
@@ -250,8 +254,12 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 					logger.GetLogger().Errorf("Failed to increment payment statistics on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
 					continue
 				}
+				// Upsert payment wallet balances
+				if err = listener.paymentWalletUCase.UpsertPaymentWalletBalance(listener.ctx, order.Wallet.ID, payload.Amount, listener.network, payload.TokenSymbol); err != nil {
+					logger.GetLogger().Errorf("Failed to upsert payment wallet balance on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+					continue
+				}
 			}
-
 		}
 
 		// Get the processed order
