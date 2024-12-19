@@ -324,7 +324,6 @@ func startWorkers(
 		paymentWalletUCase,
 		usdtContractAddress,
 		config.PaymentGateway.MasterWalletAddress,
-		config.PaymentGateway.PrivateKeyMasterWallet,
 		config.Wallet.Mnemonic,
 		config.Wallet.Passphrase,
 		config.Wallet.Salt,

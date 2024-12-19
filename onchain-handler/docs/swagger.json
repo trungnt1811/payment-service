@@ -446,6 +446,35 @@
                 }
             }
         },
+        "/api/v1/payment-wallets/receiving-address": {
+            "get": {
+                "description": "Retrieves the address of the wallet used for receiving tokens from payment wallets.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-wallet"
+                ],
+                "summary": "Retrieves the receiving wallet address.",
+                "responses": {
+                    "200": {
+                        "description": "Receiving wallet address",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/token-transfer": {
             "post": {
                 "description": "This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.",

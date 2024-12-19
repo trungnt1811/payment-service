@@ -553,6 +553,40 @@ func (c *roundRobinClient) SuggestGasPrice(ctx context.Context) (*big.Int, error
 	return result.(*big.Int), nil
 }
 
+// GetTokenBalance retrieves the balance of a specific ERC20 token for a given wallet address using round-robin retry logic.
+func (c *roundRobinClient) GetTokenBalance(
+	ctx context.Context,
+	tokenContractAddress string,
+	walletAddress string,
+) (*big.Int, error) {
+	// Use executeWithRetry to perform the operation
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+		// Convert the token contract address and wallet address to common.Address
+		tokenAddress := common.HexToAddress(tokenContractAddress)
+		accountAddress := common.HexToAddress(walletAddress)
+
+		// Load the ERC20 token contract
+		token, err := erc20token.NewErc20token(tokenAddress, client)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load ERC20 token contract: %w", err)
+		}
+
+		// Retrieve the token balance
+		balance, err := token.BalanceOf(&bind.CallOpts{Context: ctx}, accountAddress)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token balance for wallet %s: %w", walletAddress, err)
+		}
+
+		return balance, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve token balance after retries: %w", err)
+	}
+
+	// Cast the result to *big.Int and return
+	return result.(*big.Int), nil
+}
+
 // Close closes all underlying clients
 func (c *roundRobinClient) Close() {
 	for _, client := range c.clients {

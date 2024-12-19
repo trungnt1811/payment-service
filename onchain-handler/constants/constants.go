@@ -117,8 +117,9 @@ const (
 type WalletType string
 
 const (
-	PaymentWallet WalletType = "PaymentWallet"
-	UserWallet    WalletType = "UserWallet"
+	PaymentWallet   WalletType = "PaymentWallet"
+	UserWallet      WalletType = "UserWallet"
+	ReceivingWallet WalletType = "ReceivingWallet"
 )
 
 // Method ID
