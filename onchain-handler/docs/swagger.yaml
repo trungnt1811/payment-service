@@ -484,6 +484,26 @@ paths:
       summary: Retrieves all payment wallets with balances.
       tags:
       - payment-wallet
+  /api/v1/payment-wallets/receiving-address:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the address of the wallet used for receiving tokens from
+        payment wallets.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Receiving wallet address
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Retrieves the receiving wallet address.
+      tags:
+      - payment-wallet
   /api/v1/token-transfer:
     post:
       consumes:

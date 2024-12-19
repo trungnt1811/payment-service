@@ -40,4 +40,7 @@ type PaymentWalletUCase interface {
 	) error
 	GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error)
 	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error)
+	GetReceivingWalletAddress(
+		ctx context.Context, mnemonic, passphrase, salt string,
+	) (string, error)
 }
