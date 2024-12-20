@@ -3,17 +3,17 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 ## Features
 
-Blockchain Agnostic: Supports multiple blockchain networks like BSC and AVAX.
+- Blockchain Agnostic: Supports multiple blockchain networks like BSC and AVAX.
 
-Payment Wallet Management: Secure handling of payment wallets with balances and transaction tracking.
+- Payment Wallet Management: Secure handling of payment wallets with balances and transaction tracking.
 
-Token Transfers: Efficient token transfer mechanisms, including USDT and native tokens.
+- Token Transfers: Efficient token transfer mechanisms, including USDT and native tokens.
 
-Block Listeners: Real-time listening to blockchain events from a specific starting block.
+- Block Listeners: Real-time listening to blockchain events from a specific starting block.
 
-HD Wallet Support: Wallet generation using mnemonics without storing private keys in the database.
+- HD Wallet Support: Wallet generation using mnemonics without storing private keys in the database.
 
-Error-Resilient Operations: Built-in retry mechanisms for handling network or RPC errors.
+- Error-Resilient Operations: Built-in retry mechanisms for handling network or RPC errors.
 
 ## Install golangci-lint
 ```bash
