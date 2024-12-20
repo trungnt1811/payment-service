@@ -143,7 +143,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 ---
 
-## Worker Automation
+## Payment Wallets Withdrawing Worker
 
 ### Worker Schedule
 A worker runs daily at **00:00 UTC** to:
@@ -166,7 +166,7 @@ A worker runs daily at **00:00 UTC** to:
   - Ensure the starting block is not too far in the past to avoid issues with pruned nodes.
 - **Gas Fee Recommendations**:
   - Top up the Receiving Wallet monthly with **0.078 BNB** and **0.156** for seamless operations.
-- **Worker Automation**:
+- **Payment Wallets Withdrawing Worker**:
   - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
 
 
