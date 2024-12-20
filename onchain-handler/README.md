@@ -116,7 +116,7 @@ A worker automates these processes daily at **00:00 UTC**.
 ### Transaction Fees Per Network
 | **Network**     | **Gas Fee per USDT Transfer** | 
 |------------------|-------------------------------|
-| Binance Smart Chain (BSC) | **0.0002 BNB**       | 
+| Binance Smart Chain (BSC) | **0.00005 BNB**       | 
 | Avalanche (AVAX)          | **0.0004 AVAX**      | 
 
 ### Monthly Estimation (30 Days)
@@ -124,7 +124,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 | **Network**     | **Gas Fee per Day**             | **Monthly Gas Fee** |
 |------------------|---------------------------------|----------------------|
-| Binance Smart Chain (BSC) | **10 × 0.0002 BNB = 0.002 BNB** | **0.06 BNB**   |
+| Binance Smart Chain (BSC) | **10 × 0.00005 BNB = 0.0005 BNB** | **0.015 BNB**   |
 | Avalanche (AVAX)          | **10 × 0.0004 AVAX = 0.004 AVAX**| **0.12 AVAX** |
 
 ---
@@ -134,7 +134,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 ### Monthly Top-Up Recommendation
 | **Network**     | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)** |
 |------------------|-----------------------------|--------------------------------------|
-| Binance Smart Chain (BSC) | **0.06 BNB**         | **0.078 BNB**                      | 
+| Binance Smart Chain (BSC) | **0.015 BNB**         | **0.0195 BNB**                      | 
 | Avalanche (AVAX)          | **0.12 AVAX**        | **0.156 AVAX**                     |
 
 **Notes**:
