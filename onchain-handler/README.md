@@ -19,17 +19,17 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 - **State Machine for Payment Orders**:
 
-- - PENDING: Order is created and waiting for payment.
+   - PENDING: Order is created and waiting for payment.
 
-- - PROCESSING: Payment is detected, and the order is being processed.
+   - PROCESSING: Payment is detected, and the order is being processed.
 
-- - SUCCESS: Payment is completed, and the order is fulfilled.
+   - SUCCESS: Payment is completed, and the order is fulfilled.
 
-- - PARTIAL: Partial payment is received, but not sufficient to fulfill the order.
+   - PARTIAL: Partial payment is received, but not sufficient to fulfill the order.
 
-- - EXPIRED: Order is expired due to timeout.
+   - EXPIRED: Order is expired due to timeout.
 
-- - FAILED: Order is marked as failed after expiration or manual intervention.
+   - FAILED: Order is marked as failed after expiration or manual intervention.
 
 ## Install golangci-lint
 ```bash
