@@ -78,42 +78,42 @@ The following environment variables are required for the application to run. Set
 ### General Configuration
 | Variable                | Description                                                            | Default               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
-| `ENV`                  | Environment mode: `DEV`, `PROD`.                           | `PROD`                |
-| `LOG_LEVEL`            | Logging level: `debug`, `info`, `warn`, `error`.                      | `info`              |
-| `APP_NAME`             | Application name.                                                     | `onchain-handler`    |
-| `APP_PORT`             | Port to run the application.                                          | `8080`               |
+| `ENV`                   | Environment mode: `DEV`, `PROD`.                                       | `PROD`                |
+| `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`.                       | `info`                |
+| `APP_NAME`              | Application name.                                                      | `onchain-handler`     |
+| `APP_PORT`              | Port to run the application.                                           | `8080`                |
 
 ### Database Configuration
 | Variable                | Description                                                            | Default               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
-| `DB_USER`              | Database username.                                                    | `postgres`           |
-| `DB_PASSWORD`          | Database password.                                                    | `123456`             |
-| `DB_HOST`              | Database host.                                                        | `localhost`          |
-| `DB_PORT`              | Database port.                                                        | `5432`               |
-| `DB_NAME`              | Database name.                                                        | `onchain-handler`    |
+| `DB_USER`               | Database username.                                                     | `postgres`            |
+| `DB_PASSWORD`           | Database password.                                                     | `123456`              |
+| `DB_HOST`               | Database host.                                                         | `localhost`           |
+| `DB_PORT`               | Database port.                                                         | `5432`                |
+| `DB_NAME`               | Database name.                                                         | `onchain-handler`     |
 
 ### Blockchain Configuration
-| Variable                     | Description                                                                                | Example                                                      |
+| Variable                     | Description                                                                                | Default                                                      |
 |------------------------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------|
-| `BSC_RPC_URLS`              | List of Binance Smart Chain RPC URLs.                                                     | `https://rpc.ankr.com/bsc/...` (ask developer)                            |
-| `BSC_CHAIN_ID`              | Binance Smart Chain ID.                                                                   | `56`                                                         |
-| `BSC_START_BLOCK_LISTENER`  | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.** | `45011000` (ask developer)                                                   |
-| `BSC_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Binance Smart Chain.                                         | `0x55d398326f99059fF775485246999027B3197955`             |
-| `AVAX_RPC_URLS`             | List of Avalanche RPC URLs.                                                              | `https://rpc.ankr.com/avalanche/...` (ask developer)                        |
-| `AVAX_CHAIN_ID`             | Avalanche Chain ID.                                                                      | `43114`                                                      |
-| `AVAX_START_BLOCK_LISTENER` | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` (ask developer)                                                 |
-| `AVAX_USDT_CONTRACT_ADDRESS`| Contract address for USDT on Avalanche.                                                  | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`                 |
+| `BSC_RPC_URLS`               | List of Binance Smart Chain RPC URLs.                                                      | `https://rpc.ankr.com/bsc/...` (ask developer) |
+| `BSC_CHAIN_ID`               | Binance Smart Chain ID.                                                                    | `56`                                                         |
+| `BSC_START_BLOCK_LISTENER`   | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.** | `45011000` (ask developer)                                |
+| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                                          | `0x55d398326f99059fF775485246999027B3197955`   |
+| `AVAX_RPC_URLS`              | List of Avalanche RPC URLs.                                                                | `https://rpc.ankr.com/avalanche/...` (ask developer) |
+| `AVAX_CHAIN_ID`              | Avalanche Chain ID.                                                                        | `43114`                                                      |
+| `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` (ask developer)                     |
+| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                                    | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`   |
 
 ### Additional Configuration
 | Variable                     | Description                                                            | Default               |
 |------------------------------|------------------------------------------------------------------------|-----------------------|
-| `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                             | `10`                 |
-| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                 |
+| `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                              | `10`                  |
+| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                  |
 | `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.          | `1440`               |
-| `PAYMENT_COVERING`           | Discount amount applied to each order.                            | `1` (1 USDT)             |
-| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                      | `net motor more...` (ask devops) |
-| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                  | `your passphrase` (ask devops)              |
-| `SALT`                       | Salt for HD wallet derivation.                                        | `your salt` (ask devops)              |
+| `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)             |
+| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops) |
+| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)        |
+| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)              |
 
 # Receiving Wallet Documentation
 
@@ -135,28 +135,28 @@ A worker automates these processes daily at **00:00 UTC**.
 - **Each Payment Wallet** performs at least one **USDT transfer** per day, requiring gas for these transactions.
 
 ### Transaction Fees Per Network
-| **Network**     | **Gas Fee per USDT Transfer** | 
+| **Network**      | **Gas Fee per USDT Transfer** | 
 |------------------|-------------------------------|
-| Binance Smart Chain (BSC) | **0.00006 BNB**       | 
+| Binance Smart Chain (BSC) | **0.00006 BNB**      | 
 | Avalanche (AVAX)          | **0.0028 AVAX**      | 
 
 ### Monthly Estimation (30 Days)
 For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
-| **Network**     | **Gas Fee per Day**             | **Monthly Gas Fee** |
+| **Network**      | **Gas Fee per Day**             | **Monthly Gas Fee**  |
 |------------------|---------------------------------|----------------------|
-| Binance Smart Chain (BSC) | **10 × 0.00006 BNB = 0.0006 BNB** | **0.018 BNB**   |
-| Avalanche (AVAX)          | **10 × 0.0028 AVAX = 0.028 AVAX**| **0.84 AVAX** |
+| Binance Smart Chain (BSC) | **10 × 0.00006 BNB = 0.0006 BNB** | **0.018 BNB** |
+| Avalanche (AVAX)          | **10 × 0.0028 AVAX = 0.028 AVAX** | **0.84 AVAX** |
 
 ---
 
 ## Gas Balance Top-Up for Receiving Wallet
 
 ### Monthly Top-Up Recommendation
-| **Network**     | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)** |
+| **Network**      | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)**  |
 |------------------|-----------------------------|--------------------------------------|
-| Binance Smart Chain (BSC) | **0.018 BNB**         | **0.0234 BNB**                      | 
-| Avalanche (AVAX)          | **0.84 AVAX**        | **1.092 AVAX**                     |
+| Binance Smart Chain (BSC) | **0.018 BNB**      | **0.0234 BNB**                       | 
+| Avalanche (AVAX)          | **0.84 AVAX**      | **1.092 AVAX**                       |
 
 **Notes**:
 - The recommended top-up includes a **30% buffer** for unexpected additional transactions.
