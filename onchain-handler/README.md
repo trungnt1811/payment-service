@@ -3,17 +3,17 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 ## Features
 
-- Blockchain Agnostic: Supports multiple blockchain networks like BSC and AVAX.
+- **Blockchain Agnostic**: Supports multiple blockchain networks like BSC and AVAX.
 
-- Payment Wallet Management: Secure handling of payment wallets with balances and transaction tracking.
+- **Payment Wallet Management**: Secure handling of payment wallets with balances and transaction tracking.
 
-- Token Transfers: Efficient token transfer mechanisms, including USDT and native tokens.
+- **Token Transfers**: Efficient token transfer mechanisms, including USDT and native tokens.
 
-- Block Listeners: Real-time listening to blockchain events from a specific starting block.
+- **Block Listeners**: Real-time listening to blockchain events from a specific starting block.
 
-- HD Wallet Support: Wallet generation using mnemonics without storing private keys in the database.
+- **HD Wallet Support**: Wallet generation using mnemonics without storing private keys in the database.
 
-- Error-Resilient Operations: Built-in retry mechanisms for handling network or RPC errors.
+- **Error-Resilient Operations**: Built-in retry mechanisms for handling network or RPC errors.
 
 ## Install golangci-lint
 ```bash
@@ -57,8 +57,8 @@ The following environment variables are required for the application to run. Set
 ### General Configuration
 | Variable                | Description                                                            | Example               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
-| `ENV`                  | Environment mode: `DEV`, `PROD`.                           | `DEV`                |
-| `LOG_LEVEL`            | Logging level: `debug`, `info`, `warn`, `error`.                      | `debug`              |
+| `ENV`                  | Environment mode: `DEV`, `PROD`.                           | `PROD`                |
+| `LOG_LEVEL`            | Logging level: `debug`, `info`, `warn`, `error`.                      | `info`              |
 | `APP_NAME`             | Application name.                                                     | `onchain-handler`    |
 | `APP_PORT`             | Port to run the application.                                          | `8080`               |
 
@@ -94,7 +94,82 @@ The following environment variables are required for the application to run. Set
 | `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                  | `your passphrase`              |
 | `SALT`                       | Salt for HD wallet derivation.                                        | `your salt`               |
 
+# Receiving Wallet Documentation
+
+## Overview
+
+The **Receiving Wallet** is a centralized wallet designed to:
+1. **Collect USDT** from all Payment Wallets daily.
+2. Consolidate the collected **USDT** and transfer it to the **Master Wallet**.
+3. **Distribute Gas Fees** (BNB for Binance Smart Chain and AVAX for Avalanche) to Payment Wallets to ensure sufficient gas for future transactions.
+
+A worker automates these processes daily at **00:00 UTC**.
+
+---
+
+## Daily Wallet Usage and Transaction Fee Estimation
+
+### Daily Wallet Usage
+- **Average daily reuse**: 10 Payment Wallets.
+- **Each Payment Wallet** performs at least one **USDT transfer** per day, requiring gas for these transactions.
+
+### Transaction Fees Per Network
+| **Network**     | **Gas Fee per USDT Transfer** | **Equivalent USD** |
+|------------------|-------------------------------|---------------------|
+| Binance Smart Chain (BSC) | **0.0000567633 BNB**          | **$0.04**          |
+| Avalanche (AVAX)          | **0.000444552 AVAX**         | **$0.02**          |
+
+### Monthly Estimation (30 Days)
+For **10 Payment Wallets reused daily**, the estimated gas fees are:
+
+| **Network**     | **Gas Fee per Day**             | **Monthly Gas Fee** |
+|------------------|---------------------------------|----------------------|
+| Binance Smart Chain (BSC) | **10 × 0.0000567633 BNB = 0.000567633 BNB** | **0.017029 BNB**   |
+| Avalanche (AVAX)          | **10 × 0.000444552 AVAX = 0.00444552 AVAX**| **0.1333656 AVAX** |
+
+---
+
+## Gas Balance Top-Up for Receiving Wallet
+
+### Monthly Top-Up Recommendation
+| **Network**     | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)** | **Approximate Cost (USD)** |
+|------------------|-----------------------------|--------------------------------------|----------------------------|
+| Binance Smart Chain (BSC) | **0.017029 BNB**         | **0.022 BNB**                      | **~$1.5**                  |
+| Avalanche (AVAX)          | **0.1333656 AVAX**        | **0.2 AVAX**                       | **~$10**                   |
+
+**Notes**:
+- The recommended top-up includes a **30% buffer** for unexpected additional transactions.
+- Gas fees and token prices are subject to change. Adjust the top-up values periodically to align with current rates.
+
+---
+
+## Worker Automation
+
+### Worker Schedule
+A worker runs daily at **00:00 UTC** to:
+1. **Collect USDT** from all Payment Wallets into the Receiving Wallet.
+2. **Transfer USDT** from the Receiving Wallet to the Master Wallet.
+3. **Distribute Gas Fees** (BNB and AVAX) to Payment Wallets to ensure they are operational.
+
+### Workflow Summary
+1. **Gas Redistribution**:
+   - The Receiving Wallet sends BNB and AVAX to Payment Wallets for gas fee provisioning.
+2. **USDT Collection**:
+   - The Receiving Wallet collects USDT balances from Payment Wallets.
+3. **Master Wallet Transfer**:
+   - The Receiving Wallet transfers the total collected USDT to the Master Wallet.
+
+---
+
 ## Notes
-- **BSC_START_BLOCK_LISTENER** and **AVAX_START_BLOCK_LISTENER**: Ensure values are not too old to avoid issues with block pruning.
-- **MNEMONIC, PASSPHRASE, SALT**: These are used to generate wallets through the HD path algorithm. Private keys do not need to be stored in the database.
+- **BSC_START_BLOCK_LISTENER** and **AVAX_START_BLOCK_LISTENER**:
+  - Ensure the starting block is not too far in the past to avoid issues with pruned nodes.
+- **Gas Fee Recommendations**:
+  - Top up the Receiving Wallet monthly with **0.022 BNB** and **0.2 AVAX** for seamless operations.
+- **Worker Automation**:
+  - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
+
+
+
+
 
