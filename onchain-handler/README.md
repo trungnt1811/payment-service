@@ -55,7 +55,7 @@ mockgen -source=[path_inteface_file] -destination=[path_mock_file] -package=mock
 The following environment variables are required for the application to run. Set them in a .env file or your environment:
 
 ### General Configuration
-| Variable                | Description                                                            | Example               |
+| Variable                | Description                                                            | Default               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
 | `ENV`                  | Environment mode: `DEV`, `PROD`.                           | `PROD`                |
 | `LOG_LEVEL`            | Logging level: `debug`, `info`, `warn`, `error`.                      | `info`              |
@@ -63,7 +63,7 @@ The following environment variables are required for the application to run. Set
 | `APP_PORT`             | Port to run the application.                                          | `8080`               |
 
 ### Database Configuration
-| Variable                | Description                                                            | Example               |
+| Variable                | Description                                                            | Default               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
 | `DB_USER`              | Database username.                                                    | `postgres`           |
 | `DB_PASSWORD`          | Database password.                                                    | `123456`             |
@@ -74,25 +74,25 @@ The following environment variables are required for the application to run. Set
 ### Blockchain Configuration
 | Variable                     | Description                                                                                | Example                                                      |
 |------------------------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------|
-| `BSC_RPC_URLS`              | List of Binance Smart Chain RPC URLs.                                                     | `https://rpc.ankr.com/bsc/...`                              |
+| `BSC_RPC_URLS`              | List of Binance Smart Chain RPC URLs.                                                     | `https://rpc.ankr.com/bsc/...` ask developer                            |
 | `BSC_CHAIN_ID`              | Binance Smart Chain ID.                                                                   | `56`                                                         |
-| `BSC_START_BLOCK_LISTENER`  | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.** | `45011000`                                                   |
-| `BSC_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Binance Smart Chain.                                         | `0x55d398326f99059fF775485246999027B3197955`                 |
-| `AVAX_RPC_URLS`             | List of Avalanche RPC URLs.                                                              | `https://rpc.ankr.com/avalanche/...`                        |
+| `BSC_START_BLOCK_LISTENER`  | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.** | `45011000` ask developer                                                   |
+| `BSC_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Binance Smart Chain.                                         | `0x55d398326f99059fF775485246999027B3197955`             |
+| `AVAX_RPC_URLS`             | List of Avalanche RPC URLs.                                                              | `https://rpc.ankr.com/avalanche/...` ask developer                        |
 | `AVAX_CHAIN_ID`             | Avalanche Chain ID.                                                                      | `43114`                                                      |
-| `AVAX_START_BLOCK_LISTENER` | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000`                                                   |
+| `AVAX_START_BLOCK_LISTENER` | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` ask developer                                                 |
 | `AVAX_USDT_CONTRACT_ADDRESS`| Contract address for USDT on Avalanche.                                                  | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`                 |
 
 ### Additional Configuration
-| Variable                     | Description                                                            | Example               |
+| Variable                     | Description                                                            | Default               |
 |------------------------------|------------------------------------------------------------------------|-----------------------|
 | `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                             | `10`                 |
 | `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                 |
 | `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.          | `1440`               |
 | `PAYMENT_COVERING`           | Discount amount applied to each order.                            | `1` (1 USDT)             |
-| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                      | `net motor more...`  |
-| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                  | `your passphrase`              |
-| `SALT`                       | Salt for HD wallet derivation.                                        | `your salt`               |
+| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                      | `net motor more...` ask devops |
+| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                  | `your passphrase` ask devops              |
+| `SALT` devops                       | Salt for HD wallet derivation.                                        | `your salt`               |
 
 # Receiving Wallet Documentation
 
