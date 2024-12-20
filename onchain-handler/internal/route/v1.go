@@ -29,9 +29,9 @@ func RegisterRoutes(
 	appRouter := v1.Group("")
 
 	// SECTION: tokens transfer
-	transferHandler := handlers.NewTokenTransferHandler(tokenTransferUCase, config)
-	appRouter.POST("/token-transfer", transferHandler.Transfer)
-	appRouter.GET("/token-transfers", transferHandler.GetTokenTransferHistories)
+	// transferHandler := handlers.NewTokenTransferHandler(tokenTransferUCase, config)
+	// appRouter.POST("/token-transfer", transferHandler.Transfer)
+	// appRouter.GET("/token-transfers", transferHandler.GetTokenTransferHistories)
 
 	// SECTION: payment order
 	paymentOrderHandler := handlers.NewPaymentOrderHandler(paymentOrderUCase, config)
@@ -41,14 +41,14 @@ func RegisterRoutes(
 	appRouter.PUT("/payment-order/network", paymentOrderHandler.UpdatePaymentOrderNetwork)
 
 	// SECTION: user wallet
-	userWalletHander := handlers.NewUserWalletHandler(userWalletUCase, config)
-	appRouter.POST("/user-wallets", userWalletHander.CreateUserWallets)
-	appRouter.GET("/user-wallets", userWalletHander.GetUserWallets)
+	// userWalletHander := handlers.NewUserWalletHandler(userWalletUCase, config)
+	// appRouter.POST("/user-wallets", userWalletHander.CreateUserWallets)
+	// appRouter.GET("/user-wallets", userWalletHander.GetUserWallets)
 
 	// SECTION: payment wallet
 	paymentWalletHander := handlers.NewPaymentWalletHandler(paymentWalletUCase, config)
-	appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
-	appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
+	// appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
+	// appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
 	appRouter.GET("/payment-wallets/receiving-address", paymentWalletHander.GetReceivingWalletAddress)
 
 	// SECTION: metadata
