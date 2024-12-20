@@ -15,7 +15,10 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 - **Error-Resilient Operations**: Built-in retry mechanisms for handling network or RPC errors.
 
-- **Expired Order Handling**: Worker processes expired orders and transitions them to a FAILED state based on the configured expiration time.
+- **Expired Order Handling**:
+  - Orders in the EXPIRED state are monitored by a worker. If an order remains in the EXPIRED state beyond the configured cutoff time (ORDER_CUTOFF_TIME), it transitions to FAILED.
+  - However, in cases where payment is received after the order has transitioned to EXPIRED but before it moves to FAILED, the order will be updated to SUCCESS if the payment amount is sufficient.
+  - This mechanism ensures flexibility for scenarios such as delayed transactions or network latency, maintaining accuracy and fairness in order processing.
 
 - **State Machine for Payment Orders**:
 
@@ -24,7 +27,9 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
   - SUCCESS: Payment is completed, and the order is fulfilled.
   - PARTIAL: Partial payment is received, but not sufficient to fulfill the order.
   - EXPIRED: Order is expired due to timeout.
-  - FAILED: Order is marked as failed after expiration or manual intervention.
+  - FAILED: 
+    - Orders transition to FAILED after remaining in the EXPIRED state for a period exceeding the configured cutoff time (ORDER_CUTOFF_TIME in environment variables).
+    - This ensures proper handling of long-expired orders, maintaining system consistency and accuracy.
 
 - **Payment Wallets Pool Optimization**:
 
@@ -34,43 +39,6 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
   - Supports consolidation of token balances by transferring USDT from payment wallets to the receiving wallet, which then forwards the collected USDT to the master wallet.
   - Automatically distributes BNB and AVAX to payment wallets for gas fees, ensuring smooth transaction processing.
   - Integrated with a daily worker running at 00:00 UTC to execute wallet-related operations, such as gas fee distribution and balance consolidation.
-
-
-## Install golangci-lint
-```bash
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-```
-
-## Generate Go bindings to interact with smart contracts
-```bash
-mkdir -p ./contracts/abigen/erc20token && touch ./contracts/abigen/erc20token/ERC20Token.go
-
-abigen --abi=./contracts/abis/ERC20Token.abi.json --pkg=erc20token --out=./contracts/abigen/erc20token/ERC20Token.go
-```
-
-## Swagger
-http://localhost:8080/swagger/index.html
-
-## How to run
-1. `make build`
-2. `make run`
-
-## How to check unittest coverage
-Move to the target folder and run the command:
-
-```bash
-go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out
-```
-
-## How to generate mock for unittest
-1. Install `mockgen`:
-```bash
-go install go.uber.org/mock/mockgen@latest
-```
-2. Generate mock files:
-```bash
-mockgen -source=[path_inteface_file] -destination=[path_mock_file] -package=mocks
-```
 
 ## Environment Variables
 The following environment variables are required for the application to run. Set them in a .env file or your environment:
@@ -115,9 +83,9 @@ The following environment variables are required for the application to run. Set
 | `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)        |
 | `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)              |
 
-# Receiving Wallet Documentation
+## Receiving Wallet Documentation
 
-## Overview
+### Overview
 
 The **Receiving Wallet** is a centralized wallet designed to:
 1. **Collect USDT** from all Payment Wallets daily.
@@ -128,19 +96,19 @@ A worker automates these processes daily at **00:00 UTC**.
 
 ---
 
-## Daily Wallet Usage and Transaction Fee Estimation
+### Daily Wallet Usage and Transaction Fee Estimation
 
-### Daily Wallet Usage
+#### Daily Wallet Usage
 - **Average daily reuse**: 10 Payment Wallets.
 - **Each Payment Wallet** performs at least one **USDT transfer** per day, requiring gas for these transactions.
 
-### Transaction Fees Per Network
+#### Transaction Fees Per Network
 | **Network**      | **Gas Fee per USDT Transfer** | 
 |------------------|-------------------------------|
 | Binance Smart Chain (BSC) | **0.00006 BNB**      | 
 | Avalanche (AVAX)          | **0.0028 AVAX**      | 
 
-### Monthly Estimation (30 Days)
+#### Monthly Estimation (30 Days)
 For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 | **Network**      | **Gas Fee per Day**             | **Monthly Gas Fee**  |
@@ -150,9 +118,9 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 ---
 
-## Gas Balance Top-Up for Receiving Wallet
+### Gas Balance Top-Up for Receiving Wallet
 
-### Monthly Top-Up Recommendation
+#### Monthly Top-Up Recommendation
 | **Network**      | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)**  |
 |------------------|-----------------------------|--------------------------------------|
 | Binance Smart Chain (BSC) | **0.018 BNB**      | **0.0234 BNB**                       | 
@@ -164,15 +132,15 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 ---
 
-## Payment Wallets Withdrawing Worker
+### Payment Wallets Withdrawing Worker
 
-### Worker Schedule
+#### Worker Schedule
 A worker runs daily at **00:00 UTC** to:
 1. **Collect USDT** from all Payment Wallets into the Receiving Wallet.
 2. **Transfer USDT** from the Receiving Wallet to the Master Wallet.
 3. **Distribute Gas Fees** (BNB and AVAX) to Payment Wallets to ensure they are operational.
 
-### Workflow Summary
+#### Workflow Summary
 1. **Gas Redistribution**:
    - The Receiving Wallet sends BNB and AVAX to Payment Wallets for gas fee provisioning.
 2. **USDT Collection**:
@@ -189,6 +157,50 @@ A worker runs daily at **00:00 UTC** to:
   - Top up the Receiving Wallet monthly with **0.0234 BNB** and **1.092 AVAX** for seamless operations.
 - **Payment Wallets Withdrawing Worker**:
   - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
+
+---  
+
+## Setup development tools
+
+### Install golangci-lint
+```bash
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+```
+
+### Generate Go bindings to interact with smart contracts
+```bash
+mkdir -p ./contracts/abigen/erc20token && touch ./contracts/abigen/erc20token/ERC20Token.go
+
+abigen --abi=./contracts/abis/ERC20Token.abi.json --pkg=erc20token --out=./contracts/abigen/erc20token/ERC20Token.go
+```
+
+### Swagger
+- `make swagger`
+- http://localhost:8080/swagger/index.html
+
+### How to run service
+- `make build`
+- `make run`
+
+### How to stop service
+- `make stop`
+
+### How to check unittest coverage
+Move to the target folder and run the command:
+
+```bash
+go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out
+```
+
+### How to generate mock for unittest
+1. Install `mockgen`:
+```bash
+go install go.uber.org/mock/mockgen@latest
+```
+2. Generate mock files:
+```bash
+mockgen -source=[path_inteface_file] -destination=[path_mock_file] -package=mocks
+```  
 
 
 
