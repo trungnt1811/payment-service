@@ -1,6 +1,20 @@
 # Onchain Handler
 Onchain Handler is a comprehensive service designed to facilitate seamless interaction with blockchain networks such as Binance Smart Chain (BSC) and Avalanche (AVAX). This service supports various functionalities, including managing payment wallets, processing token transfers, handling USDT balances, and tracking blockchain events efficiently. It is tailored to provide robust support for on-chain operations with scalability and reliability in mind.
 
+## Features
+
+Blockchain Agnostic: Supports multiple blockchain networks like BSC and AVAX.
+
+Payment Wallet Management: Secure handling of payment wallets with balances and transaction tracking.
+
+Token Transfers: Efficient token transfer mechanisms, including USDT and native tokens.
+
+Block Listeners: Real-time listening to blockchain events from a specific starting block.
+
+HD Wallet Support: Wallet generation using mnemonics without storing private keys in the database.
+
+Error-Resilient Operations: Built-in retry mechanisms for handling network or RPC errors.
+
 ## Install golangci-lint
 ```bash
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -43,7 +57,7 @@ The following environment variables are required for the application to run. Set
 ### General Configuration
 | Variable                | Description                                                            | Example               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
-| `ENV`                  | Environment mode: `DEV`, `STAGING`, `PROD`.                           | `DEV`                |
+| `ENV`                  | Environment mode: `DEV`, `PROD`.                           | `DEV`                |
 | `LOG_LEVEL`            | Logging level: `debug`, `info`, `warn`, `error`.                      | `debug`              |
 | `APP_NAME`             | Application name.                                                     | `onchain-handler`    |
 | `APP_PORT`             | Port to run the application.                                          | `8080`               |
