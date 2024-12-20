@@ -10,6 +10,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
+	"github.com/genefriendway/onchain-handler/pkg/payment"
 )
 
 type paymentWalletUCase struct {
@@ -134,4 +135,14 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 	}
 
 	return dtos, nil
+}
+
+func (u *paymentWalletUCase) GetReceivingWalletAddress(
+	ctx context.Context, mnemonic, passphrase, salt string,
+) (string, error) {
+	account, _, err := payment.GetReceivingWallet(mnemonic, passphrase, salt)
+	if err != nil {
+		return "", err
+	}
+	return account.Address.Hex(), nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
@@ -13,12 +14,14 @@ import (
 )
 
 type paymentWalletHandler struct {
-	ucase interfaces.PaymentWalletUCase
+	ucase  interfaces.PaymentWalletUCase
+	config *conf.Configuration
 }
 
-func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase) *paymentWalletHandler {
+func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase, config *conf.Configuration) *paymentWalletHandler {
 	return &paymentWalletHandler{
-		ucase: ucase,
+		ucase:  ucase,
+		config: config,
 	}
 }
 
@@ -67,4 +70,25 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, wallets)
+}
+
+// GetReceivingWalletAddress retrieves the receiving wallet address.
+// @Summary Retrieves the receiving wallet address.
+// @Description Retrieves the address of the wallet used for receiving tokens from payment wallets.
+// @Tags payment-wallet
+// @Accept json
+// @Produce json
+// @Success 200 {string} string "Receiving wallet address"
+// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Router /api/v1/payment-wallets/receiving-address [get]
+func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
+	address, err := h.ucase.GetReceivingWalletAddress(
+		ctx, h.config.Wallet.Mnemonic, h.config.Wallet.Passphrase, h.config.Wallet.Salt,
+	)
+	if err != nil {
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to get receiving wallet address", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"receiving_wallet_address": address})
 }

@@ -2,9 +2,14 @@ package payment
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/accounts"
+
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -37,4 +42,15 @@ func InitPaymentWallets(
 
 	logger.GetLogger().Infof("Successfully created %d payment wallets", totalWallets)
 	return nil
+}
+
+// Function to get the receiving wallet
+func GetReceivingWallet(mnemonic, passphrase, salt string) (*accounts.Account, *ecdsa.PrivateKey, error) {
+	// Generate receiving wallet
+	account, privateKey, err := crypto.GenerateAccount(mnemonic, passphrase, salt, constants.ReceivingWallet, 0)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate master wallet: %w", err)
+	}
+
+	return account, privateKey, nil
 }

@@ -43,5 +43,10 @@ type Client interface {
 		amount *big.Int,
 	) (common.Hash, uint64, *big.Int, error)
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
+	GetTokenBalance(
+		ctx context.Context,
+		tokenContractAddress string,
+		walletAddress string,
+	) (*big.Int, error)
 	Close()
 }
