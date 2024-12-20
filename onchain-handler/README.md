@@ -19,17 +19,22 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 - **State Machine for Payment Orders**:
 
-   - PENDING: Order is created and waiting for payment.
+  - PENDING: Order is created and waiting for payment.
+  - PROCESSING: Payment is detected, and the order is being processed.
+  - SUCCESS: Payment is completed, and the order is fulfilled.
+  - PARTIAL: Partial payment is received, but not sufficient to fulfill the order.
+  - EXPIRED: Order is expired due to timeout.
+  - FAILED: Order is marked as failed after expiration or manual intervention.
 
-   - PROCESSING: Payment is detected, and the order is being processed.
+- **Payment Wallets Pool Optimization**:
 
-   - SUCCESS: Payment is completed, and the order is fulfilled.
+  - Dynamically maintains a pool of reusable payment wallets to optimize wallet usage.
+  - Payment wallets are automatically assigned to new orders and released back into the pool upon order completion or failure.
+  - Reduces operational costs by minimizing wallet creation and promoting efficient wallet reuse.
+  - Supports consolidation of token balances by transferring USDT from payment wallets to the receiving wallet, which then forwards the collected USDT to the master wallet.
+  - Automatically distributes BNB and AVAX to payment wallets for gas fees, ensuring smooth transaction processing.
+  - Integrated with a daily worker running at 00:00 UTC to execute wallet-related operations, such as gas fee distribution and balance consolidation.
 
-   - PARTIAL: Partial payment is received, but not sufficient to fulfill the order.
-
-   - EXPIRED: Order is expired due to timeout.
-
-   - FAILED: Order is marked as failed after expiration or manual intervention.
 
 ## Install golangci-lint
 ```bash
