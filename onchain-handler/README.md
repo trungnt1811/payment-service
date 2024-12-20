@@ -114,28 +114,28 @@ A worker automates these processes daily at **00:00 UTC**.
 - **Each Payment Wallet** performs at least one **USDT transfer** per day, requiring gas for these transactions.
 
 ### Transaction Fees Per Network
-| **Network**     | **Gas Fee per USDT Transfer** | **Equivalent USD** |
-|------------------|-------------------------------|---------------------|
-| Binance Smart Chain (BSC) | **0.0000567633 BNB**          | **$0.04**          |
-| Avalanche (AVAX)          | **0.000444552 AVAX**         | **$0.02**          |
+| **Network**     | **Gas Fee per USDT Transfer** | 
+|------------------|-------------------------------|
+| Binance Smart Chain (BSC) | **0.0002 BNB**       | 
+| Avalanche (AVAX)          | **0.0004 AVAX**      | 
 
 ### Monthly Estimation (30 Days)
 For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 | **Network**     | **Gas Fee per Day**             | **Monthly Gas Fee** |
 |------------------|---------------------------------|----------------------|
-| Binance Smart Chain (BSC) | **10 × 0.0000567633 BNB = 0.000567633 BNB** | **0.017029 BNB**   |
-| Avalanche (AVAX)          | **10 × 0.000444552 AVAX = 0.00444552 AVAX**| **0.1333656 AVAX** |
+| Binance Smart Chain (BSC) | **10 × 0.0002 BNB = 0.002 BNB** | **0.06 BNB**   |
+| Avalanche (AVAX)          | **10 × 0.0004 AVAX = 0.004 AVAX**| **0.12 AVAX** |
 
 ---
 
 ## Gas Balance Top-Up for Receiving Wallet
 
 ### Monthly Top-Up Recommendation
-| **Network**     | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)** | **Approximate Cost (USD)** |
-|------------------|-----------------------------|--------------------------------------|----------------------------|
-| Binance Smart Chain (BSC) | **0.017029 BNB**         | **0.022 BNB**                      | **~$1.5**                  |
-| Avalanche (AVAX)          | **0.1333656 AVAX**        | **0.2 AVAX**                       | **~$10**                   |
+| **Network**     | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)** |
+|------------------|-----------------------------|--------------------------------------|
+| Binance Smart Chain (BSC) | **0.06 BNB**         | **0.078 BNB**                      | 
+| Avalanche (AVAX)          | **0.12 AVAX**        | **0.156 AVAX**                     |
 
 **Notes**:
 - The recommended top-up includes a **30% buffer** for unexpected additional transactions.
@@ -165,7 +165,7 @@ A worker runs daily at **00:00 UTC** to:
 - **BSC_START_BLOCK_LISTENER** and **AVAX_START_BLOCK_LISTENER**:
   - Ensure the starting block is not too far in the past to avoid issues with pruned nodes.
 - **Gas Fee Recommendations**:
-  - Top up the Receiving Wallet monthly with **0.022 BNB** and **0.2 AVAX** for seamless operations.
+  - Top up the Receiving Wallet monthly with **0.078 BNB** and **0.156** for seamless operations.
 - **Worker Automation**:
   - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
 
