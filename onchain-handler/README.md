@@ -15,6 +15,22 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 - **Error-Resilient Operations**: Built-in retry mechanisms for handling network or RPC errors.
 
+- **Expired Order Handling**: Worker processes expired orders and transitions them to a FAILED state based on the configured expiration time.
+
+- **State Machine for Payment Orders**:
+
+- - PENDING: Order is created and waiting for payment.
+
+- - PROCESSING: Payment is detected, and the order is being processed.
+
+- - SUCCESS: Payment is completed, and the order is fulfilled.
+
+- - PARTIAL: Partial payment is received, but not sufficient to fulfill the order.
+
+- - EXPIRED: Order is expired due to timeout.
+
+- - FAILED: Order is marked as failed after expiration or manual intervention.
+
 ## Install golangci-lint
 ```bash
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
