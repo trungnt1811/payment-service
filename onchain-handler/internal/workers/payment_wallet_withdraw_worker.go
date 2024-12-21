@@ -372,10 +372,11 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 		return nil, err
 	}
 
+	// Calculate the required gas with a buffer (x2 multiplier)
 	requiredGas := new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasPrice)
-	buffer := new(big.Int).Div(new(big.Int).Mul(requiredGas, big.NewInt(15)), big.NewInt(100))
-	requiredGas.Add(requiredGas, buffer)
+	requiredGas.Mul(requiredGas, big.NewInt(2)) // Add a 2x multiplier buffer
 
+	// Adjust for existing native token amount
 	if walletInfo.NativeTokenAmount != nil && walletInfo.NativeTokenAmount.Cmp(requiredGas) < 0 {
 		requiredGas.Sub(requiredGas, walletInfo.NativeTokenAmount)
 	}
