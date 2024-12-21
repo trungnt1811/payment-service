@@ -11,12 +11,12 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
 
 - **Block Listeners**: Real-time listening to blockchain events from a specific starting block.
 
-- **HD Wallet Support**: Wallet generation using mnemonics without storing private keys in the database.
+- **HD Wallet Support**: Wallets are securely generated using a single mnemonic, passphrase, and salt, ensuring consistency and enhanced security. This approach removes the necessity of storing private keys in the database, as wallets can be deterministically regenerated when needed.
 
-- **Error-Resilient Operations**: Built-in retry mechanisms for handling network or RPC errors.
+- **Error-Resilient Operations**: Built-in retry mechanisms ensure the system remains robust against network or RPC errors. In cases where services experience downtime, a catch-up worker is implemented to process missed events or transactions during the downtime period, ensuring data consistency and continuity.
 
 - **Expired Order Handling**:
-  - Orders in the EXPIRED state are monitored by a worker. If an order remains in the EXPIRED state beyond the configured cutoff time (ORDER_CUTOFF_TIME), it transitions to FAILED.
+  - Orders in the EXPIRED state are monitored by a catch-up worker. If an order remains in the EXPIRED state beyond the configured cutoff time (ORDER_CUTOFF_TIME), it transitions to FAILED.
   - However, in cases where payment is received after the order has transitioned to EXPIRED but before it moves to FAILED, the order will be updated to SUCCESS if the payment amount is sufficient.
   - This mechanism ensures flexibility for scenarios such as delayed transactions or network latency, maintaining accuracy and fairness in order processing.
 
@@ -75,13 +75,14 @@ The following environment variables are required for the application to run. Set
 ### Additional Configuration
 | Variable                     | Description                                                            | Default               |
 |------------------------------|------------------------------------------------------------------------|-----------------------|
-| `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                              | `10`                  |
-| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                  |
-| `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.          | `1440`               |
-| `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)             |
-| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops) |
-| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)        |
-| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)              |
+| `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                              | `10`                   |
+| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                   |
+| `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.              | `1440`|
+| `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)                  |
+| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)  |
+| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)       |
+| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)           |
+| `MASTER_WALLET_ADDRESS`      | The address of the master wallet where funds from receiving wallets are consolidated. Ensure this is securely configured.| `your master wallet address` (ask devops) |
 
 ## Receiving Wallet Documentation
 
