@@ -246,19 +246,17 @@ func (w *paymentWalletWithdrawWorker) mapWallets(wallets []dto.PaymentWalletBala
 		for _, networkBalance := range wallet.NetworkBalances {
 			if networkBalance.Network == string(w.network) {
 				for _, tokenBalance := range networkBalance.TokenBalances {
+					if tokenBalance.Symbol == nativeTokenSymbol {
+						continue
+					}
 					amount, err := utils.ConvertFloatTokenToSmallestUnit(tokenBalance.Amount, decimals)
 					if err != nil {
 						logger.GetLogger().Errorf("Failed to convert amount for wallet %s: %v", wallet.Address, err)
 						continue
 					}
-
 					walletDetails := addressWalletMap[wallet.Address]
 					walletDetails.ID = wallet.ID
-					if tokenBalance.Symbol == constants.USDT {
-						walletDetails.TokenAmount = amount
-					} else if tokenBalance.Symbol == nativeTokenSymbol {
-						walletDetails.NativeTokenAmount = amount
-					}
+					walletDetails.TokenAmount = amount
 					addressWalletMap[wallet.Address] = walletDetails
 				}
 			}
@@ -295,14 +293,10 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	if err != nil {
 		return fmt.Errorf("failed to transfer native token to %s: %w", address, err)
 	}
-	fee := utils.CalculateFee(gasUsed, gasPrice)
 
-	// Upsert payment wallet balance for native token
+	fee := utils.CalculateFee(gasUsed, gasPrice)
 	nativeAmount, _ := utils.ConvertSmallestUnitToFloatToken(requiredGas.String(), constants.NativeTokenDecimalPlaces)
-	if err = w.paymentWalletUCase.UpsertPaymentWalletBalance(ctx, walletInfo.ID, nativeAmount, w.network, nativeTokenSymbol); err != nil {
-		logger.GetLogger().Errorf("Failed to upsert payment wallet balance: %v", err)
-		return err
-	}
+
 	payloads = append(payloads, dto.TokenTransferHistoryDTO{
 		Network:         string(w.network),
 		TransactionHash: txHash.Hex(),
@@ -376,9 +370,15 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 	requiredGas := new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasPrice)
 	requiredGas.Mul(requiredGas, big.NewInt(2)) // Add a 2x multiplier buffer
 
+	// Get the native token balance of the wallet
+	nativeTokenAmount, err := w.ethClient.GetNativeTokenBalance(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+
 	// Adjust for existing native token amount
-	if walletInfo.NativeTokenAmount != nil && walletInfo.NativeTokenAmount.Cmp(requiredGas) < 0 {
-		requiredGas.Sub(requiredGas, walletInfo.NativeTokenAmount)
+	if nativeTokenAmount != nil && nativeTokenAmount.Cmp(requiredGas) < 0 {
+		requiredGas.Sub(requiredGas, nativeTokenAmount)
 	}
 	return requiredGas, nil
 }
