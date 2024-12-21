@@ -587,6 +587,31 @@ func (c *roundRobinClient) GetTokenBalance(
 	return result.(*big.Int), nil
 }
 
+// GetNativeTokenBalance retrieves the native token balance (e.g., ETH, BNB) of a wallet address using round-robin retry logic.
+func (c *roundRobinClient) GetNativeTokenBalance(
+	ctx context.Context,
+	walletAddress string,
+) (*big.Int, error) {
+	// Use executeWithRetry to perform the operation
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+		accountAddress := common.HexToAddress(walletAddress)
+
+		// Retrieve the native token balance
+		balance, err := client.BalanceAt(ctx, accountAddress, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get native token balance for wallet %s: %w", walletAddress, err)
+		}
+
+		return balance, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve native token balance after retries: %w", err)
+	}
+
+	// Cast the result to *big.Int and return
+	return result.(*big.Int), nil
+}
+
 // Close closes all underlying clients
 func (c *roundRobinClient) Close() {
 	for _, client := range c.clients {

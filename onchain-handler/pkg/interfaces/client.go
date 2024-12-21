@@ -48,5 +48,9 @@ type Client interface {
 		tokenContractAddress string,
 		walletAddress string,
 	) (*big.Int, error)
+	GetNativeTokenBalance(
+		ctx context.Context,
+		walletAddress string,
+	) (*big.Int, error)
 	Close()
 }
