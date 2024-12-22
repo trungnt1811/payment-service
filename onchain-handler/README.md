@@ -16,6 +16,12 @@ abigen --abi=./contracts/abis/ERC20Token.abi.json --pkg=erc20token --out=./contr
 - `make swagger`
 - http://localhost:8080/swagger/index.html
 
+### How to wire dependencies
+- `make wiring`
+
+### How to run linter
+- `make lint`
+
 ### How to run service
 - `make build`
 - `make run`

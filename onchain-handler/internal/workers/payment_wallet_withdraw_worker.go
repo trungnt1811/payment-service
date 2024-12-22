@@ -358,27 +358,33 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 		walletInfo.TokenAmount,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 
 	gasPrice, err := w.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to suggest gas price: %w", err)
 	}
 
-	// Calculate the required gas with a buffer (x2 multiplier)
+	// Calculate the required gas with a buffer (x2.5 multiplier)
 	requiredGas := new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasPrice)
-	requiredGas.Mul(requiredGas, big.NewInt(2)) // Add a 2x multiplier buffer
+	requiredGas = new(big.Int).Div(new(big.Int).Mul(requiredGas, big.NewInt(25)), big.NewInt(10)) // Multiply by 2.5 (25/10)
 
 	// Get the native token balance of the wallet
 	nativeTokenAmount, err := w.ethClient.GetNativeTokenBalance(ctx, address)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get native token balance: %w", err)
 	}
 
 	// Adjust for existing native token amount
 	if nativeTokenAmount != nil && nativeTokenAmount.Cmp(requiredGas) < 0 {
 		requiredGas.Sub(requiredGas, nativeTokenAmount)
 	}
+
+	// Ensure the required gas is not negative
+	if requiredGas.Cmp(big.NewInt(0)) < 0 {
+		requiredGas.Set(big.NewInt(0))
+	}
+
 	return requiredGas, nil
 }
