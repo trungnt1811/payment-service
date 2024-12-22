@@ -35,11 +35,12 @@ type PaymentGatewayConfiguration struct {
 }
 
 type BlockchainConfiguration struct {
-	AvaxNetwork      AvaxNetworkConfiguration      `mapstructure:",squash"`
-	BscNetwork       BscNetworkConfiguration       `mapstructure:",squash"`
-	LPTreasuryPool   LPTreasuryPoolConfiguration   `mapstructure:",squash"`
-	USDTTreasuryPool USDTTreasuryPoolConfiguration `mapstructure:",squash"`
-	LPRevenuePool    LPRevenuePoolConfiguration    `mapstructure:",squash"`
+	AvaxNetwork         AvaxNetworkConfiguration      `mapstructure:",squash"`
+	BscNetwork          BscNetworkConfiguration       `mapstructure:",squash"`
+	LPTreasuryPool      LPTreasuryPoolConfiguration   `mapstructure:",squash"`
+	USDTTreasuryPool    USDTTreasuryPoolConfiguration `mapstructure:",squash"`
+	LPRevenuePool       LPRevenuePoolConfiguration    `mapstructure:",squash"`
+	GasBufferMultiplier string                        `mapstructure:"GAS_BUFFER_MULTIPLIER"`
 }
 
 type AvaxNetworkConfiguration struct {
@@ -110,6 +111,7 @@ var defaultConfigurations = map[string]any{
 	"ORDER_CUTOFF_TIME":                 10,
 	"EXPIRED_ORDER_TIME":                3,
 	"PAYMENT_COVERING":                  1.2,
+	"GAS_BUFFER_MULTIPLIER":             2.5,
 	"MASTER_WALLET_ADDRESS":             "",
 	"AVAX_RPC_URLS":                     "",
 	"AVAX_CHAIN_ID":                     0,
@@ -264,6 +266,22 @@ func (config Configuration) GetPaymentCovering() float64 {
 	}
 
 	return paymentCoveringFloat
+}
+
+func (config Configuration) GetGasBufferMultiplier() float64 {
+	multiplierStr := config.Blockchain.GasBufferMultiplier
+	if multiplierStr == "" {
+		log.Error().Msg("GetGasBufferMultiplier is not set or is empty in the configuration")
+		return 1.0
+	}
+
+	multiplier, err := strconv.ParseFloat(multiplierStr, 64)
+	if err != nil {
+		log.Printf("Invalid GetGasBufferMultiplier: %s. Using default value: 1. Error: %v", multiplierStr, err)
+		return 1.0
+	}
+
+	return multiplier
 }
 
 func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
