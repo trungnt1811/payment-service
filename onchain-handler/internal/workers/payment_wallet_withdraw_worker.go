@@ -357,6 +357,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	return nil
 }
 
+// calculateRequiredGas calculates the required gas for a wallet withdrawal.
 func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, address, receivingWalletAddress string, walletInfo walletInfo) (*big.Int, error) {
 	// Step 1: Estimate the gas required for ERC20 token transfer
 	estimatedGas, err := w.ethClient.EstimateGasERC20(
@@ -369,37 +370,43 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 		return nil, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 
-	// Step 2: Get the current gas price
-	gasPrice, err := w.ethClient.SuggestGasPrice(ctx)
+	// Step 2: Fetch gas tip cap and base fee for dynamic fee transactions
+	gasTipCap, err := w.ethClient.SuggestGasTipCap(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to suggest gas price: %w", err)
+		return nil, fmt.Errorf("failed to suggest gas tip cap: %w", err)
 	}
 
-	// Step 3: Calculate the required gas with a buffer
-	requiredGas := new(big.Float).Mul(
-		new(big.Float).SetInt(new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasPrice)),
-		new(big.Float).SetFloat64(w.gasBufferMultiplier),
-	)
+	baseFee, err := w.ethClient.GetBaseFee(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get base fee: %w", err)
+	}
 
-	// Convert required gas back to *big.Int
-	finalRequiredGas := new(big.Int)
-	requiredGas.Int(finalRequiredGas)
+	// Step 3: Calculate max fee per gas (baseFee + 2 * gasTipCap)
+	gasFeeCap := new(big.Int).Add(baseFee, new(big.Int).Mul(gasTipCap, big.NewInt(2)))
 
-	// Step 4: Get the native token balance of the wallet
+	// Step 4: Calculate the required gas cost
+	requiredGas := new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasFeeCap)
+
+	// Step 5: Apply the gas buffer multiplier
+	multiplier := big.NewFloat(w.gasBufferMultiplier)
+	finalGas := new(big.Float).Mul(new(big.Float).SetInt(requiredGas), multiplier)
+	finalGas.Int(requiredGas) // `requiredGas` now contains the final gas value with the buffer applied.
+
+	// Step 6: Get the native token balance of the wallet
 	nativeTokenAmount, err := w.ethClient.GetNativeTokenBalance(ctx, address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get native token balance: %w", err)
 	}
 
-	// Step 5: Adjust required gas based on the existing native token balance
-	if nativeTokenAmount != nil && nativeTokenAmount.Cmp(finalRequiredGas) < 0 {
-		finalRequiredGas.Sub(finalRequiredGas, nativeTokenAmount)
+	// Step 7: Adjust the final gas cost (stored in `requiredGas`) based on the existing native token balance
+	if nativeTokenAmount != nil && nativeTokenAmount.Cmp(requiredGas) < 0 {
+		requiredGas.Sub(requiredGas, nativeTokenAmount)
 	}
 
-	// Step 6: Ensure the required gas is not negative
-	if finalRequiredGas.Cmp(big.NewInt(0)) < 0 {
-		finalRequiredGas.Set(big.NewInt(0))
+	// Step 8: Ensure the required gas is not negative
+	if requiredGas.Cmp(big.NewInt(0)) < 0 {
+		requiredGas.Set(big.NewInt(0))
 	}
 
-	return finalRequiredGas, nil
+	return requiredGas, nil
 }

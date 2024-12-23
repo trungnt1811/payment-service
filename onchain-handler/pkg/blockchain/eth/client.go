@@ -553,6 +553,41 @@ func (c *roundRobinClient) SuggestGasPrice(ctx context.Context) (*big.Int, error
 	return result.(*big.Int), nil
 }
 
+// GetBaseFee fetches the current base fee for dynamic fee transactions.
+func (c *roundRobinClient) GetBaseFee(ctx context.Context) (*big.Int, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+		header, err := client.HeaderByNumber(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch header for base fee: %w", err)
+		}
+		return header.BaseFee, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch base fee: %w", err)
+	}
+
+	return result.(*big.Int), nil
+}
+
+// SuggestGasTipCap retrieves the suggested gas tip cap for dynamic fee transactions using round-robin retry logic.
+func (c *roundRobinClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	// Use executeWithRetry to simplify retry logic
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+		// Use the client's SuggestGasTipCap method to fetch the tip cap
+		gasTipCap, err := client.SuggestGasTipCap(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to suggest gas tip cap: %w", err)
+		}
+		return gasTipCap, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve suggested gas tip cap after retries: %w", err)
+	}
+
+	// Cast the result to *big.Int and return
+	return result.(*big.Int), nil
+}
+
 // GetTokenBalance retrieves the balance of a specific ERC20 token for a given wallet address using round-robin retry logic.
 func (c *roundRobinClient) GetTokenBalance(
 	ctx context.Context,

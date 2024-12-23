@@ -111,7 +111,7 @@ var defaultConfigurations = map[string]any{
 	"ORDER_CUTOFF_TIME":                 10,
 	"EXPIRED_ORDER_TIME":                3,
 	"PAYMENT_COVERING":                  1.2,
-	"GAS_BUFFER_MULTIPLIER":             2.5,
+	"GAS_BUFFER_MULTIPLIER":             2,
 	"MASTER_WALLET_ADDRESS":             "",
 	"AVAX_RPC_URLS":                     "",
 	"AVAX_CHAIN_ID":                     0,
