@@ -295,7 +295,14 @@ func (listener *tokenTransferListener) processOrderPayment(
 		orderAmount, listener.config.GetPaymentCovering(), listener.tokenDecimals,
 	)
 
-	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, listener.tokenDecimals)
+	// Get newest order state in cache
+	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
+		return false, err
+	}
+
+	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(orderDTO.Transferred, listener.tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert transferred amount: %v", err)
 	}
@@ -309,7 +316,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if order is still 'Processing' or needs to be marked as 'Success'.
 		status := constants.Success
-		if blockHeight < order.UpcomingBlockHeight {
+		if blockHeight < orderDTO.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 
@@ -321,7 +328,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
-		if blockHeight < order.UpcomingBlockHeight {
+		if blockHeight < orderDTO.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 
