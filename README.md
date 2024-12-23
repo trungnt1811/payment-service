@@ -46,8 +46,8 @@ The following environment variables are required for the application to run. Set
 ### General Configuration
 | Variable                | Description                                                            | Default               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
-| `ENV`                   | Environment mode: `DEV`, `PROD`.                                       | `PROD`                |
-| `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`.                       | `info`                |
+| `ENV`                   | Environment mode: `DEV`, `PROD`.                                       | `DEV`                 |
+| `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`.                       | `debug`               |
 | `APP_NAME`              | Application name.                                                      | `onchain-handler`     |
 | `APP_PORT`              | Port to run the application.                                           | `8080`                |
 
@@ -76,15 +76,15 @@ The following environment variables are required for the application to run. Set
 ### Additional Configuration
 | Variable                     | Description                                                            | Default               |
 |------------------------------|------------------------------------------------------------------------|-----------------------|
-| `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                              | `10`                   |
-| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                   |
-| `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.              | `1440`|
+| `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                              | `10`                  |
+| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `3`                   |
+| `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.                 | `10`|
 | `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)                  |
 | `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)           |
 | `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)           |
 | `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)                |
 | `MASTER_WALLET_ADDRESS`      | The address of the master wallet where funds from receiving wallets are consolidated. Ensure this is securely configured.| `your master wallet address` (ask devops) |
-| `WITHDRAW_WORKER_INTERVAL`   | Interval for the paymentWalletWithdrawWorker to run. Accepts `hourly` or `daily`.                       | `daily`                                                                |
+| `WITHDRAW_WORKER_INTERVAL`   | Interval for the paymentWalletWithdrawWorker to run. Accepts `hourly` or `daily`.                       | `hourly`                                                                |
 
 ## Receiving Wallet Documentation
 
