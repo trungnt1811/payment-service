@@ -80,10 +80,11 @@ The following environment variables are required for the application to run. Set
 | `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                   |
 | `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.              | `1440`|
 | `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)                  |
-| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)  |
-| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)       |
-| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)           |
+| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)           |
+| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)           |
+| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)                |
 | `MASTER_WALLET_ADDRESS`      | The address of the master wallet where funds from receiving wallets are consolidated. Ensure this is securely configured.| `your master wallet address` (ask devops) |
+| `WITHDRAW_WORKER_INTERVAL`   | Interval for the paymentWalletWithdrawWorker to run. Accepts `hourly` or `daily`.                       | `daily`                                                                |
 
 ## Receiving Wallet Documentation
 

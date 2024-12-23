@@ -27,11 +27,12 @@ type DatabaseConfiguration struct {
 }
 
 type PaymentGatewayConfiguration struct {
-	InitWalletCount     uint   `mapstructure:"INIT_WALLET_COUNT"`
-	ExpiredOrderTime    uint   `mapstructure:"EXPIRED_ORDER_TIME"`
-	OrderCutoffTime     uint   `mapstructure:"ORDER_CUTOFF_TIME"`
-	PaymentCovering     string `mapstructure:"PAYMENT_COVERING"`
-	MasterWalletAddress string `mapstructure:"MASTER_WALLET_ADDRESS"`
+	InitWalletCount        uint   `mapstructure:"INIT_WALLET_COUNT"`
+	ExpiredOrderTime       uint   `mapstructure:"EXPIRED_ORDER_TIME"`
+	OrderCutoffTime        uint   `mapstructure:"ORDER_CUTOFF_TIME"`
+	PaymentCovering        string `mapstructure:"PAYMENT_COVERING"`
+	MasterWalletAddress    string `mapstructure:"MASTER_WALLET_ADDRESS"`
+	WithdrawWorkerInterval string `mapstructure:"WITHDRAW_WORKER_INTERVAL"`
 }
 
 type BlockchainConfiguration struct {
@@ -112,6 +113,7 @@ var defaultConfigurations = map[string]any{
 	"EXPIRED_ORDER_TIME":                3,
 	"PAYMENT_COVERING":                  1.2,
 	"GAS_BUFFER_MULTIPLIER":             2,
+	"WITHDRAW_WORKER_INTERVAL":          "hourly",
 	"MASTER_WALLET_ADDRESS":             "",
 	"AVAX_RPC_URLS":                     "",
 	"AVAX_CHAIN_ID":                     0,

@@ -41,6 +41,7 @@ type paymentWalletWithdrawWorker struct {
 	passphrase           string
 	salt                 string
 	gasBufferMultiplier  float64
+	withdrawInterval     string
 	isRunning            bool
 	mu                   sync.Mutex
 }
@@ -57,6 +58,7 @@ func NewPaymentWalletWithdrawWorker(
 	masterWalletAddress string,
 	mnemonic, passphrase, salt string,
 	gasBufferMultiplier float64,
+	withdrawInterval string,
 ) interfaces.Worker {
 	return &paymentWalletWithdrawWorker{
 		ctx:                  ctx,
@@ -72,21 +74,32 @@ func NewPaymentWalletWithdrawWorker(
 		passphrase:           passphrase,
 		salt:                 salt,
 		gasBufferMultiplier:  gasBufferMultiplier,
+		withdrawInterval:     withdrawInterval,
 	}
 }
 
 func (w *paymentWalletWithdrawWorker) Start(ctx context.Context) {
 	for {
 		// Calculate the duration until the next scheduled time (e.g., midnight)
-		now := time.Now()
-		nextRun := time.Date(
-			now.Year(), now.Month(), now.Day()+1, // Next day
-			0, 0, 0, 0, // 00:00:00
-			now.Location(),
-		)
-		sleepDuration := time.Until(nextRun)
+		var sleepDuration time.Duration
 
-		logger.GetLogger().Infof("Next payment wallet withdrawal scheduled at: %s", nextRun)
+		switch w.withdrawInterval {
+		case "hourly":
+			sleepDuration = time.Hour
+		case "daily":
+			now := time.Now()
+			nextRun := time.Date(
+				now.Year(), now.Month(), now.Day()+1, // Next day
+				0, 0, 0, 0, // 00:00:00
+				now.Location(),
+			)
+			sleepDuration = time.Until(nextRun)
+		default:
+			logger.GetLogger().Errorf("Invalid RunInterval: %s. Defaulting to hourly.", w.withdrawInterval)
+			sleepDuration = time.Hour
+		}
+
+		logger.GetLogger().Infof("Next payment wallet withdrawal scheduled in: %s", sleepDuration)
 
 		// Sleep until the next scheduled time or exit early if the context is canceled
 		select {
