@@ -38,7 +38,7 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
   - Reduces operational costs by minimizing wallet creation and promoting efficient wallet reuse.
   - Supports consolidation of token balances by transferring USDT from payment wallets to the receiving wallet, which then forwards the collected USDT to the master wallet.
   - Automatically distributes BNB and AVAX to payment wallets for gas fees, ensuring smooth transaction processing.
-  - Integrated with a daily worker running at 00:00 UTC to execute wallet-related operations, such as gas fee distribution and balance consolidation.
+  - Integrated a configurable worker that can run either: Daily at 00:00 UTC, or Hourly, depending on the WITHDRAW_WORKER_INTERVAL configuration. The worker handles wallet-related operations, such as gas fee distribution and balance consolidation.
 
 ## Environment Variables
 The following environment variables are required for the application to run. Set them in a .env file or your environment:
