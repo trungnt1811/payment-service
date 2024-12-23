@@ -71,7 +71,7 @@ The following environment variables are required for the application to run. Set
 | `AVAX_CHAIN_ID`              | Avalanche Chain ID.          | `43114`                                                       |
 | `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` (ask developer)                       |
 | `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                       | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`                  |
-| `GAS_BUFFER_MULTIPLIER`      | Multiplier to buffer estimated gas calculations.                              | `2.5`                             |
+| `GAS_BUFFER_MULTIPLIER`      | Multiplier to buffer estimated gas calculations.                              | `2`                             |
 
 ### Additional Configuration
 | Variable                     | Description                                                            | Default               |
