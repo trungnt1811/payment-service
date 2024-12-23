@@ -38,7 +38,7 @@ Onchain Handler is a comprehensive service designed to facilitate seamless inter
   - Reduces operational costs by minimizing wallet creation and promoting efficient wallet reuse.
   - Supports consolidation of token balances by transferring USDT from payment wallets to the receiving wallet, which then forwards the collected USDT to the master wallet.
   - Automatically distributes BNB and AVAX to payment wallets for gas fees, ensuring smooth transaction processing.
-  - Integrated with a daily worker running at 00:00 UTC to execute wallet-related operations, such as gas fee distribution and balance consolidation.
+  - Integrated a configurable worker that can run either: Daily at 00:00 UTC, or Hourly, depending on the WITHDRAW_WORKER_INTERVAL configuration. The worker handles wallet-related operations, such as gas fee distribution and balance consolidation.
 
 ## Environment Variables
 The following environment variables are required for the application to run. Set them in a .env file or your environment:
@@ -63,14 +63,15 @@ The following environment variables are required for the application to run. Set
 ### Blockchain Configuration
 | Variable                     | Description                                                                                | Default                                                      |
 |------------------------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------|
-| `BSC_RPC_URLS`               | List of Binance Smart Chain RPC URLs.                                                      | `https://rpc.ankr.com/bsc/...` (ask developer) |
-| `BSC_CHAIN_ID`               | Binance Smart Chain ID.                                                                    | `56`                                                         |
-| `BSC_START_BLOCK_LISTENER`   | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.** | `45011000` (ask developer)                                |
-| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                                          | `0x55d398326f99059fF775485246999027B3197955`   |
-| `AVAX_RPC_URLS`              | List of Avalanche RPC URLs.                                                                | `https://rpc.ankr.com/avalanche/...` (ask developer) |
-| `AVAX_CHAIN_ID`              | Avalanche Chain ID.                                                                        | `43114`                                                      |
-| `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` (ask developer)                     |
-| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                                    | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`   |
+| `BSC_RPC_URLS`               | List of Binance Smart Chain RPC URLs.                                                         | `https://rpc.ankr.com/bsc/...` (ask developer) |
+| `BSC_CHAIN_ID`               | Binance Smart Chain ID.      | `56`                                           |
+| `BSC_START_BLOCK_LISTENER`   | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.**                             | `45011000` (ask developer)   |
+| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                             | `0x55d398326f99059fF775485246999027B3197955`   |
+| `AVAX_RPC_URLS`              | List of Avalanche RPC URLs.  | `https://rpc.ankr.com/avalanche/...` (ask developer) |
+| `AVAX_CHAIN_ID`              | Avalanche Chain ID.          | `43114`                                                       |
+| `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` (ask developer)                       |
+| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                       | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`                  |
+| `GAS_BUFFER_MULTIPLIER`      | Multiplier to buffer estimated gas calculations.                              | `2`                             |
 
 ### Additional Configuration
 | Variable                     | Description                                                            | Default               |
@@ -79,10 +80,11 @@ The following environment variables are required for the application to run. Set
 | `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                   |
 | `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.              | `1440`|
 | `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)                  |
-| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)  |
-| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)       |
-| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)           |
+| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)           |
+| `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)           |
+| `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)                |
 | `MASTER_WALLET_ADDRESS`      | The address of the master wallet where funds from receiving wallets are consolidated. Ensure this is securely configured.| `your master wallet address` (ask devops) |
+| `WITHDRAW_WORKER_INTERVAL`   | Interval for the paymentWalletWithdrawWorker to run. Accepts `hourly` or `daily`.                       | `daily`                                                                |
 
 ## Receiving Wallet Documentation
 

@@ -40,6 +40,8 @@ type paymentWalletWithdrawWorker struct {
 	mnemonic             string
 	passphrase           string
 	salt                 string
+	gasBufferMultiplier  float64
+	withdrawInterval     string
 	isRunning            bool
 	mu                   sync.Mutex
 }
@@ -55,6 +57,8 @@ func NewPaymentWalletWithdrawWorker(
 	tokenContractAddress string,
 	masterWalletAddress string,
 	mnemonic, passphrase, salt string,
+	gasBufferMultiplier float64,
+	withdrawInterval string,
 ) interfaces.Worker {
 	return &paymentWalletWithdrawWorker{
 		ctx:                  ctx,
@@ -69,21 +73,33 @@ func NewPaymentWalletWithdrawWorker(
 		mnemonic:             mnemonic,
 		passphrase:           passphrase,
 		salt:                 salt,
+		gasBufferMultiplier:  gasBufferMultiplier,
+		withdrawInterval:     withdrawInterval,
 	}
 }
 
 func (w *paymentWalletWithdrawWorker) Start(ctx context.Context) {
 	for {
 		// Calculate the duration until the next scheduled time (e.g., midnight)
-		now := time.Now()
-		nextRun := time.Date(
-			now.Year(), now.Month(), now.Day()+1, // Next day
-			0, 0, 0, 0, // 00:00:00
-			now.Location(),
-		)
-		sleepDuration := time.Until(nextRun)
+		var sleepDuration time.Duration
 
-		logger.GetLogger().Infof("Next payment wallet withdrawal scheduled at: %s", nextRun)
+		switch w.withdrawInterval {
+		case "hourly":
+			sleepDuration = time.Hour
+		case "daily":
+			now := time.Now()
+			nextRun := time.Date(
+				now.Year(), now.Month(), now.Day()+1, // Next day
+				0, 0, 0, 0, // 00:00:00
+				now.Location(),
+			)
+			sleepDuration = time.Until(nextRun)
+		default:
+			logger.GetLogger().Errorf("Invalid RunInterval: %s. Defaulting to hourly.", w.withdrawInterval)
+			sleepDuration = time.Hour
+		}
+
+		logger.GetLogger().Infof("Next payment wallet withdrawal scheduled in: %s", sleepDuration)
 
 		// Sleep until the next scheduled time or exit early if the context is canceled
 		select {
@@ -270,6 +286,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	address, nativeTokenSymbol, receivingWalletAddress, receivingWalletPrivateKey string,
 	walletInfo walletInfo, decimals uint8,
 ) error {
+	// Step 1: Generate account and validate
 	account, privateKey, err := crypto.GenerateAccount(w.mnemonic, w.passphrase, w.salt, constants.PaymentWallet, walletInfo.ID)
 	if err != nil || account.Address.Hex() != address {
 		return fmt.Errorf("account generation or address mismatch: %v", err)
@@ -280,7 +297,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		return fmt.Errorf("failed to convert private key: %w", err)
 	}
 
-	// Calculate the gas required
+	// Step 2: Calculate required gas
 	requiredGas, err := w.calculateRequiredGas(ctx, address, receivingWalletAddress, walletInfo)
 	if err != nil {
 		return fmt.Errorf("failed to calculate required gas for wallet %s: %w", address, err)
@@ -288,44 +305,48 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 
 	var payloads []dto.TokenTransferHistoryDTO
 
-	// Step 1: Transfer native token for gas
-	txHash, gasUsed, gasPrice, err := w.ethClient.TransferNativeToken(ctx, w.chainID, receivingWalletPrivateKey, address, requiredGas)
-	if err != nil {
-		return fmt.Errorf("failed to transfer native token to %s: %w", address, err)
+	// Step 3: Transfer native token for gas if required
+	if requiredGas.Cmp(big.NewInt(0)) > 0 {
+		txHash, gasUsed, gasPrice, err := w.ethClient.TransferNativeToken(ctx, w.chainID, receivingWalletPrivateKey, address, requiredGas)
+		if err != nil {
+			return fmt.Errorf("failed to transfer native token to %s: %w", address, err)
+		}
+
+		fee := utils.CalculateFee(gasUsed, gasPrice)
+		nativeAmount, _ := utils.ConvertSmallestUnitToFloatToken(requiredGas.String(), constants.NativeTokenDecimalPlaces)
+
+		payloads = append(payloads, dto.TokenTransferHistoryDTO{
+			Network:         string(w.network),
+			TransactionHash: txHash.Hex(),
+			FromAddress:     receivingWalletAddress,
+			ToAddress:       address,
+			TokenAmount:     nativeAmount,
+			Status:          true,
+			Symbol:          nativeTokenSymbol,
+			ErrorMessage:    "",
+			Fee:             fee,
+			Type:            constants.Withdraw,
+		})
+		logger.GetLogger().Infof("Native token sent to %s for gas. Transaction hash: %s", address, txHash.Hex())
 	}
 
-	fee := utils.CalculateFee(gasUsed, gasPrice)
-	nativeAmount, _ := utils.ConvertSmallestUnitToFloatToken(requiredGas.String(), constants.NativeTokenDecimalPlaces)
-
-	payloads = append(payloads, dto.TokenTransferHistoryDTO{
-		Network:         string(w.network),
-		TransactionHash: txHash.Hex(),
-		FromAddress:     receivingWalletAddress,
-		ToAddress:       address,
-		TokenAmount:     nativeAmount,
-		Status:          true,
-		Symbol:          nativeTokenSymbol,
-		ErrorMessage:    "",
-		Fee:             fee,
-		Type:            constants.Withdraw,
-	})
-	logger.GetLogger().Infof("Native token sent to %s for gas. Transaction hash: %s", address, txHash.Hex())
-
-	// Step 2: Transfer USDT to the receiving wallet
-	txHash, gasUsed, gasPrice, err = w.ethClient.TransferToken(
+	// Step 4: Transfer USDT to the receiving wallet
+	txHash, gasUsed, gasPrice, err := w.ethClient.TransferToken(
 		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, walletInfo.TokenAmount,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to transfer USDT from %s to receiving wallet: %w", address, err)
 	}
-	fee = utils.CalculateFee(gasUsed, gasPrice)
 
-	// Subtract payment wallet balance for USDT
+	fee := utils.CalculateFee(gasUsed, gasPrice)
 	tokenAmount, _ := utils.ConvertSmallestUnitToFloatToken(walletInfo.TokenAmount.String(), decimals)
+
+	// Update payment wallet balance
 	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmount, w.network, constants.USDT); err != nil {
 		logger.GetLogger().Errorf("Failed to subtract payment wallet balance: %v", err)
 		return err
 	}
+
 	payloads = append(payloads, dto.TokenTransferHistoryDTO{
 		Network:         string(w.network),
 		TransactionHash: txHash.Hex(),
@@ -340,9 +361,8 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	})
 	logger.GetLogger().Infof("USDT transferred from %s to receiving wallet. Transaction hash: %s", address, txHash.Hex())
 
-	// Step 3: Persist transfer histories
-	err = w.tokenTransferUCase.CreateTokenTransferHistories(w.ctx, payloads)
-	if err != nil {
+	// Step 5: Persist transfer histories
+	if err := w.tokenTransferUCase.CreateTokenTransferHistories(w.ctx, payloads); err != nil {
 		logger.GetLogger().Errorf("Failed to create token transfer histories: %v", err)
 		return err
 	}
@@ -350,7 +370,9 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	return nil
 }
 
+// calculateRequiredGas calculates the required gas for a wallet withdrawal.
 func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, address, receivingWalletAddress string, walletInfo walletInfo) (*big.Int, error) {
+	// Step 1: Estimate the gas required for ERC20 token transfer
 	estimatedGas, err := w.ethClient.EstimateGasERC20(
 		common.HexToAddress(w.tokenContractAddress),
 		common.HexToAddress(address),
@@ -361,27 +383,40 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 		return nil, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 
-	gasPrice, err := w.ethClient.SuggestGasPrice(ctx)
+	// Step 2: Fetch gas tip cap and base fee for dynamic fee transactions
+	gasTipCap, err := w.ethClient.SuggestGasTipCap(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to suggest gas price: %w", err)
+		return nil, fmt.Errorf("failed to suggest gas tip cap: %w", err)
 	}
 
-	// Calculate the required gas with a buffer (x2.5 multiplier)
-	requiredGas := new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasPrice)
-	requiredGas = new(big.Int).Div(new(big.Int).Mul(requiredGas, big.NewInt(25)), big.NewInt(10)) // Multiply by 2.5 (25/10)
+	baseFee, err := w.ethClient.GetBaseFee(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get base fee: %w", err)
+	}
 
-	// Get the native token balance of the wallet
+	// Step 3: Calculate max fee per gas (baseFee + 2 * gasTipCap)
+	gasFeeCap := new(big.Int).Add(baseFee, new(big.Int).Mul(gasTipCap, big.NewInt(2)))
+
+	// Step 4: Calculate the required gas cost
+	requiredGas := new(big.Int).Mul(big.NewInt(int64(estimatedGas)), gasFeeCap)
+
+	// Step 5: Apply the gas buffer multiplier
+	multiplier := big.NewFloat(w.gasBufferMultiplier)
+	finalGas := new(big.Float).Mul(new(big.Float).SetInt(requiredGas), multiplier)
+	finalGas.Int(requiredGas) // `requiredGas` now contains the final gas value with the buffer applied.
+
+	// Step 6: Get the native token balance of the wallet
 	nativeTokenAmount, err := w.ethClient.GetNativeTokenBalance(ctx, address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get native token balance: %w", err)
 	}
 
-	// Adjust for existing native token amount
+	// Step 7: Adjust the final gas cost (stored in `requiredGas`) based on the existing native token balance
 	if nativeTokenAmount != nil && nativeTokenAmount.Cmp(requiredGas) < 0 {
 		requiredGas.Sub(requiredGas, nativeTokenAmount)
 	}
 
-	// Ensure the required gas is not negative
+	// Step 8: Ensure the required gas is not negative
 	if requiredGas.Cmp(big.NewInt(0)) < 0 {
 		requiredGas.Set(big.NewInt(0))
 	}

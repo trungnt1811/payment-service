@@ -327,6 +327,8 @@ func startWorkers(
 		config.Wallet.Mnemonic,
 		config.Wallet.Passphrase,
 		config.Wallet.Salt,
+		config.GetGasBufferMultiplier(),
+		config.PaymentGateway.WithdrawWorkerInterval,
 	)
 	go paymentWalletWithdrawWorker.Start(ctx)
 }

@@ -49,29 +49,30 @@ func (r *PaymentOrderRepository) CreatePaymentOrders(tx *gorm.DB, ctx context.Co
 	return orders, nil
 }
 
-// GetActivePaymentOrders retrieves active orders that have not expired on a specific network.
+// GetActivePaymentOrders retrieves active orders that have not expired or are in "Processing" status.
 func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error) {
 	var orders []domain.PaymentOrder
-	currentTime := time.Now().UTC() // Calculate current time in Go
+	currentTime := time.Now().UTC() // Get the current UTC time
 
 	query := r.db.WithContext(ctx).
 		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id"). // Join PaymentWallet with PaymentOrder.
 		Preload("Wallet").                                                           // Preload the associated Wallet
 		Limit(limit).
 		Offset(offset).
-		Where("payment_order.status IN (?) AND payment_order.expired_time > ?",
-			[]string{constants.Pending, constants.Processing, constants.Partial},
+		Where("(payment_order.status IN (?) AND payment_order.expired_time > ?) OR payment_order.status = ?", // Differentiate logic for `Processing`.
+			[]string{constants.Pending, constants.Partial}, // Non-expired statuses.
 			currentTime,
+			constants.Processing, // Include all `Processing` orders.
 		)
 
-	// Check if the network is specified
+	// Filter by network if specified
 	if network != nil {
 		query = query.Where("payment_order.network = ?", *network)
 	}
 
-	if err := query.Order("payment_order.expired_time ASC"). // Order results by expiration time.
-									Find(&orders).Error; err != nil {
-		return nil, fmt.Errorf("failed to retrieve pending orders: %w", err)
+	// Execute the query and retrieve results
+	if err := query.Order("payment_order.expired_time ASC").Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("failed to retrieve active orders: %w", err)
 	}
 
 	return orders, nil
@@ -264,7 +265,7 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 			// Step 1: Select a batch of expired orders with row-level locks
 			if err := tx.Model(&domain.PaymentOrder{}).
 				Clauses(clause.Locking{Strength: "UPDATE"}).
-				Where("status NOT IN (?)", []string{constants.Success, constants.Failed}).
+				Where("status NOT IN (?)", []string{constants.Success, constants.Failed, constants.Processing}).
 				Where("expired_time <= ?", cutoffTime).
 				Limit(constants.BatchSize).
 				Offset(offset).

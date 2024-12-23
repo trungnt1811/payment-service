@@ -137,10 +137,22 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 			continue
 		}
 
-		// Calculate the effective latest block considering the confirmation depth.
-		effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
-		if effectiveLatestBlock <= 0 {
+		// Retrieve the last processed block.
+		lastProcessedBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx, listener.network)
+		if err != nil || lastProcessedBlock == 0 {
+			logger.GetLogger().Warnf("Failed to retrieve the last processed block or it was zero on %s: %v", string(listener.network), err)
 			continue
+		}
+
+		// Determine the effective latest block.
+		var effectiveLatestBlock uint64
+		if lastProcessedBlock+constants.ConfirmationDepth >= latestBlock {
+			effectiveLatestBlock = latestBlock - constants.ConfirmationDepth
+			if effectiveLatestBlock <= 0 {
+				continue
+			}
+		} else {
+			effectiveLatestBlock = lastProcessedBlock + constants.ConfirmationDepth
 		}
 
 		if currentBlock > latestBlock {
