@@ -129,9 +129,26 @@ func (w *paymentWalletWithdrawWorker) run(ctx context.Context) {
 		w.mu.Unlock()
 	}()
 
-	if err := w.withdraw(ctx); err != nil {
-		logger.GetLogger().Errorf("Withdrawal process failed: %v", err)
+	var lastErr error
+	for attempt := 1; attempt <= constants.MaxRetries; attempt++ {
+		lastErr = w.withdraw(ctx)
+		if lastErr == nil {
+			logger.GetLogger().Infof("Withdrawal process succeeded on attempt %d", attempt)
+			return
+		}
+
+		logger.GetLogger().Errorf("Withdrawal process failed on attempt %d: %v", attempt, lastErr)
+
+		// Check if the context has been canceled to avoid infinite retries when shutting down
+		select {
+		case <-ctx.Done():
+			logger.GetLogger().Info("Withdrawal process stopped due to context cancellation")
+			return
+		case <-time.After(constants.RetryDelay): // Wait before retrying
+		}
 	}
+
+	logger.GetLogger().Errorf("Withdrawal process failed after %d attempts: %v", constants.MaxRetries, lastErr)
 }
 
 func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
