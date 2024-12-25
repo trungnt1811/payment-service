@@ -91,11 +91,11 @@ The following environment variables are required for the application to run. Set
 ### Overview
 
 The **Receiving Wallet** is a centralized wallet designed to:
-1. **Collect USDT** from all Payment Wallets daily.
+1. **Collect USDT** from all Payment Wallets.
 2. Consolidate the collected **USDT** and transfer it to the **Master Wallet**.
 3. **Distribute Gas Fees** (BNB for Binance Smart Chain and AVAX for Avalanche) to Payment Wallets to ensure sufficient gas for future transactions.
 
-A worker automates these processes daily at **00:00 UTC**.
+A worker automates these processes daily at **00:00 UTC** or optionally configurable to run hourly based on operational needs.
 
 ---
 
