@@ -66,11 +66,11 @@ The following environment variables are required for the application to run. Set
 | `BSC_RPC_URLS`               | List of Binance Smart Chain RPC URLs.                                                      | `https://rpc.ankr.com/bsc_testnet_chapel/...` (ask developer) |
 | `BSC_CHAIN_ID`               | Binance Smart Chain ID.      | `0`     (ask developer)                                     |
 | `BSC_START_BLOCK_LISTENER`   | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.**                             | `0` (ask developer)          |
-| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                                          | ` ` (ask developer)                |
+| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                                          | `0x...` (ask developer)              |
 | `AVAX_RPC_URLS`              | List of Avalanche RPC URLs.  | `https://rpc.ankr.com/avalanche_fuji/...` (ask developer)   |
 | `AVAX_CHAIN_ID`              | Avalanche Chain ID.          | `0`  (ask developer)                                        |
 | `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `0` (ask developer)            |
-| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                       | ` ` (ask developer)                     |
+| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                       | `0x...` (ask developer)                     |
 | `GAS_BUFFER_MULTIPLIER`      | Multiplier to buffer estimated gas calculations.                              | `2`                            |
 
 ### Additional Configuration
