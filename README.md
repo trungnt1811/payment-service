@@ -108,7 +108,7 @@ A worker automates these processes daily at **00:00 UTC** or optionally configur
 #### Transaction Fees Per Network
 | **Network**      | **Gas Fee per USDT Transfer** | 
 |------------------|-------------------------------|
-| Binance Smart Chain (BSC) | **0.00016 BNB**      | 
+| Binance Smart Chain (BSC) | **0.0002 BNB**       | 
 | Avalanche (AVAX)          | **0.0028 AVAX**      | 
 
 #### Monthly Estimation (30 Days)
@@ -116,7 +116,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 | **Network**      | **Gas Fee per Day**             | **Monthly Gas Fee**  |
 |------------------|---------------------------------|----------------------|
-| Binance Smart Chain (BSC) | **10 × 0.00016 BNB = 0.0016 BNB** | **0.048 BNB** |
+| Binance Smart Chain (BSC) | **10 × 0.0002 BNB = 0.002 BNB**   | **0.06 BNB**  |
 | Avalanche (AVAX)          | **10 × 0.0028 AVAX = 0.028 AVAX** | **0.84 AVAX** |
 
 ---
@@ -126,7 +126,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 #### Monthly Top-Up Recommendation
 | **Network**      | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)**  |
 |------------------|-----------------------------|--------------------------------------|
-| Binance Smart Chain (BSC) | **0.048 BNB**      | **0.0624 BNB**                       | 
+| Binance Smart Chain (BSC) | **0.06 BNB**       | **0.078 BNB**                        | 
 | Avalanche (AVAX)          | **0.84 AVAX**      | **1.092 AVAX**                       |
 
 **Notes**:
@@ -159,6 +159,6 @@ The worker is configured to run either:
 - **BSC_START_BLOCK_LISTENER** and **AVAX_START_BLOCK_LISTENER**:
   - Ensure the starting block is not too far in the past to avoid issues with pruned nodes.
 - **Gas Fee Recommendations**:
-  - Top up the Receiving Wallet monthly with **0.0624 BNB** and **1.092 AVAX** for seamless operations.
+  - Top up the Receiving Wallet monthly with **0.078 BNB** and **1.092 AVAX** for seamless operations.
 - **Payment Wallets Withdrawing Worker**:
   - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
