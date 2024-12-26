@@ -219,7 +219,7 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 
 	// Step 2: Skip transfer if no balance
 	if usdtBalance.Cmp(big.NewInt(0)) == 0 {
-		logger.GetLogger().Info("No USDT balance in receiving wallet. Skipping transfer to master wallet.")
+		logger.GetLogger().Infof("No USDT balance in receiving wallet in network %s. Skipping transfer to master wallet", w.network)
 		return nil
 	}
 
