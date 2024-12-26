@@ -84,9 +84,9 @@ func (w *paymentWalletWithdrawWorker) Start(ctx context.Context) {
 		var sleepDuration time.Duration
 
 		switch w.withdrawInterval {
-		case "hourly":
+		case constants.WithdrawIntervalHourly:
 			sleepDuration = time.Hour
-		case "daily":
+		case constants.WithdrawIntervalDaily:
 			now := time.Now()
 			nextRun := time.Date(
 				now.Year(), now.Month(), now.Day()+1, // Next day

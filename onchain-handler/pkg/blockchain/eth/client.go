@@ -305,6 +305,11 @@ func (c *roundRobinClient) getAuth(
 			return nil, fmt.Errorf("failed to get gas price: %w", err)
 		}
 
+		// Buffer the gas price
+		bufferedGasPrice := new(big.Float).Mul(new(big.Float).SetInt(gasPrice), big.NewFloat(constants.GasPriceMultiplier))
+		finalGasPrice := new(big.Int)
+		bufferedGasPrice.Int(finalGasPrice)
+
 		// Create transactor
 		auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 		if err != nil {
@@ -314,7 +319,7 @@ func (c *roundRobinClient) getAuth(
 		// Set transaction options
 		auth.Nonce = big.NewInt(int64(nonce))
 		auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
-		auth.GasPrice = gasPrice
+		auth.GasPrice = finalGasPrice
 
 		return auth, nil
 	})

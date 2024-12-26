@@ -168,3 +168,14 @@ const (
 	Monthly = "MONTHLY"
 	Yearly  = "YEARLY"
 )
+
+// Gas price multiplier
+const (
+	GasPriceMultiplier = 1.5
+)
+
+// Withdraw interval
+const (
+	WithdrawIntervalDaily  = "daily"
+	WithdrawIntervalHourly = "hourly"
+)
