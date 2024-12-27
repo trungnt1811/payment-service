@@ -356,7 +356,10 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	}
 
 	fee := utils.CalculateFee(gasUsed, gasPrice)
-	tokenAmount, _ := utils.ConvertSmallestUnitToFloatToken(walletInfo.TokenAmount.String(), decimals)
+	tokenAmount, err := utils.ConvertSmallestUnitToFloatToken(walletInfo.TokenAmount.String(), decimals)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to convert token amount for transfer USDT on network %s: %v", w.network, tokenAmount)
+	}
 
 	// Update payment wallet balance
 	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmount, w.network, constants.USDT); err != nil {
