@@ -321,7 +321,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 	}
 
 	// No matching order found for this log entry
-	logger.GetLogger().Warnf("No matching expired order found for transfer to address: %s on network %s", transferEvent.To.Hex(), string(w.network))
+	logger.GetLogger().Infof("No matching expired order found for transfer to address: %s on network %s", transferEvent.To.Hex(), string(w.network))
 	return nil
 }
 

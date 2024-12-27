@@ -99,14 +99,14 @@ func (w *paymentWalletWithdrawWorker) Start(ctx context.Context) {
 			sleepDuration = time.Hour
 		}
 
-		logger.GetLogger().Infof("Next payment wallet withdrawal scheduled in: %s", sleepDuration)
+		logger.GetLogger().Infof("Next payment wallet withdrawal on network %s scheduled in: %s", w.network, sleepDuration)
 
 		// Sleep until the next scheduled time or exit early if the context is canceled
 		select {
 		case <-time.After(sleepDuration):
 			go w.run(ctx)
 		case <-ctx.Done():
-			logger.GetLogger().Info("Shutting down paymentWalletWithdrawWorker")
+			logger.GetLogger().Infof("Shutting down paymentWalletWithdrawWorker on network %s", w.network)
 			return
 		}
 	}
@@ -115,7 +115,7 @@ func (w *paymentWalletWithdrawWorker) Start(ctx context.Context) {
 func (w *paymentWalletWithdrawWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		logger.GetLogger().Warn("Previous paymentWalletWithdrawWorker run still in progress, skipping this cycle")
+		logger.GetLogger().Warnf("Previous paymentWalletWithdrawWorker on network %s run still in progress, skipping this cycle", w.network)
 		w.mu.Unlock()
 		return
 	}
@@ -133,47 +133,47 @@ func (w *paymentWalletWithdrawWorker) run(ctx context.Context) {
 	for attempt := 1; attempt <= constants.MaxRetries; attempt++ {
 		lastErr = w.withdraw(ctx)
 		if lastErr == nil {
-			logger.GetLogger().Infof("Withdrawal process succeeded on attempt %d", attempt)
+			logger.GetLogger().Infof("Withdrawal process on network %s succeeded on attempt %d", w.network, attempt)
 			return
 		}
 
-		logger.GetLogger().Errorf("Withdrawal process failed on attempt %d: %v", attempt, lastErr)
+		logger.GetLogger().Errorf("Withdrawal process on network %s failed on attempt %d: %v", w.network, attempt, lastErr)
 
 		// Check if the context has been canceled to avoid infinite retries when shutting down
 		select {
 		case <-ctx.Done():
-			logger.GetLogger().Info("Withdrawal process stopped due to context cancellation")
+			logger.GetLogger().Infof("Withdrawal process on network %s stopped due to context cancellation", w.network)
 			return
 		case <-time.After(constants.RetryDelay): // Wait before retrying
 		}
 	}
 
-	logger.GetLogger().Errorf("Withdrawal process failed after %d attempts: %v", constants.MaxRetries, lastErr)
+	logger.GetLogger().Errorf("Withdrawal process on network %s failed after %d attempts: %v", w.network, constants.MaxRetries, lastErr)
 }
 
 func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
 	// Step 1: Get native token symbol
 	nativeTokenSymbol, err := blockchain.GetNativeTokenSymbol(w.network)
 	if err != nil {
-		return fmt.Errorf("failed to get native token symbol: %w", err)
+		return fmt.Errorf("failed to get native token symbol on network %s: %w", w.network, err)
 	}
 
 	// Step 2: Get token decimals from cache
 	decimals, err := blockchain.GetTokenDecimalsFromCache(w.tokenContractAddress, string(w.network), w.cacheRepo)
 	if err != nil {
-		return fmt.Errorf("failed to get token decimals from cache: %w", err)
+		return fmt.Errorf("failed to get token decimals from cache on network %s: %w", w.network, err)
 	}
 
 	// Step 3: Fetch payment wallets with balances
 	wallets, err := w.paymentWalletUCase.GetPaymentWalletsWithBalances(ctx, true, &w.network)
 	if err != nil {
-		return fmt.Errorf("failed to get payment wallets with balances: %w", err)
+		return fmt.Errorf("failed to get payment wallets with balances on network %s: %w", w.network, err)
 	}
 
 	// Step 4: Get receiving wallet (address and private key)
 	account, privateKey, err := payment.GetReceivingWallet(w.mnemonic, w.passphrase, w.salt)
 	if err != nil {
-		return fmt.Errorf("failed to get receiving wallet: %w", err)
+		return fmt.Errorf("failed to get receiving wallet on network %s: %w", w.network, err)
 	}
 
 	receivingWalletAddress := account.Address.Hex()
@@ -188,19 +188,19 @@ func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
 	// Step 6: Process each wallet
 	for address, walletInfo := range addressWalletMap {
 		if walletInfo.TokenAmount == nil {
-			logger.GetLogger().Warnf("Skipping withdrawal for wallet %s due to nil token amount", address)
+			logger.GetLogger().Warnf("Skipping withdrawal for wallet %s due to nil token amount on network %s", address, w.network)
 			continue
 		}
 		if err := w.processWallet(
 			ctx, address, nativeTokenSymbol, receivingWalletAddress, receivingWalletPrivateKey, walletInfo, decimals,
 		); err != nil {
-			logger.GetLogger().Errorf("Failed to process wallet %s: %v", address, err)
+			logger.GetLogger().Errorf("Failed to process wallet %s on network %s: %v", address, w.network, err)
 		}
 	}
 
 	// Step 7: Transfer all USDT tokens from receiving wallet to master wallet
 	if err := w.transferFromReceivingToMasterWallet(ctx, receivingWalletAddress, receivingWalletPrivateKey, decimals); err != nil {
-		return fmt.Errorf("failed to transfer from receiving wallet to master wallet: %w", err)
+		return fmt.Errorf("failed to transfer from receiving wallet to master wallet on network %s: %w", w.network, err)
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 	// Step 1: Get the balance of the USDT token in the receiving wallet
 	usdtBalance, err := w.ethClient.GetTokenBalance(ctx, w.tokenContractAddress, receivingWalletAddress)
 	if err != nil {
-		return fmt.Errorf("failed to get USDT balance for receiving wallet: %w", err)
+		return fmt.Errorf("failed to get USDT balance for receiving wallet on network %s: %w", w.network, err)
 	}
 
 	// Step 2: Skip transfer if no balance
@@ -233,14 +233,14 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 		usdtBalance,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to transfer USDT to master wallet: %w", err)
+		return fmt.Errorf("failed to transfer USDT to master wallet on network %s: %w", w.network, err)
 	}
 
 	// Step 4: Calculate fee and create the payload
 	fee := utils.CalculateFee(gasUsed, gasPrice)
 	tokenAmount, err := utils.ConvertSmallestUnitToFloatToken(usdtBalance.String(), decimals)
 	if err != nil {
-		logger.GetLogger().Errorf("Failed to convert token amount for transfer: %v", err)
+		logger.GetLogger().Errorf("Failed to convert token amount for transfer USDT on network %s: %v", w.network, err)
 		return err
 	}
 
@@ -260,14 +260,14 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 	// Step 5: Persist transfer history
 	err = w.tokenTransferUCase.CreateTokenTransferHistories(ctx, []dto.TokenTransferHistoryDTO{payload})
 	if err != nil {
-		logger.GetLogger().Errorf("Failed to create token transfer history for receiving wallet transfer: %v", err)
+		logger.GetLogger().Errorf("Failed to create token transfer history for receiving wallet transfer on network %s: %v", w.network, err)
 		return err
 	}
 
 	// Step 6: Log successful transfer
 	logger.GetLogger().Infof(
-		"Transferred %s USDT from receiving wallet to master wallet. Transaction hash: %s. Fee: %s",
-		usdtBalance.String(), txHash.Hex(), fee,
+		"Transferred %s USDT from receiving wallet to master wallet  on network %s. Transaction hash: %s. Fee: %s",
+		usdtBalance.String(), w.network, txHash.Hex(), fee,
 	)
 
 	return nil
@@ -284,7 +284,7 @@ func (w *paymentWalletWithdrawWorker) mapWallets(wallets []dto.PaymentWalletBala
 					}
 					amount, err := utils.ConvertFloatTokenToSmallestUnit(tokenBalance.Amount, decimals)
 					if err != nil {
-						logger.GetLogger().Errorf("Failed to convert amount for wallet %s: %v", wallet.Address, err)
+						logger.GetLogger().Errorf("Failed to convert amount for wallet %s on network %s: %v", wallet.Address, w.network, err)
 						continue
 					}
 					walletDetails := addressWalletMap[wallet.Address]
@@ -317,7 +317,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	// Step 2: Calculate required gas
 	requiredGas, err := w.calculateRequiredGas(ctx, address, receivingWalletAddress, walletInfo)
 	if err != nil {
-		return fmt.Errorf("failed to calculate required gas for wallet %s: %w", address, err)
+		return fmt.Errorf("failed to calculate required gas for wallet %s on network %s: %w", address, w.network, err)
 	}
 
 	var payloads []dto.TokenTransferHistoryDTO
@@ -326,7 +326,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	if requiredGas.Cmp(big.NewInt(0)) > 0 {
 		txHash, gasUsed, gasPrice, err := w.ethClient.TransferNativeToken(ctx, w.chainID, receivingWalletPrivateKey, address, requiredGas)
 		if err != nil {
-			return fmt.Errorf("failed to transfer native token to %s: %w", address, err)
+			return fmt.Errorf("failed to transfer native token to %s on network %s: %w", address, w.network, err)
 		}
 
 		fee := utils.CalculateFee(gasUsed, gasPrice)
@@ -344,7 +344,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 			Fee:             fee,
 			Type:            constants.Withdraw,
 		})
-		logger.GetLogger().Infof("Native token sent to %s for gas. Transaction hash: %s", address, txHash.Hex())
+		logger.GetLogger().Infof("Native token sent to %s for gas on network %s. Transaction hash: %s", address, w.network, txHash.Hex())
 	}
 
 	// Step 4: Transfer USDT to the receiving wallet
@@ -352,7 +352,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, walletInfo.TokenAmount,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to transfer USDT from %s to receiving wallet: %w", address, err)
+		return fmt.Errorf("failed to transfer USDT from %s to receiving wallet on network %s: %w", address, w.network, err)
 	}
 
 	fee := utils.CalculateFee(gasUsed, gasPrice)
@@ -360,7 +360,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 
 	// Update payment wallet balance
 	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmount, w.network, constants.USDT); err != nil {
-		logger.GetLogger().Errorf("Failed to subtract payment wallet balance: %v", err)
+		logger.GetLogger().Errorf("Failed to subtract payment wallet balance on network %s: %v", w.network, err)
 		return err
 	}
 
@@ -376,11 +376,11 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		Fee:             fee,
 		Type:            constants.Withdraw,
 	})
-	logger.GetLogger().Infof("USDT transferred from %s to receiving wallet. Transaction hash: %s", address, txHash.Hex())
+	logger.GetLogger().Infof("USDT transferred from %s to receiving wallet on network %s. Transaction hash: %s", address, w.network, txHash.Hex())
 
 	// Step 5: Persist transfer histories
 	if err := w.tokenTransferUCase.CreateTokenTransferHistories(w.ctx, payloads); err != nil {
-		logger.GetLogger().Errorf("Failed to create token transfer histories: %v", err)
+		logger.GetLogger().Errorf("Failed to create token transfer histories on network %s: %v", w.network, err)
 		return err
 	}
 
@@ -397,18 +397,18 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 		walletInfo.TokenAmount,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to estimate gas: %w", err)
+		return nil, fmt.Errorf("failed to estimate gas on network %s: %w", w.network, err)
 	}
 
 	// Step 2: Fetch gas tip cap and base fee for dynamic fee transactions
 	gasTipCap, err := w.ethClient.SuggestGasTipCap(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to suggest gas tip cap: %w", err)
+		return nil, fmt.Errorf("failed to suggest gas tip cap on network %s: %w", w.network, err)
 	}
 
 	baseFee, err := w.ethClient.GetBaseFee(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get base fee: %w", err)
+		return nil, fmt.Errorf("failed to get base fee on network %s: %w", w.network, err)
 	}
 
 	// Step 3: Calculate max fee per gas (baseFee + 2 * gasTipCap)
@@ -425,7 +425,7 @@ func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, 
 	// Step 6: Get the native token balance of the wallet
 	nativeTokenAmount, err := w.ethClient.GetNativeTokenBalance(ctx, address)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get native token balance: %w", err)
+		return nil, fmt.Errorf("failed to get native token balance on network %s: %w", w.network, err)
 	}
 
 	// Step 7: Adjust the final gas cost (stored in `requiredGas`) based on the existing native token balance

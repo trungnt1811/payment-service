@@ -28,10 +28,12 @@ import (
 
 // roundRobinClient manages a pool of RPC clients for round-robin usage
 type roundRobinClient struct {
-	clients   []*ethclient.Client
-	endpoints []string
-	counter   int
-	mu        sync.Mutex
+	clients        []*ethclient.Client
+	endpoints      []string
+	counter        int
+	mu             sync.Mutex
+	failureTracker map[int]time.Time // Tracks failed clients and their cooldown periods
+	cooldown       time.Duration     // Cooldown period for retrying a failed client
 }
 
 // NewRoundRobinClient creates a new RoundRobinClient
@@ -50,9 +52,11 @@ func NewRoundRobinClient(rpcEndpoints []string) (interfaces.Client, error) {
 	}
 
 	return &roundRobinClient{
-		clients:   clients,
-		endpoints: rpcEndpoints,
-		counter:   0,
+		clients:        clients,
+		endpoints:      rpcEndpoints,
+		counter:        0,
+		failureTracker: make(map[int]time.Time),
+		cooldown:       constants.EthClientCooldown,
 	}, nil
 }
 
@@ -60,9 +64,27 @@ func NewRoundRobinClient(rpcEndpoints []string) (interfaces.Client, error) {
 func (c *roundRobinClient) getClient() *ethclient.Client {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	client := c.clients[c.counter]
-	c.counter = (c.counter + 1) % len(c.clients)
-	return client
+
+	// Track the index of the last client
+	lastClientIndex := len(c.clients) - 1
+
+	for {
+		clientIndex := c.counter
+		c.counter = (c.counter + 1) % len(c.clients)
+
+		// Check if the client is in cooldown
+		if cooldownEnd, failed := c.failureTracker[clientIndex]; failed {
+			if time.Now().Before(cooldownEnd) && clientIndex != lastClientIndex {
+				logger.GetLogger().Warnf("Skipping client %s due to recent failure (cooldown active)", c.endpoints[clientIndex])
+				continue
+			}
+			// Remove from failure tracker if cooldown has expired
+			delete(c.failureTracker, clientIndex)
+		}
+
+		// Return the client if not in cooldown or it's the last client
+		return c.clients[clientIndex]
+	}
 }
 
 // executeWithRetry executes a function and retries with the next client on failure
@@ -73,28 +95,48 @@ func (r *roundRobinClient) executeWithRetry(
 	baseDelay := constants.RetryDelay
 
 	for i := 0; i < len(r.clients); i++ {
+		clientIndex := r.counter
 		client := r.getClient()
-		logger.GetLogger().Debugf("Using RPC endpoint: %s", r.endpoints[r.counter])
+		logger.GetLogger().Debugf("Using RPC endpoint: %s", r.endpoints[clientIndex])
 
-		// Execute the function with the current client
-		result, err := fn(client)
-		if err == nil {
-			// Success
-			return result, nil
+		// Retry the current client up to 3 times
+		for attempt := 1; attempt <= 3; attempt++ {
+			result, err := fn(client)
+			if err == nil {
+				return result, nil // Success
+			}
+
+			lastErr = err
+			logger.GetLogger().Warnf("RPC call failed on endpoint %s (attempt %d): %v", r.endpoints[clientIndex], attempt, err)
+			time.Sleep(baseDelay * (1 << (attempt - 1))) // Exponential backoff
 		}
 
-		// Log failure
-		logger.GetLogger().Warnf("RPC call failed on endpoint %s: %v", r.endpoints[r.counter], err)
-		lastErr = err
+		// Mark the client as failed (unless it’s the last client)
+		if clientIndex != len(r.clients)-1 {
+			logger.GetLogger().Warnf("Marking client %s as failed", r.endpoints[clientIndex])
+			r.mu.Lock()
+			r.failureTracker[clientIndex] = time.Now().Add(r.cooldown)
+			r.mu.Unlock()
+		} else {
+			logger.GetLogger().Warnf("Keeping last client running despite failures")
+		}
+	}
 
-		// Add exponential backoff
-		delay := baseDelay * (1 << i) // Exponential backoff: 200ms, 400ms, 800ms, etc.
-		logger.GetLogger().Debugf("Delaying next retry by %v", delay)
-		time.Sleep(delay)
+	// Try the last client as a fallback
+	lastClient := r.clients[len(r.clients)-1]
+	logger.GetLogger().Warnf("Falling back to last client: %s", r.endpoints[len(r.clients)-1])
+	for attempt := 1; attempt <= 3; attempt++ {
+		result, err := fn(lastClient)
+		if err == nil {
+			return result, nil // Success
+		}
+		lastErr = err
+		logger.GetLogger().Warnf("Fallback client failed on attempt %d: %v", attempt, err)
+		time.Sleep(baseDelay * (1 << (attempt - 1))) // Exponential backoff
 	}
 
 	// Return the last encountered error if all retries fail
-	return nil, fmt.Errorf("all RPC clients failed: %w", lastErr)
+	return nil, fmt.Errorf("all RPC clients failed after retries, including fallback: %w", lastErr)
 }
 
 // PollForLogsFromBlock polls logs from the given block number onwards
@@ -305,10 +347,13 @@ func (c *roundRobinClient) getAuth(
 			return nil, fmt.Errorf("failed to get gas price: %w", err)
 		}
 
-		// Buffer the gas price
-		bufferedGasPrice := new(big.Float).Mul(new(big.Float).SetInt(gasPrice), big.NewFloat(constants.GasPriceMultiplier))
-		finalGasPrice := new(big.Int)
-		bufferedGasPrice.Int(finalGasPrice)
+		// Calculate buffered gas price
+		bufferedGasPrice, err := utils.CalculateBufferedGasPrice(gasPrice, constants.GasPriceMultiplier)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate buffered gas price: %w", err)
+		}
+
+		logger.GetLogger().Debugf("Using buffered gas price: %s wei", bufferedGasPrice.String())
 
 		// Create transactor
 		auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
@@ -319,7 +364,7 @@ func (c *roundRobinClient) getAuth(
 		// Set transaction options
 		auth.Nonce = big.NewInt(int64(nonce))
 		auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
-		auth.GasPrice = finalGasPrice
+		auth.GasPrice = bufferedGasPrice
 
 		return auth, nil
 	})
@@ -405,6 +450,9 @@ func (c *roundRobinClient) TransferToken(
 	toAddress := common.HexToAddress(toAddressHex)
 	tokenAddress := common.HexToAddress(tokenContractAddress)
 
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
 	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
 		// Get an authorized transactor
 		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID))
@@ -430,25 +478,20 @@ func (c *roundRobinClient) TransferToken(
 			return nil, fmt.Errorf("failed to wait for transaction to be mined: %w", err)
 		}
 
-		// Calculate transaction fee
-		gasPrice := auth.GasPrice
-		gasUsed := receipt.GasUsed
-
 		return struct {
 			Hash     common.Hash
 			GasUsed  uint64
 			GasPrice *big.Int
 		}{
 			Hash:     tx.Hash(),
-			GasUsed:  gasUsed,
-			GasPrice: gasPrice,
+			GasUsed:  receipt.GasUsed,
+			GasPrice: auth.GasPrice,
 		}, nil
 	})
 	if err != nil {
 		return common.Hash{}, 0, nil, fmt.Errorf("failed to transfer token after retries: %w", err)
 	}
 
-	// Extract and return the result
 	res := result.(struct {
 		Hash     common.Hash
 		GasUsed  uint64

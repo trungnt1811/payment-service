@@ -171,11 +171,16 @@ const (
 
 // Gas price multiplier
 const (
-	GasPriceMultiplier = 1.5
+	GasPriceMultiplier = 2.0
 )
 
 // Withdraw interval
 const (
 	WithdrawIntervalDaily  = "daily"
 	WithdrawIntervalHourly = "hourly"
+)
+
+// Eth client cooldown
+const (
+	EthClientCooldown = 5 * time.Minute
 )
