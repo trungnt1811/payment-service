@@ -1,0 +1,79 @@
+services:
+  app:
+    build:
+      context: .  # Path to Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ENV: DEV
+      LOG_LEVEL: debug
+
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_NAME: onchain-handler
+
+      BSC_RPC_URLS: https://rpc.ankr.com/bsc_testnet_chapel/0c81d15ee5d65af58c059bd6f4f7c707437b785c6e8a2dd9b753b24f4e575d81, https://rpc.ankr.com/bsc_testnet_chapel/095fe20adbc46e25cacabbfae458adfbf4493d8e69a14c09062a51cb34a33bbb, https://bsc-testnet-rpc.publicnode.com
+      BSC_CHAIN_ID: 97
+      BSC_START_BLOCK_LISTENER: 46158000
+      BSC_USDT_CONTRACT_ADDRESS: 0xc4E680309AE00BF8a517428335C846B75b9b0390
+
+      AVAX_RPC_URLS: https://rpc.ankr.com/avalanche_fuji/0c81d15ee5d65af58c059bd6f4f7c707437b785c6e8a2dd9b753b24f4e575d81, https://rpc.ankr.com/avalanche_fuji/095fe20adbc46e25cacabbfae458adfbf4493d8e69a14c09062a51cb34a33bbb, https://api.avax-test.network/ext/bc/C/rpc
+      AVAX_CHAIN_ID: 43113
+      AVAX_START_BLOCK_LISTENER: 36956000
+      AVAX_USDT_CONTRACT_ADDRESS: 0xa18523a7f8Be602df294a7804a510381fbE1760a 
+
+      AVAX_LIFE_POINT_CONTRACT_ADDRESS: 0x50B7C0d6A27149181abd17c3F427084C800f178c
+      AVAX_BULK_SENDER_CONTRACT_ADDRESS: 0xf3c16A130aC33E9b3f0A786c5705a15830E12186
+
+      LP_TREASURY_ADDRESS: 0x326ee3fbD294aCa6f33C60847A80883Ce25A92AD
+      USDT_TREASURY_ADDRESS: 0xB9F2fa90DBB47cd08e43aFA1b4D2C2620D80d193
+      LP_REVENUE_ADDRESS: 0x8EDBFc7Dcda975c7e23a48FF143878574E854E97
+
+      GAS_BUFFER_MULTIPLIER: 2
+
+      INIT_WALLET_COUNT: 10
+      EXPIRED_ORDER_TIME: 15
+      ORDER_CUTOFF_TIME: 1440
+      PAYMENT_COVERING: 1.2
+      MASTER_WALLET_ADDRESS: 0x131d21c1b52B7D41d1FBBdab45fBA9D0539565CA
+      WITHDRAW_WORKER_INTERVAL: daily
+
+      PRIVATE_KEY_LP_TREASURY: ${PRIVATE_KEY_LP_TREASURY}
+      PRIVATE_KEY_USDT_TREASURY: ${PRIVATE_KEY_USDT_TREASURY}
+      PRIVATE_KEY_LP_REVENUE: ${PRIVATE_KEY_LP_REVENUE}
+      MNEMONIC: ${MNEMONIC}
+      PASSPHRASE: ${PASSPHRASE}
+      SALT: ${SALT}
+    depends_on:
+      db:
+        condition: service_healthy  # Wait for the db service to become healthy
+    networks:
+      - onchain-handler-network
+
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: onchain-handler
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Persistent volume for PostgreSQL data
+    ports:
+      - "5432:5432"
+    networks:
+      - onchain-handler-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  onchain-handler-network:

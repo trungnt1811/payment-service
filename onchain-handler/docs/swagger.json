@@ -1,0 +1,995 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/api/v1/metadata/networks": {
+            "get": {
+                "description": "Retrieves all networks metadata.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metadata"
+                ],
+                "summary": "Retrieves all networks metadata.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.NetworkMetadataDTO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-order/network": {
+            "put": {
+                "description": "This endpoint allows updating the network of a payment order.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Update payment order network",
+                "parameters": [
+                    {
+                        "description": "Payment order ID and network (AVAX C-Chain or BSC).",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentOrderNetworkPayloadDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response: {\\\"success\\\": true}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Unsupported network",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-order/{request_id}": {
+            "get": {
+                "description": "This endpoint retrieves a payment order by its request ID, which can contain special characters.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment order by request ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment order request ID",
+                        "name": "request_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of payment order",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentOrderDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "404": {
+                        "description": "Payment order not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-orders": {
+            "get": {
+                "description": "This endpoint retrieves payment orders based on optional filters such as status, from_address, network, and sorting options.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Retrieve payment orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vendor ID for authentication",
+                        "name": "Vendor-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "List of request IDs to filter (maximum 50)",
+                        "name": "request_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by sender's address (from_address)",
+                        "name": "from_address",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by network (e.g., BSC, AVAX C-Chain)",
+                        "name": "network",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter (e.g., PENDING, PROCESSING, SUCCESS, PARTIAL, EXPIRED, FAILED)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc, succeeded_at_desc)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start time in UNIX timestamp format to filter (e.g., 1704067200)",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End time in UNIX timestamp format to filter (e.g., 1706745600)",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to filter time (e.g., created_at or succeeded_at)",
+                        "name": "time_filter_field",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of payment order histories",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "This endpoint allows creating payment orders for users.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Create payment orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vendor ID for authentication",
+                        "name": "Vendor-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC).",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PaymentOrderPayloadDTO"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Success created: {\\\"success\\\": true, \\\"data\\\": []dto.CreatedPaymentOrderDTO}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "412": {
+                        "description": "Duplicate key value",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-statistics": {
+            "get": {
+                "description": "This endpoint retrieves payment statistics based on granularity and time range.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-statistics"
+                ],
+                "summary": "Retrieve payment statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vendor ID for authentication",
+                        "name": "Vendor-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Granularity (DAILY, WEEKLY, MONTHLY, YEARLY)",
+                        "name": "granularity",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start time in UNIX timestamp format",
+                        "name": "start_time",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End time in UNIX timestamp format",
+                        "name": "end_time",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment statistics retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PaymentStatistics"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-wallet/{address}": {
+            "get": {
+                "description": "Retrieves a payment wallet by its address.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-wallet"
+                ],
+                "summary": "Retrieves a payment wallet by its address.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Address",
+                        "name": "address",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentWalletDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid address",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-wallets/balances": {
+            "get": {
+                "description": "Retrieves all payment wallets with balances grouped by network and token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-wallet"
+                ],
+                "summary": "Retrieves all payment wallets with balances.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PaymentWalletBalanceDTO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-wallets/receiving-address": {
+            "get": {
+                "description": "Retrieves the address of the wallet used for receiving tokens from payment wallets.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-wallet"
+                ],
+                "summary": "Retrieves the receiving wallet address.",
+                "responses": {
+                    "200": {
+                        "description": "Receiving wallet address",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/token-transfer": {
+            "post": {
+                "description": "This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "token-transfer"
+                ],
+                "summary": "Distribute tokens to recipients",
+                "parameters": [
+                    {
+                        "description": "List of transfer requests. Each request must include request id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain).",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TokenTransferPayloadDTO"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful distribution of tokens",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TokenTransferResultDTOResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload or invalid recipient address/transaction type",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error, failed to distribute tokens",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/token-transfers": {
+            "get": {
+                "description": "This endpoint fetches a paginated list of token transfer histories filtered by request IDs and time range.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "token-transfer"
+                ],
+                "summary": "Get list of token transfer histories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "List of request IDs to filter (maximum 50)",
+                        "name": "request_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of token transfer histories",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user-wallets": {
+            "get": {
+                "description": "This endpoint retrieves wallets based on a list of user IDs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-wallet"
+                ],
+                "summary": "Retrieve user wallets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "List of user IDs to filter",
+                        "name": "user_ids",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of user wallets",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "This endpoint allows creating wallets for a list of user IDs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-wallet"
+                ],
+                "summary": "Create wallets for users",
+                "parameters": [
+                    {
+                        "description": "List of user IDs",
+                        "name": "user_ids",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Success created: {\\\"success\\\": true, \\\"data\\\": []dto.UserWalletPayloadDTO}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.NetworkBalanceDTO": {
+            "type": "object",
+            "properties": {
+                "network": {
+                    "type": "string"
+                },
+                "token_balances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TokenBalanceDTO"
+                    }
+                }
+            }
+        },
+        "dto.NetworkMetadataDTO": {
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "type": "string"
+                },
+                "icon_base64": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaginationDTOResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {}
+                },
+                "next_page": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PaymentHistoryDTO": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "from_address": {
+                    "type": "string"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "to_address": {
+                    "type": "string"
+                },
+                "token_symbol": {
+                    "type": "string"
+                },
+                "transaction_hash": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentOrderDTOResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "block_height": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "event_histories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PaymentHistoryDTO"
+                    }
+                },
+                "expired": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "payment_address": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "succeeded_at": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "transferred": {
+                    "type": "string"
+                },
+                "upcoming_block_height": {
+                    "type": "integer"
+                },
+                "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentOrderNetworkPayloadDTO": {
+            "type": "object",
+            "properties": {
+                "network": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentOrderPayloadDTO": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentStatistics": {
+            "type": "object",
+            "properties": {
+                "period_start": {
+                    "type": "integer"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "string"
+                },
+                "total_orders": {
+                    "type": "integer"
+                },
+                "total_transferred": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PaymentWalletBalanceDTO": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "network_balances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.NetworkBalanceDTO"
+                    }
+                }
+            }
+        },
+        "dto.PaymentWalletDTO": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "in_use": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.TokenBalanceDTO": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TokenTransferPayloadDTO": {
+            "type": "object",
+            "properties": {
+                "from_address": {
+                    "type": "string"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "to_address": {
+                    "type": "string"
+                },
+                "token_amount": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TokenTransferResultDTOResponse": {
+            "type": "object",
+            "properties": {
+                "error_message": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.GeneralError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
