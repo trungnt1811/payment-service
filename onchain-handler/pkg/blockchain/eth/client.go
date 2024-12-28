@@ -87,6 +87,66 @@ func (c *roundRobinClient) getClient() *ethclient.Client {
 	}
 }
 
+// getAuth creates a new keyed transactor for signing transactions with the given private key and network chain ID
+func (c *roundRobinClient) getAuth(
+	ctx context.Context,
+	privateKey *ecdsa.PrivateKey,
+	chainID *big.Int,
+	client *ethclient.Client,
+) (*bind.TransactOpts, error) {
+	if privateKey == nil || chainID == nil || client == nil {
+		return nil, fmt.Errorf("invalid parameters: privateKey, chainID, and client must not be nil")
+	}
+
+	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	// Get nonce
+	nonce, err := client.PendingNonceAt(ctx, fromAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	// Get gas price
+	gasPrice, err := client.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get gas price: %w", err)
+	}
+
+	// Calculate buffered gas price
+	bufferedGasPrice, err := utils.CalculateBufferedGasPrice(gasPrice, constants.GasPriceMultiplier)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate buffered gas price: %w", err)
+	}
+
+	logger.GetLogger().Debugf("Using buffered gas price: %s wei", bufferedGasPrice.String())
+
+	// Create transactor
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create transactor: %w", err)
+	}
+
+	// Set transaction options
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
+	auth.GasPrice = bufferedGasPrice
+
+	return auth, nil
+}
+
+// getNonceWithRetry fetches the nonce for the given pool address and client
+func (c *roundRobinClient) getNonceWithRetry(ctx context.Context, poolAddress string, client *ethclient.Client) (uint64, error) {
+	if poolAddress == "" {
+		return 0, fmt.Errorf("invalid poolAddress: address cannot be empty")
+	}
+	// Use the provided client to fetch the nonce
+	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch nonce: %w", err)
+	}
+	return nonce, nil
+}
+
 // executeWithRetry executes a function and retries with the next client on failure
 func (r *roundRobinClient) executeWithRetry(
 	fn func(client *ethclient.Client) (interface{}, error),
@@ -209,13 +269,13 @@ func (c *roundRobinClient) BulkTransfer(
 		}
 
 		// Step 3: Get Nonce
-		nonce, err := c.getNonceWithRetry(ctx, poolAddress)
+		nonce, err := c.getNonceWithRetry(ctx, poolAddress, client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve nonce: %w", err)
 		}
 
 		// Step 4: Create Auth Object
-		auth, err := c.getAuth(ctx, privateKeyECDSA, new(big.Int).SetUint64(chainID))
+		auth, err := c.getAuth(ctx, privateKeyECDSA, new(big.Int).SetUint64(chainID), client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create auth object for pool %s: %w", poolAddress, err)
 		}
@@ -322,79 +382,6 @@ func (c *roundRobinClient) GetTokenDecimals(ctx context.Context, tokenContractAd
 	return result.(uint8), nil
 }
 
-// getAuth creates a new keyed transactor for signing transactions with the given private key and network chain ID using round-robin
-func (c *roundRobinClient) getAuth(
-	ctx context.Context,
-	privateKey *ecdsa.PrivateKey,
-	chainID *big.Int,
-) (*bind.TransactOpts, error) {
-	if privateKey == nil || chainID == nil {
-		return nil, fmt.Errorf("invalid parameters: privateKey and chainID must not be nil")
-	}
-
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
-		fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-		// Get nonce
-		nonce, err := client.PendingNonceAt(ctx, fromAddress)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get nonce: %w", err)
-		}
-
-		// Get gas price
-		gasPrice, err := client.SuggestGasPrice(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get gas price: %w", err)
-		}
-
-		// Calculate buffered gas price
-		bufferedGasPrice, err := utils.CalculateBufferedGasPrice(gasPrice, constants.GasPriceMultiplier)
-		if err != nil {
-			return nil, fmt.Errorf("failed to calculate buffered gas price: %w", err)
-		}
-
-		logger.GetLogger().Debugf("Using buffered gas price: %s wei", bufferedGasPrice.String())
-
-		// Create transactor
-		auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create transactor: %w", err)
-		}
-
-		// Set transaction options
-		auth.Nonce = big.NewInt(int64(nonce))
-		auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
-		auth.GasPrice = bufferedGasPrice
-
-		return auth, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get auth after retries: %w", err)
-	}
-
-	return result.(*bind.TransactOpts), nil
-}
-
-// getNonceWithRetry fetches the nonce for the given pool address using round-robin with retries
-func (c *roundRobinClient) getNonceWithRetry(ctx context.Context, poolAddress string) (uint64, error) {
-	if poolAddress == "" {
-		return 0, fmt.Errorf("invalid poolAddress: address cannot be empty")
-	}
-
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
-		nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch nonce: %w", err)
-		}
-		return nonce, nil
-	})
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch nonce after retries: %w", err)
-	}
-
-	return result.(uint64), nil
-}
-
 // EstimateGasERC20 estimates the gas required for an ERC-20 token transfer using round-robin
 func (c *roundRobinClient) EstimateGasERC20(
 	tokenAddress common.Address,
@@ -455,7 +442,7 @@ func (c *roundRobinClient) TransferToken(
 
 	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
 		// Get an authorized transactor
-		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID))
+		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID), client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get authorized transactor: %w", err)
 		}
@@ -518,7 +505,7 @@ func (c *roundRobinClient) TransferNativeToken(
 	// Use `executeWithRetry` to simplify retry logic
 	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
 		// Get an authorized transactor
-		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID))
+		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID), client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get authorized transactor: %w", err)
 		}
