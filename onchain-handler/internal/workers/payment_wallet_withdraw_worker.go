@@ -22,9 +22,8 @@ import (
 )
 
 type walletInfo struct {
-	ID                uint64
-	TokenAmount       *big.Int
-	NativeTokenAmount *big.Int
+	ID          uint64
+	TokenAmount *big.Int
 }
 
 type paymentWalletWithdrawWorker struct {
