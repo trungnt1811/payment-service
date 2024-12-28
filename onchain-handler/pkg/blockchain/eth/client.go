@@ -134,19 +134,6 @@ func (c *roundRobinClient) getAuth(
 	return auth, nil
 }
 
-// getNonceWithRetry fetches the nonce for the given pool address and client
-func (c *roundRobinClient) getNonceWithRetry(ctx context.Context, poolAddress string, client *ethclient.Client) (uint64, error) {
-	if poolAddress == "" {
-		return 0, fmt.Errorf("invalid poolAddress: address cannot be empty")
-	}
-	// Use the provided client to fetch the nonce
-	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch nonce: %w", err)
-	}
-	return nonce, nil
-}
-
 // executeWithRetry executes a function and retries with the next client on failure
 func (r *roundRobinClient) executeWithRetry(
 	fn func(client *ethclient.Client) (interface{}, error),
@@ -269,7 +256,7 @@ func (c *roundRobinClient) BulkTransfer(
 		}
 
 		// Step 3: Get Nonce
-		nonce, err := c.getNonceWithRetry(ctx, poolAddress, client)
+		nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve nonce: %w", err)
 		}
@@ -429,6 +416,11 @@ func (c *roundRobinClient) TransferToken(
 	tokenContractAddress, fromPrivateKeyHex, toAddressHex string,
 	amount *big.Int,
 ) (common.Hash, uint64, *big.Int, error) {
+	// Validate input
+	if amount == nil || amount.Cmp(big.NewInt(0)) <= 0 {
+		return common.Hash{}, 0, nil, fmt.Errorf("invalid amount: must be greater than 0")
+	}
+
 	fromPrivateKey, err := crypto.HexToECDSA(fromPrivateKeyHex)
 	if err != nil {
 		return common.Hash{}, 0, nil, fmt.Errorf("invalid private key: %w", err)
@@ -437,6 +429,7 @@ func (c *roundRobinClient) TransferToken(
 	toAddress := common.HexToAddress(toAddressHex)
 	tokenAddress := common.HexToAddress(tokenContractAddress)
 
+	// Set a timeout context for the operation
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
@@ -465,6 +458,7 @@ func (c *roundRobinClient) TransferToken(
 			return nil, fmt.Errorf("failed to wait for transaction to be mined: %w", err)
 		}
 
+		// Return the transaction details
 		return struct {
 			Hash     common.Hash
 			GasUsed  uint64
@@ -484,6 +478,7 @@ func (c *roundRobinClient) TransferToken(
 		GasUsed  uint64
 		GasPrice *big.Int
 	})
+	logger.GetLogger().Infof("Token transfer successful: txHash=%s, gasUsed=%d, gasPrice=%s", res.Hash.Hex(), res.GasUsed, res.GasPrice.String())
 	return res.Hash, res.GasUsed, res.GasPrice, nil
 }
 
