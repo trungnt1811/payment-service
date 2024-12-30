@@ -100,10 +100,10 @@ func (c *roundRobinClient) getAuth(
 
 	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	// Get nonce
-	nonce, err := client.PendingNonceAt(ctx, fromAddress)
+	// Fetch pending nonce
+	pendingNonce, err := client.PendingNonceAt(ctx, fromAddress) // Highest pending nonce
 	if err != nil {
-		return nil, fmt.Errorf("failed to get nonce: %w", err)
+		return nil, fmt.Errorf("failed to get pending nonce: %w", err)
 	}
 
 	// Get gas price
@@ -112,7 +112,6 @@ func (c *roundRobinClient) getAuth(
 		return nil, fmt.Errorf("failed to get gas price: %w", err)
 	}
 
-	// Calculate buffered gas price
 	bufferedGasPrice, err := utils.CalculateBufferedGasPrice(gasPrice, constants.GasPriceMultiplier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate buffered gas price: %w", err)
@@ -127,11 +126,32 @@ func (c *roundRobinClient) getAuth(
 	}
 
 	// Set transaction options
-	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Nonce = big.NewInt(int64(pendingNonce))
 	auth.Value = big.NewInt(0) // 0 wei, since we're not sending Ether
 	auth.GasPrice = bufferedGasPrice
 
+	logger.GetLogger().Infof("Using nonce %d for address %s", pendingNonce, fromAddress.Hex())
 	return auth, nil
+}
+
+// detectPendingTxs checks for pending transactions and returns the latest and pending nonces.
+func (c *roundRobinClient) detectPendingTxs(
+	ctx context.Context,
+	client *ethclient.Client,
+	fromAddress common.Address,
+) (latestNonce, pendingNonce uint64, hasPending bool, err error) {
+	latestNonce, err = client.NonceAt(ctx, fromAddress, nil)
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("failed to get latest nonce: %w", err)
+	}
+
+	pendingNonce, err = client.PendingNonceAt(ctx, fromAddress)
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("failed to get pending nonce: %w", err)
+	}
+
+	hasPending = pendingNonce > latestNonce
+	return latestNonce, pendingNonce, hasPending, nil
 }
 
 // executeWithRetry executes a function and retries with the next client on failure
@@ -426,6 +446,7 @@ func (c *roundRobinClient) TransferToken(
 		return common.Hash{}, 0, nil, fmt.Errorf("invalid private key: %w", err)
 	}
 
+	fromAddress := crypto.PubkeyToAddress(fromPrivateKey.PublicKey)
 	toAddress := common.HexToAddress(toAddressHex)
 	tokenAddress := common.HexToAddress(tokenContractAddress)
 
@@ -444,6 +465,20 @@ func (c *roundRobinClient) TransferToken(
 		token, err := erc20token.NewErc20token(tokenAddress, client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load token contract: %w", err)
+		}
+
+		// Detect pending transactions
+		latestNonce, pendingNonce, hasPending, err := c.detectPendingTxs(ctx, client, fromAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		if hasPending {
+			logger.GetLogger().Warnf("Pending transactions detected for address %s: Latest=%d, Pending=%d", fromAddress.Hex(), latestNonce, pendingNonce)
+			auth.Nonce = big.NewInt(int64(latestNonce))
+			gasPrice := auth.GasPrice
+			auth.GasPrice = new(big.Int).Mul(gasPrice, big.NewInt(2)) // Increase gas price for replacement
+			logger.GetLogger().Infof("Replacing pending transaction with higher gas price: %s", gasPrice.String())
 		}
 
 		// Send the transfer transaction
@@ -495,20 +530,21 @@ func (c *roundRobinClient) TransferNativeToken(
 		return common.Hash{}, 0, nil, fmt.Errorf("invalid private key: %w", err)
 	}
 
+	fromAddress := crypto.PubkeyToAddress(fromPrivateKey.PublicKey)
 	toAddress := common.HexToAddress(toAddressHex)
 
 	// Use `executeWithRetry` to simplify retry logic
 	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
-		// Get an authorized transactor
-		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID), client)
+		// Get the sender's balance
+		balance, err := client.BalanceAt(ctx, fromAddress, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get authorized transactor: %w", err)
+			return nil, fmt.Errorf("failed to fetch balance for address %s: %w", fromAddress.Hex(), err)
 		}
 
 		// Estimate gas for the transaction
 		estimatedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 			To:    &toAddress,
-			From:  auth.From,
+			From:  fromAddress,
 			Value: amount,
 		})
 		if err != nil {
@@ -519,6 +555,24 @@ func (c *roundRobinClient) TransferNativeToken(
 		gasPrice, err := client.SuggestGasPrice(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get gas price: %w", err)
+		}
+
+		// Calculate the total gas cost
+		gasCost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
+
+		// Check if the balance is sufficient
+		totalCost := new(big.Int).Add(amount, gasCost)
+		if balance.Cmp(totalCost) < 0 {
+			return nil, fmt.Errorf(
+				"insufficient balance for address %s: required %s (amount=%s, gasCost=%s), available %s",
+				fromAddress.Hex(), totalCost.String(), amount.String(), gasCost.String(), balance.String(),
+			)
+		}
+
+		// Get an authorized transactor
+		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID), client)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get authorized transactor: %w", err)
 		}
 
 		// Create and sign the transaction
