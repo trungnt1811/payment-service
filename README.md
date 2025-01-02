@@ -115,8 +115,6 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 | Binance Smart Chain (BSC) | **10 × 0.0002 BNB = 0.002 BNB**   | **0.06 BNB**                     |
 | Avalanche (AVAX)          | **10 × 0.0028 AVAX = 0.028 AVAX** | **0.84 AVAX**                    |
 
----
-
 ### Gas Fee Estimation (Hourly Mode)
 For **3 Payment Wallets reused hourly**, the estimated gas fees are:
 
@@ -134,8 +132,6 @@ For **3 Payment Wallets reused hourly**, the estimated gas fees are:
 |---------------------------|-----------------------------|-------------------------------------|
 | Binance Smart Chain (BSC) | **0.06 BNB**                | **0.078 BNB**                       |
 | Avalanche (AVAX)          | **0.84 AVAX**               | **1.092 AVAX**                      |
-
----
 
 #### Monthly Top-Up Recommendation (Hourly Mode)
 | **Network**               | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)** |
