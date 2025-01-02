@@ -184,3 +184,8 @@ const (
 const (
 	EthClientCooldown = 5 * time.Minute
 )
+
+// Network delay
+const (
+	DefaultNetworkDelay = 10 * time.Second
+)

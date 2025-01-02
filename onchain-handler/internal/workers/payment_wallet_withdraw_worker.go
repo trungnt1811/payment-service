@@ -195,6 +195,8 @@ func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
 		); err != nil {
 			logger.GetLogger().Errorf("Failed to process wallet %s on network %s: %v", address, w.network, err)
 		}
+		// Delay between wallet processing to avoid spamming the network
+		time.Sleep(constants.DefaultNetworkDelay)
 	}
 
 	// Step 7: Transfer all USDT tokens from receiving wallet to master wallet
