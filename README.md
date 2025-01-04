@@ -168,6 +168,6 @@ The worker is configured to run either:
 - **BSC_START_BLOCK_LISTENER** and **AVAX_START_BLOCK_LISTENER**:
   - Ensure the starting block is not too far in the past to avoid issues with pruned nodes.
 - **Gas Fee Recommendations**:
-  - Top up the Receiving Wallet monthly with **0.078 BNB** and **1.092 AVAX** for seamless operations.
+  - Top up the Receiving Wallet monthly with at least **0.078 BNB** and **1.092 AVAX** for seamless operations.
 - **Payment Wallets Withdrawing Worker**:
-  - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
+  - Runs daily or hourly, based on configuration, to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
