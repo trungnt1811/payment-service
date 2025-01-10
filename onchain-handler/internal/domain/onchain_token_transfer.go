@@ -39,5 +39,7 @@ func (m *TokenTransferHistory) ToDto() dto.TokenTransferHistoryDTO {
 		Status:          m.Status,
 		Type:            m.Type,
 		ErrorMessage:    m.ErrorMessage,
+		CreatedAt:       m.CreatedAt,
+		UpdatedAt:       m.UpdatedAt,
 	}
 }
