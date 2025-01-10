@@ -546,7 +546,7 @@ paths:
       consumes:
       - application/json
       description: This endpoint fetches a paginated list of token transfer histories
-        filtered by request IDs and time range.
+        filtered by request IDs, time range, and addresses.
       parameters:
       - description: Page number, default is 1
         in: query
@@ -556,13 +556,6 @@ paths:
         in: query
         name: size
         type: integer
-      - collectionFormat: csv
-        description: List of request IDs to filter (maximum 50)
-        in: query
-        items:
-          type: string
-        name: request_ids
-        type: array
       - description: Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)
         in: query
         name: start_time
@@ -570,6 +563,14 @@ paths:
       - description: End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)
         in: query
         name: end_time
+        type: string
+      - description: Filter by sender address
+        in: query
+        name: from_address
+        type: string
+      - description: Filter by recipient address
+        in: query
+        name: to_address
         type: string
       - description: Sorting parameter in the format `field_direction` (e.g., id_asc,
           created_at_desc)

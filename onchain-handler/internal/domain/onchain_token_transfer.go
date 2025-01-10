@@ -29,8 +29,6 @@ func (m *TokenTransferHistory) TableName() string {
 
 func (m *TokenTransferHistory) ToDto() dto.TokenTransferHistoryDTO {
 	return dto.TokenTransferHistoryDTO{
-		ID:              m.ID,
-		RequestID:       m.RequestID,
 		Network:         m.Network,
 		TransactionHash: m.TransactionHash,
 		FromAddress:     m.FromAddress,

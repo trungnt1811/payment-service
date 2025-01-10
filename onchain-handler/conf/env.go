@@ -165,11 +165,6 @@ func init() {
 		}
 	}
 
-	err := viper.Unmarshal(&configuration)
-	if err != nil {
-		log.Fatal().Err(err).Msgf("Error reading config file %v", err)
-	}
-
 	if err := viper.Unmarshal(&configuration); err != nil {
 		log.Fatal().Err(err).Msgf("Error unmarshalling configuration %v", err)
 	}

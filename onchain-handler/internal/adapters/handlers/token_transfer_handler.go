@@ -3,8 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
@@ -99,15 +97,16 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 
 // GetTokenTransferHistories retrieves the token transfer histories.
 // @Summary Get list of token transfer histories
-// @Description This endpoint fetches a paginated list of token transfer histories filtered by request IDs and time range.
+// @Description This endpoint fetches a paginated list of token transfer histories filtered by request IDs, time range, and addresses.
 // @Tags token-transfer
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param request_ids query []string false "List of request IDs to filter (maximum 50)"
 // @Param start_time query string false "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)"
 // @Param end_time query string false "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)"
+// @Param from_address query string false "Filter by sender address"
+// @Param to_address query string false "Filter by recipient address"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
 // @Failure 400 {object} response.GeneralError "Invalid parameters"
@@ -121,31 +120,6 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Extract and parse request IDs from query string
-	requestIDsParam := ctx.Query("request_ids")
-
-	requestIDsMap := make(map[string]struct{}) // To handle duplicates
-	var requestIDs []string
-
-	if requestIDsParam != "" {
-		for _, id := range strings.Split(requestIDsParam, ",") {
-			trimmedID := strings.TrimSpace(id)
-			if trimmedID != "" {
-				if _, exists := requestIDsMap[trimmedID]; !exists {
-					requestIDsMap[trimmedID] = struct{}{}
-					requestIDs = append(requestIDs, trimmedID)
-				}
-			}
-		}
-	}
-
-	// Check if the number of request IDs exceeds the limit
-	if len(requestIDs) > 50 {
-		logger.GetLogger().Errorf("Too many request IDs: received %d, maximum allowed is 50", len(requestIDs))
-		httpresponse.Error(ctx, http.StatusBadRequest, "Too many request IDs. Maximum allowed is 50", nil)
-		return
-	}
-
 	// Parse and validate the start_time query parameter
 	startTime, err := utils.ParseOptionalTime(ctx.Query("start_time"))
 	if err != nil {
@@ -155,16 +129,15 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	}
 
 	// Parse and validate the end_time query parameter
-	endTimeStr := ctx.Query("end_time")
-	endTime, err := time.Parse(time.RFC3339, endTimeStr)
-	if endTimeStr != "" && err != nil {
+	endTime, err := utils.ParseOptionalTime(ctx.Query("end_time"))
+	if err != nil {
 		logger.GetLogger().Errorf("Invalid end time: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid end time", fmt.Errorf("invalid end time. Must be in RFC3339 format"))
 		return
 	}
 
 	// Validate that start time is before end time
-	if !startTime.IsZero() && !endTime.IsZero() && startTime.After(endTime) {
+	if startTime != nil && endTime != nil && startTime.After(*endTime) {
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, start time must be before end time", fmt.Errorf("start time must be before end time"))
 		return
 	}
@@ -178,9 +151,20 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch token transfer histories using the use case, passing request IDs, time range, page, and size
+	// Parse optional from_address and to_address query parameters
+	var fromAddress *string
+	if addr := ctx.Query("from_address"); addr != "" {
+		fromAddress = &addr
+	}
+
+	var toAddress *string
+	if addr := ctx.Query("to_address"); addr != "" {
+		toAddress = &addr
+	}
+
+	// Fetch token transfer histories using the use case, passing all parameters
 	response, err := h.ucase.GetTokenTransferHistories(
-		ctx, requestIDs, *startTime, endTime, orderBy, orderDirection, page, size,
+		ctx, startTime, endTime, orderBy, orderDirection, page, size, fromAddress, toAddress,
 	)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve token transfer histories: %v", err)

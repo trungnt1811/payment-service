@@ -14,10 +14,10 @@ type TokenTransferRepository interface {
 	GetTokenTransferHistories(
 		ctx context.Context,
 		limit, offset int,
-		requestIDs []string,
 		orderBy *string,
 		orderDirection constants.OrderDirection,
-		startTime, endTime time.Time,
+		startTime, endTime *time.Time,
+		fromAddress, toAddress *string,
 	) ([]domain.TokenTransferHistory, error)
 }
 
@@ -26,10 +26,10 @@ type TokenTransferUCase interface {
 	TransferTokens(ctx context.Context, payloads []dto.TokenTransferPayloadDTO) ([]dto.TokenTransferResultDTOResponse, error)
 	GetTokenTransferHistories(
 		ctx context.Context,
-		requestIDs []string,
-		startTime, endTime time.Time,
+		startTime, endTime *time.Time,
 		orderBy *string,
 		orderDirection constants.OrderDirection,
 		page, size int,
+		fromAddress, toAddress *string,
 	) (dto.PaginationDTOResponse, error)
 }

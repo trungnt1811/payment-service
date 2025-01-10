@@ -29,9 +29,9 @@ func RegisterRoutes(
 	appRouter := v1.Group("")
 
 	// SECTION: tokens transfer
-	// transferHandler := handlers.NewTokenTransferHandler(tokenTransferUCase, config)
+	transferHandler := handlers.NewTokenTransferHandler(tokenTransferUCase, config)
 	// appRouter.POST("/token-transfer", transferHandler.Transfer)
-	// appRouter.GET("/token-transfers", transferHandler.GetTokenTransferHistories)
+	appRouter.GET("/token-transfers", transferHandler.GetTokenTransferHistories)
 
 	// SECTION: payment order
 	paymentOrderHandler := handlers.NewPaymentOrderHandler(paymentOrderUCase, config)

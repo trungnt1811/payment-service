@@ -20,7 +20,11 @@ type tokenTransferUCase struct {
 	config                  *conf.Configuration
 }
 
-func NewTokenTransferUCase(tokenTransferRepository interfaces.TokenTransferRepository, ethClient pkginterfaces.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
+func NewTokenTransferUCase(
+	tokenTransferRepository interfaces.TokenTransferRepository,
+	ethClient pkginterfaces.Client,
+	config *conf.Configuration,
+) interfaces.TokenTransferUCase {
 	return &tokenTransferUCase{
 		tokenTransferRepository: tokenTransferRepository,
 		ethClient:               ethClient,
@@ -251,19 +255,19 @@ func (u *tokenTransferUCase) groupPayloadsByFromAddressAndSymbol(payloads []dto.
 // GetTokenTransferHistories fetches token transfer histories from the repository with optional filters
 func (s *tokenTransferUCase) GetTokenTransferHistories(
 	ctx context.Context,
-	requestIDs []string, // List of request IDs to filter
-	startTime, endTime time.Time, // Time range to filter by
+	startTime, endTime *time.Time, // Time range to filter by
 	orderBy *string, // Order by field
 	orderDirection constants.OrderDirection, // Order direction for sorting
 	page, size int,
+	fromAddress, toAddress *string, // Address filters
 ) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
 	limit := size + 1
 	offset := (page - 1) * size
 
-	// Fetch the token transfer histories using request IDs and time range
+	// Fetch the token transfer histories using the repository with filters
 	listTokenTransfers, err := s.tokenTransferRepository.GetTokenTransferHistories(
-		ctx, limit, offset, requestIDs, orderBy, orderDirection, startTime, endTime,
+		ctx, limit, offset, orderBy, orderDirection, startTime, endTime, fromAddress, toAddress,
 	)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
@@ -299,8 +303,6 @@ func (s *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, p
 
 	for _, payload := range payloads {
 		models = append(models, domain.TokenTransferHistory{
-			ID:              payload.ID,
-			RequestID:       payload.RequestID,
 			Network:         payload.Network,
 			TransactionHash: payload.TransactionHash,
 			FromAddress:     payload.FromAddress,

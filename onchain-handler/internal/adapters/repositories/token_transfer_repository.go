@@ -33,10 +33,10 @@ func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Conte
 func (r *tokenTransferRepository) GetTokenTransferHistories(
 	ctx context.Context,
 	limit, offset int,
-	requestIDs []string, // List of request IDs to filter
 	orderBy *string, // Order by field
 	orderDirection constants.OrderDirection,
-	startTime, endTime time.Time, // Range of time to filter by
+	startTime, endTime *time.Time, // Range of time to filter by
+	fromAddress, toAddress *string, // Address filters
 ) ([]domain.TokenTransferHistory, error) {
 	var tokenTransfers []domain.TokenTransferHistory
 
@@ -51,16 +51,25 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 	}
 
 	// Start with pagination setup
-	query := r.db.WithContext(ctx).Limit(limit).Offset(offset).Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
-
-	// Apply filter for request IDs if provided
-	if len(requestIDs) > 0 {
-		query = query.Where("request_id IN ?", requestIDs)
-	}
+	query := r.db.WithContext(ctx).
+		Where("symbol = ?", constants.USDT).
+		Limit(limit).
+		Offset(offset).
+		Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
 
 	// Apply time range filter if both startTime and endTime are provided
-	if !startTime.IsZero() && !endTime.IsZero() {
+	if startTime != nil && endTime != nil {
 		query = query.Where("created_at BETWEEN ? AND ?", startTime, endTime)
+	}
+
+	// Apply from_address filter if provided
+	if fromAddress != nil && *fromAddress != "" {
+		query = query.Where("from_address = ?", *fromAddress)
+	}
+
+	// Apply to_address filter if provided
+	if toAddress != nil && *toAddress != "" {
+		query = query.Where("to_address = ?", *toAddress)
 	}
 
 	// Execute query
