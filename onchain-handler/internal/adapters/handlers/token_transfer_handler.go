@@ -78,7 +78,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 		}
 
 		// Check if payload.Network is Avax C-Chain
-		if payload.Network != string(constants.AvaxCChain) {
+		if payload.Network != constants.AvaxCChain.String() {
 			httpresponse.Error(ctx, http.StatusBadRequest, "Failed to distribute tokens, invalid network", fmt.Errorf("invalid network: %s. Network must be Avax C-Chain", payload.Network))
 			return
 		}

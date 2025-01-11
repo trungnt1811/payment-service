@@ -43,7 +43,7 @@ func (h *paymentStatisticsHandler) GetPaymentStatistics(ctx *gin.Context) {
 	// Parse and validate granularity parameter
 	granularity := ctx.Query("granularity")
 	switch granularity {
-	case string(constants.Daily), string(constants.Weekly), string(constants.Monthly), string(constants.Yearly):
+	case constants.Daily, constants.Weekly, constants.Monthly, constants.Yearly:
 		// Valid granularities, proceed
 	default:
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid granularity. Valid options are: DAILY, WEEKLY, MONTHLY, YEARLY", nil)

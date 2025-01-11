@@ -46,7 +46,7 @@ func (w *latestBlockWorker) Start(ctx context.Context) {
 		case <-ticker.C:
 			go w.run(ctx)
 		case <-ctx.Done():
-			logger.GetLogger().Infof("Shutting down latestBlockWorker on network %s", string(w.network))
+			logger.GetLogger().Infof("Shutting down latestBlockWorker on network %s", w.network.String())
 			return
 		}
 	}
@@ -55,7 +55,7 @@ func (w *latestBlockWorker) Start(ctx context.Context) {
 func (w *latestBlockWorker) run(ctx context.Context) {
 	w.mu.Lock()
 	if w.isRunning {
-		logger.GetLogger().Warnf("Previous latestBlockWorker on network %s run still in progress, skipping this cycle", string(w.network))
+		logger.GetLogger().Warnf("Previous latestBlockWorker on network %s run still in progress, skipping this cycle", w.network.String())
 		w.mu.Unlock()
 		return
 	}
@@ -75,7 +75,7 @@ func (w *latestBlockWorker) run(ctx context.Context) {
 
 // fetchAndStoreLatestBlock fetches the latest block and stores it in cache and DB
 func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + string(w.network)}
+	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + w.network.String()}
 
 	// Try to retrieve the latest block from cache
 	var latestBlock uint64
@@ -98,7 +98,7 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 	// Fetch the latest block from the Ethereum blockchain
 	blockNumber, err := w.ethClient.GetLatestBlockNumber(ctx)
 	if err != nil {
-		logger.GetLogger().Infof("Failed to fetch latest block from %s: %v", string(w.network), err)
+		logger.GetLogger().Infof("Failed to fetch latest block from %s: %v", w.network.String(), err)
 		return
 	}
 
@@ -118,6 +118,6 @@ func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
 			logger.GetLogger().Infof("Failed to update latest block in DB: %v", err)
 		}
 
-		logger.GetLogger().Infof("Latest block on network %s updated to: %d", string(w.network), latestBlock)
+		logger.GetLogger().Infof("Latest block on network %s updated to: %d", w.network.String(), latestBlock)
 	}
 }

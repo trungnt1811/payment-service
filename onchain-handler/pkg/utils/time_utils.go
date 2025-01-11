@@ -12,11 +12,11 @@ func GetPeriodStart(granularity string, t time.Time) time.Time {
 	t = t.UTC() // Normalize to UTC for consistency
 
 	switch granularity {
-	case string(constants.Daily):
+	case constants.Daily:
 		// Start of the current day
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 
-	case string(constants.Weekly):
+	case constants.Weekly:
 		// Start of the current week (Monday)
 		weekday := int(t.Weekday())
 		if weekday == 0 {
@@ -24,11 +24,11 @@ func GetPeriodStart(granularity string, t time.Time) time.Time {
 		}
 		return t.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
 
-	case string(constants.Monthly):
+	case constants.Monthly:
 		// Start of the current month
 		return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	case string(constants.Yearly):
+	case constants.Yearly:
 		// Start of the current year
 		return time.Date(t.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
 

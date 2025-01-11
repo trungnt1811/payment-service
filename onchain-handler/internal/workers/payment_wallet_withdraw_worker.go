@@ -158,7 +158,7 @@ func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
 	}
 
 	// Step 2: Get token decimals from cache
-	decimals, err := blockchain.GetTokenDecimalsFromCache(w.tokenContractAddress, string(w.network), w.cacheRepo)
+	decimals, err := blockchain.GetTokenDecimalsFromCache(w.tokenContractAddress, w.network.String(), w.cacheRepo)
 	if err != nil {
 		return fmt.Errorf("failed to get token decimals from cache on network %s: %w", w.network, err)
 	}
@@ -246,7 +246,7 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 	}
 
 	payload := dto.TokenTransferHistoryDTO{
-		Network:         string(w.network),
+		Network:         w.network.String(),
 		TransactionHash: txHash.Hex(),
 		FromAddress:     receivingWalletAddress,
 		ToAddress:       w.masterWalletAddress,
@@ -278,7 +278,7 @@ func (w *paymentWalletWithdrawWorker) mapWallets(wallets []dto.PaymentWalletBala
 	addressWalletMap := make(map[string]walletInfo)
 	for _, wallet := range wallets {
 		for _, networkBalance := range wallet.NetworkBalances {
-			if networkBalance.Network == string(w.network) {
+			if networkBalance.Network == w.network.String() {
 				for _, tokenBalance := range networkBalance.TokenBalances {
 					if tokenBalance.Symbol == nativeTokenSymbol {
 						continue
@@ -334,7 +334,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		nativeAmount, _ := utils.ConvertSmallestUnitToFloatToken(requiredGas.String(), constants.NativeTokenDecimalPlaces)
 
 		payloads = append(payloads, dto.TokenTransferHistoryDTO{
-			Network:         string(w.network),
+			Network:         w.network.String(),
 			TransactionHash: txHash.Hex(),
 			FromAddress:     receivingWalletAddress,
 			ToAddress:       address,
@@ -369,7 +369,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	}
 
 	payloads = append(payloads, dto.TokenTransferHistoryDTO{
-		Network:         string(w.network),
+		Network:         w.network.String(),
 		TransactionHash: txHash.Hex(),
 		FromAddress:     address,
 		ToAddress:       receivingWalletAddress,

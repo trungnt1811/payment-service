@@ -104,7 +104,7 @@ func (u *paymentOrderUCase) updatePaymentStatistics(
 	payloads []dto.PaymentOrderPayloadDTO,
 	vendorID string,
 ) error {
-	granularity := string(constants.Daily)
+	granularity := constants.Daily
 	periodStart := utils.GetPeriodStart(granularity, time.Now())
 
 	for _, payload := range payloads {
@@ -232,7 +232,7 @@ func (u *paymentOrderUCase) UpdateActiveOrdersToExpired(ctx context.Context) ([]
 
 func (u *paymentOrderUCase) GetExpiredPaymentOrders(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTO, error) {
 	var orderDtos []dto.PaymentOrderDTO
-	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx, string(network))
+	expiredOrders, err := u.paymentOrderRepository.GetExpiredPaymentOrders(ctx, network.String())
 	if err != nil {
 		return nil, err
 	}
@@ -310,12 +310,12 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID st
 	}
 
 	// Fetch the latest block height for the given network
-	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, string(network), u.cacheRepo)
+	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network.String(), u.cacheRepo)
 	if err != nil {
 		return fmt.Errorf("failed to get latest block from cache: %w", err)
 	}
 
-	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, string(network), latestBlock)
+	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, network.String(), latestBlock)
 }
 
 func (u *paymentOrderUCase) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {

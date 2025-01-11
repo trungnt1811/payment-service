@@ -61,7 +61,7 @@ func (u *paymentWalletUCase) UpsertPaymentWalletBalance(
 	network constants.NetworkType,
 	symbol string,
 ) error {
-	return u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, newBalance, string(network), symbol)
+	return u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, newBalance, network.String(), symbol)
 }
 
 func (u *paymentWalletUCase) SubtractPaymentWalletBalance(
@@ -71,7 +71,7 @@ func (u *paymentWalletUCase) SubtractPaymentWalletBalance(
 	network constants.NetworkType,
 	symbol string,
 ) error {
-	return u.paymentWalletBalanceRepository.SubtractPaymentWalletBalance(ctx, walletID, amountToSubtract, string(network), symbol)
+	return u.paymentWalletBalanceRepository.SubtractPaymentWalletBalance(ctx, walletID, amountToSubtract, network.String(), symbol)
 }
 
 func (u *paymentWalletUCase) GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error) {
@@ -90,7 +90,7 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 	// Convert `network` to `*string` if it's not nil
 	var parsedNetwork *string
 	if network != nil {
-		networkStr := string(*network)
+		networkStr := network.String()
 		parsedNetwork = &networkStr
 	} else {
 		parsedNetwork = nil

@@ -274,7 +274,7 @@ func persistTokenDecimalsToCache(
 		ctx,
 		ethClient,
 		tokenContractAddress,
-		string(network),
+		network.String(),
 		cacheRepo,
 	)
 	if err != nil {

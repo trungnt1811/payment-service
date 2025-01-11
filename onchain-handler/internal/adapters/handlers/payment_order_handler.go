@@ -290,7 +290,7 @@ func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
 
 	// Determine the network type
 	var network constants.NetworkType
-	if req.Network == string(constants.AvaxCChain) {
+	if req.Network == constants.AvaxCChain.String() {
 		network = constants.AvaxCChain
 	} else {
 		network = constants.Bsc

@@ -368,9 +368,9 @@ func (r *PaymentOrderRepository) GetPaymentOrders(
 		orderColumn = *orderBy
 	}
 
-	orderDir := string(constants.Asc) // Default direction
+	orderDir := constants.Asc.String() // Default direction
 	if orderDirection == constants.Desc {
-		orderDir = string(constants.Desc)
+		orderDir = constants.Desc.String()
 	}
 
 	query := r.db.WithContext(ctx).

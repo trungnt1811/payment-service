@@ -52,7 +52,7 @@ func NewBaseEventListener(
 	if startBlockListener != nil && *startBlockListener > lastBlock {
 		// Override the current block with the startBlockListener if it's higher than the last processed block
 		currentBlock = *startBlockListener
-		logger.GetLogger().Debugf("Using startBlockListener on network %s : %d instead of last processed block: %d", string(network), *startBlockListener, lastBlock)
+		logger.GetLogger().Debugf("Using startBlockListener on network %s : %d instead of last processed block: %d", network.String(), *startBlockListener, lastBlock)
 	}
 
 	return &baseEventListener{
@@ -106,7 +106,7 @@ func (listener *baseEventListener) RunListener(ctx context.Context) error {
 	}()
 
 	<-ctx.Done()
-	logger.GetLogger().Infof("Event listener on network %s stopped.", string(listener.network))
+	logger.GetLogger().Infof("Event listener on network %s stopped.", listener.network.String())
 
 	// Wait for the goroutines to finish
 	wg.Wait()
@@ -118,7 +118,7 @@ func (listener *baseEventListener) RunListener(ctx context.Context) error {
 
 // listenRealtimeEvents polls the blockchain for listening events from effectiveLatestBlock to latest block
 func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, contractAddresses []common.Address) {
-	logger.GetLogger().Infof("Starting to realtime events on network %s...", string(listener.network))
+	logger.GetLogger().Infof("Starting to realtime events on network %s...", listener.network.String())
 
 	currentBlock := uint64(0)
 
@@ -127,12 +127,12 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
 		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
 			ctx,
-			string(listener.network),
+			listener.network.String(),
 			listener.cacheRepo,
 			listener.ethClient,
 		)
 		if err != nil {
-			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
+			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", listener.network.String(), err)
 			time.Sleep(constants.RetryDelay)
 			continue
 		}
@@ -140,7 +140,7 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 		// Retrieve the last processed block.
 		lastProcessedBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx, listener.network)
 		if err != nil || lastProcessedBlock == 0 {
-			logger.GetLogger().Warnf("Failed to retrieve the last processed block or it was zero on %s: %v", string(listener.network), err)
+			logger.GetLogger().Warnf("Failed to retrieve the last processed block or it was zero on %s: %v", listener.network.String(), err)
 			continue
 		}
 
@@ -156,7 +156,7 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 		}
 
 		if currentBlock > latestBlock {
-			logger.GetLogger().Debugf("No new blocks on network %s to process. Waiting for new blocks...", string(listener.network))
+			logger.GetLogger().Debugf("No new blocks on network %s to process. Waiting for new blocks...", listener.network.String())
 			time.Sleep(constants.RetryDelay) // Wait before rechecking to prevent excessive polling
 			continue
 		}
@@ -169,7 +169,7 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 				chunkEnd = latestBlock
 			}
 
-			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", string(listener.network), chunkStart, chunkEnd)
+			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", listener.network.String(), chunkStart, chunkEnd)
 
 			var logs []types.Log
 			// Poll logs from the blockchain with retries in case of failure.
@@ -177,14 +177,14 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 				// Poll logs from the chunk of blocks.
 				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
-					logger.GetLogger().Warnf("Failed to poll realtime logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
+					logger.GetLogger().Warnf("Failed to poll realtime logs on network %s from block %d to %d: %v. Retrying...", listener.network.String(), chunkStart, chunkEnd, err)
 					time.Sleep(constants.RetryDelay)
 					continue
 				}
 				break
 			}
 			if err != nil {
-				logger.GetLogger().Errorf("Max retries reached on network %s. Skipping block chunk %d to %d due to error: %v", string(listener.network), chunkStart, chunkEnd, err)
+				logger.GetLogger().Errorf("Max retries reached on network %s. Skipping block chunk %d to %d due to error: %v", listener.network.String(), chunkStart, chunkEnd, err)
 				break // Exit the loop if we cannot fetch logs
 			}
 
@@ -193,11 +193,11 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 				if eventHandler, exists := listener.realtimeEventHandlers[logEntry.Address]; exists {
 					_, err := eventHandler(logEntry)
 					if err != nil {
-						logger.GetLogger().Warnf("Failed to process realtime log entry on network %s: %v", string(listener.network), err)
+						logger.GetLogger().Warnf("Failed to process realtime log entry on network %s: %v", listener.network.String(), err)
 						continue
 					}
 				} else {
-					logger.GetLogger().Warnf("No realtime event handler for log address on network %s: %s", string(listener.network), logEntry.Address.Hex())
+					logger.GetLogger().Warnf("No realtime event handler for log address on network %s: %s", listener.network.String(), logEntry.Address.Hex())
 				}
 			}
 
@@ -209,25 +209,25 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 
 // listenConfirmedEvents polls the blockchain for logs and parses them.
 func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, contractAddresses []common.Address) {
-	logger.GetLogger().Infof("Start listening for confirmed transfer events on the network %s...", string(listener.network))
+	logger.GetLogger().Infof("Start listening for confirmed transfer events on the network %s...", listener.network.String())
 
 	// Get the last processed block from the repository, defaulting to an offset if not found.
 	lastProcessedBlock, err := listener.blockStateUCase.GetLastProcessedBlock(ctx, listener.network)
 	if err != nil || lastProcessedBlock == 0 {
-		logger.GetLogger().Warnf("Failed to get last processed block on %s or it was zero: %v", string(listener.network), err)
+		logger.GetLogger().Warnf("Failed to get last processed block on %s or it was zero: %v", listener.network.String(), err)
 
 		// Try to retrieve the latest block from cache or blockchain
 		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
 			ctx,
-			string(listener.network),
+			listener.network.String(),
 			listener.cacheRepo,
 			listener.ethClient,
 		)
 		if err != nil {
-			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
+			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", listener.network.String(), err)
 			return
 		}
-		logger.GetLogger().Debugf("Retrieved latest block number from network %s: %d", string(listener.network), latestBlock)
+		logger.GetLogger().Debugf("Retrieved latest block number from network %s: %d", listener.network.String(), latestBlock)
 
 		if latestBlock > constants.DefaultBlockOffset {
 			lastProcessedBlock = latestBlock - constants.DefaultBlockOffset
@@ -247,12 +247,12 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
 		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
 			ctx,
-			string(listener.network),
+			listener.network.String(),
 			listener.cacheRepo,
 			listener.ethClient,
 		)
 		if err != nil {
-			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", string(listener.network), err)
+			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", listener.network.String(), err)
 			time.Sleep(constants.RetryDelay)
 			continue
 		}
@@ -264,7 +264,7 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 			continue
 		}
 
-		logger.GetLogger().Debugf("Listening for confirmed events starting at block on network %s: %d", string(listener.network), currentBlock)
+		logger.GetLogger().Debugf("Listening for confirmed events starting at block on network %s: %d", listener.network.String(), currentBlock)
 
 		// Determine the end block while respecting ApiMaxBlocksPerRequest and the effective latest block.
 		endBlock := currentBlock + constants.ApiMaxBlocksPerRequest/8
@@ -279,7 +279,7 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 				chunkEnd = endBlock
 			}
 
-			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", string(listener.network), chunkStart, chunkEnd)
+			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", listener.network.String(), chunkStart, chunkEnd)
 
 			var logs []types.Log
 			// Poll logs from the blockchain with retries in case of failure.
@@ -287,14 +287,14 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 				// Poll logs from the chunk of blocks.
 				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
-					logger.GetLogger().Warnf("Failed to poll confirmed logs on network %s from block %d to %d: %v. Retrying...", string(listener.network), chunkStart, chunkEnd, err)
+					logger.GetLogger().Warnf("Failed to poll confirmed logs on network %s from block %d to %d: %v. Retrying...", listener.network.String(), chunkStart, chunkEnd, err)
 					time.Sleep(constants.RetryDelay)
 					continue
 				}
 				break
 			}
 			if err != nil {
-				logger.GetLogger().Errorf("Max retries reached on network %s. Skipping block chunk %d to %d due to error: %v", string(listener.network), chunkStart, chunkEnd, err)
+				logger.GetLogger().Errorf("Max retries reached on network %s. Skipping block chunk %d to %d due to error: %v", listener.network.String(), chunkStart, chunkEnd, err)
 				break // Exit the loop if we cannot fetch logs
 			}
 
@@ -303,14 +303,14 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 				if eventHandler, exists := listener.confirmedEventHandlers[logEntry.Address]; exists {
 					processedEvent, err := eventHandler(logEntry)
 					if err != nil {
-						logger.GetLogger().Warnf("Failed to process confirmed log entry on network %s: %v", string(listener.network), err)
+						logger.GetLogger().Warnf("Failed to process confirmed log entry on network %s: %v", listener.network.String(), err)
 						continue
 					}
 
 					// Send the processed event to the channel
 					listener.eventChan <- processedEvent
 				} else {
-					logger.GetLogger().Warnf("No confirmed event handler for log address on network %s: %s", string(listener.network), logEntry.Address.Hex())
+					logger.GetLogger().Warnf("No confirmed event handler for log address on network %s: %s", listener.network.String(), logEntry.Address.Hex())
 				}
 			}
 
@@ -320,7 +320,7 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 
 		// Update the last processed block in the repository.
 		if err := listener.blockStateUCase.UpdateLastProcessedBlock(ctx, currentBlock, listener.network); err != nil {
-			logger.GetLogger().Errorf("Failed to update last processed block on network %s in repository: %v", string(listener.network), err)
+			logger.GetLogger().Errorf("Failed to update last processed block on network %s in repository: %v", listener.network.String(), err)
 		}
 	}
 }
@@ -339,7 +339,7 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 			switch ev := event.(type) {
 			case dto.PaymentOrderDTOResponse:
 				// Log the event
-				logger.GetLogger().Debugf("Processing PaymentOrderDTOResponse on network %s: %v", string(listener.network), ev)
+				logger.GetLogger().Debugf("Processing PaymentOrderDTOResponse on network %s: %v", listener.network.String(), ev)
 				// Check if a webhook URL is provided
 				if ev.WebhookURL == "" {
 					continue
@@ -347,19 +347,19 @@ func (listener *baseEventListener) processEvents(ctx context.Context) {
 				// Use a separate goroutine for webhook sending
 				go func(ev dto.PaymentOrderDTOResponse) {
 					if err := utils.SendWebhook(ev, ev.WebhookURL); err != nil {
-						logger.GetLogger().Errorf("Failed to send webhook for PaymentOrderDTOResponse on network %s: %v", string(listener.network), err)
+						logger.GetLogger().Errorf("Failed to send webhook for PaymentOrderDTOResponse on network %s: %v", listener.network.String(), err)
 					} else {
-						logger.GetLogger().Infof("Successfully sent webhook for PaymentOrderDTOResponse on network %s", string(listener.network))
+						logger.GetLogger().Infof("Successfully sent webhook for PaymentOrderDTOResponse on network %s", listener.network.String())
 					}
 				}(ev)
 
 			default:
 				// Handle unknown or unsupported event types
-				logger.GetLogger().Warnf("Unsupported event type received on network %s: %v", string(listener.network), event)
+				logger.GetLogger().Warnf("Unsupported event type received on network %s: %v", listener.network.String(), event)
 			}
 
 		case <-ctx.Done():
-			logger.GetLogger().Infof("Stopping event processing on network %s...", string(listener.network))
+			logger.GetLogger().Infof("Stopping event processing on network %s...", listener.network.String())
 			return
 		}
 	}

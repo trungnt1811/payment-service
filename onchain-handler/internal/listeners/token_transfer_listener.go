@@ -60,7 +60,7 @@ func NewTokenTransferListener(
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
 	}
 
-	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, string(network), cacheRepo)
+	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, network.String(), cacheRepo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token decimals: %w", err)
 	}
@@ -100,7 +100,7 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 			listener.dequeueOrders()
 			// Refill the queue to ensure it has the required number of items
 			if err := listener.queue.FillQueue(); err != nil {
-				logger.GetLogger().Errorf("Failed to refill the %s queue: %v", string(listener.network), err)
+				logger.GetLogger().Errorf("Failed to refill the %s queue: %v", listener.network.String(), err)
 			}
 			logger.GetLogger().Debug("Dequeue operation finished.")
 			listener.mu.Unlock()
@@ -121,7 +121,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	// Unpack the transfer event
 	transferEvent, err := blockchain.UnpackTransferEvent(vLog, listener.parsedABI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
+		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", listener.network.String(), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
 	queueItems := listener.queue.GetItems()
@@ -136,7 +136,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 			logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
 			continue
 		}
-		if orderDTO.Network != string(listener.network) {
+		if orderDTO.Network != listener.network.String() {
 			continue
 		}
 
@@ -145,10 +145,10 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 			status := constants.Processing
 			err := listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &upComingBlockHeight, &status, nil, nil)
 			if err != nil {
-				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+				logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 				continue
 			}
-			logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, string(listener.network))
+			logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, listener.network.String())
 			// Update the order status to 'Processing' in the queue
 			order.Status = status
 			order.UpcomingBlockHeight = vLog.BlockNumber
@@ -182,7 +182,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	// Unpack the transfer event
 	transferEvent, err := blockchain.UnpackTransferEvent(vLog, listener.parsedABI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", string(listener.network), vLog.Address.Hex(), vLog.BlockNumber, err)
+		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", listener.network.String(), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
 	queueItems := listener.queue.GetItems()
@@ -197,7 +197,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 			logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
 			continue
 		}
-		if orderDTO.Network != string(listener.network) {
+		if orderDTO.Network != listener.network.String() {
 			continue
 		}
 
@@ -208,7 +208,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 
 		transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), listener.tokenDecimals)
 		if err != nil {
-			logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", string(listener.network), order.ID, err)
+			logger.GetLogger().Errorf("Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v", listener.network.String(), order.ID, err)
 			return nil, err
 		}
 
@@ -222,24 +222,24 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 				ContractAddress: vLog.Address.Hex(),
 				TokenSymbol:     tokenSymbol,
 				Amount:          transferEventValueInEth,
-				Network:         string(listener.network),
+				Network:         listener.network.String(),
 			},
 		}
 
 		// Process the payment for the order
 		isUpdated, err := listener.processOrderPayment(index, order, transferEvent, vLog.BlockNumber)
 		if err != nil {
-			logger.GetLogger().Errorf("Failed to process payment on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+			logger.GetLogger().Errorf("Failed to process payment on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 			return nil, err
 		}
 		if isUpdated {
 			// Create payment event history
 			if err := listener.paymentEventHistoryUCase.CreatePaymentEventHistory(listener.ctx, payloads); err != nil {
-				logger.GetLogger().Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+				logger.GetLogger().Errorf("Failed to process payment event history on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 				return nil, err
 			}
 
-			granularity := string(constants.Daily)
+			granularity := constants.Daily
 			for _, payload := range payloads {
 				// Increment payment statistics
 				if err := listener.paymentStatisticsUCase.IncrementStatistics(
@@ -251,12 +251,12 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 					payload.TokenSymbol,
 					order.VendorID,
 				); err != nil {
-					logger.GetLogger().Errorf("Failed to increment payment statistics on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+					logger.GetLogger().Errorf("Failed to increment payment statistics on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 					continue
 				}
 				// Upsert payment wallet balances
 				if err = listener.paymentWalletUCase.UpsertPaymentWalletBalance(listener.ctx, order.Wallet.ID, payload.Amount, listener.network, payload.TokenSymbol); err != nil {
-					logger.GetLogger().Errorf("Failed to upsert payment wallet balance on network %s for order ID %d, error: %v", string(listener.network), order.ID, err)
+					logger.GetLogger().Errorf("Failed to upsert payment wallet balance on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 					continue
 				}
 			}
@@ -312,7 +312,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
-		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", string(listener.network), order.ID)
+		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", listener.network.String(), order.ID)
 
 		// Check if order is still 'Processing' or needs to be marked as 'Success'.
 		status := constants.Success
@@ -324,7 +324,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 		return true, listener.updatePaymentOrderStatus(itemIndex, order, status, totalTransferred.String(), blockHeight)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
-		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", string(listener.network), order.ID)
+		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", listener.network.String(), order.ID)
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
@@ -371,7 +371,7 @@ func (listener *tokenTransferListener) dequeueOrders() {
 	// Iterate over current orders in the queue
 	for index, order := range orders {
 		// Double-check the order network before dequeuing
-		if order.Network != string(listener.network) {
+		if order.Network != listener.network.String() {
 			continue
 		}
 		// Check if the order needs to be dequeued

@@ -116,6 +116,10 @@ const (
 // Wallet type
 type WalletType string
 
+func (t WalletType) String() string {
+	return string(t)
+}
+
 const (
 	PaymentWallet   WalletType = "PaymentWallet"
 	UserWallet      WalletType = "UserWallet"
@@ -130,6 +134,10 @@ const (
 // Network type
 type NetworkType string
 
+func (t NetworkType) String() string {
+	return string(t)
+}
+
 const (
 	Bsc        NetworkType = "BSC"
 	AvaxCChain NetworkType = "AVAX C-Chain"
@@ -143,6 +151,10 @@ const (
 
 // Order direction
 type OrderDirection string
+
+func (t OrderDirection) String() string {
+	return string(t)
+}
 
 const (
 	Asc  OrderDirection = "ASC"
