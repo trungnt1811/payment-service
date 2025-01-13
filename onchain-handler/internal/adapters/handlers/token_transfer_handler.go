@@ -97,14 +97,14 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 
 // GetTokenTransferHistories retrieves the token transfer histories.
 // @Summary Get list of token transfer histories
-// @Description This endpoint fetches a paginated list of token transfer histories filtered by request IDs, time range, and addresses.
+// @Description This endpoint fetches a paginated list of token transfer histories filtered by time range and addresses.
 // @Tags token-transfer
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number, default is 1"
 // @Param size query int false "Page size, default is 10"
-// @Param start_time query string false "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)"
-// @Param end_time query string false "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)"
+// @Param start_time query int false "Start time in UNIX timestamp format"
+// @Param end_time query int false "End time in UNIX timestamp format"
 // @Param from_address query string false "Filter by sender address"
 // @Param to_address query string false "Filter by recipient address"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
@@ -113,6 +113,7 @@ func (h *tokenTransferHandler) Transfer(ctx *gin.Context) {
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/token-transfers [get]
 func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
+	// Parse pagination parameters
 	page, size, err := utils.ParsePaginationParams(ctx)
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
@@ -120,19 +121,19 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Parse and validate the start_time query parameter
-	startTime, err := utils.ParseOptionalTime(ctx.Query("start_time"))
+	// Parse and validate start_time parameter
+	startTime, err := utils.ParseOptionalUnixTimestamp(ctx.Query("start_time"))
 	if err != nil {
-		logger.GetLogger().Errorf("Invalid start time: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid start time", fmt.Errorf("invalid start time. Must be in RFC3339 format"))
+		logger.GetLogger().Errorf("Invalid start_time: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid start_time. Provide a valid UNIX timestamp.", err)
 		return
 	}
 
-	// Parse and validate the end_time query parameter
-	endTime, err := utils.ParseOptionalTime(ctx.Query("end_time"))
+	// Parse and validate end_time parameter
+	endTime, err := utils.ParseOptionalUnixTimestamp(ctx.Query("end_time"))
 	if err != nil {
-		logger.GetLogger().Errorf("Invalid end time: %v", err)
-		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve token transfer histories, invalid end time", fmt.Errorf("invalid end time. Must be in RFC3339 format"))
+		logger.GetLogger().Errorf("Invalid end_time: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid end_time. Provide a valid UNIX timestamp.", err)
 		return
 	}
 
@@ -162,7 +163,7 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		toAddress = &addr
 	}
 
-	// Fetch token transfer histories using the use case, passing all parameters
+	// Call the use case to fetch token transfer histories
 	response, err := h.ucase.GetTokenTransferHistories(
 		ctx, startTime, endTime, orderBy, orderDirection, page, size, fromAddress, toAddress,
 	)
@@ -172,6 +173,6 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 		return
 	}
 
-	// Return the response as a JSON response
+	// Return the response
 	ctx.JSON(http.StatusOK, response)
 }

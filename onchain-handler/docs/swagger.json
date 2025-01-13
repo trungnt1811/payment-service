@@ -529,7 +529,7 @@
         },
         "/api/v1/token-transfers": {
             "get": {
-                "description": "This endpoint fetches a paginated list of token transfer histories filtered by request IDs, time range, and addresses.",
+                "description": "This endpoint fetches a paginated list of token transfer histories filtered by time range and addresses.",
                 "consumes": [
                     "application/json"
                 ],
@@ -554,14 +554,14 @@
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Start time in RFC3339 format to filter (e.g., 2024-01-01T00:00:00Z)",
+                        "type": "integer",
+                        "description": "Start time in UNIX timestamp format",
                         "name": "start_time",
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "End time in RFC3339 format to filter (e.g., 2024-02-01T00:00:00Z)",
+                        "type": "integer",
+                        "description": "End time in UNIX timestamp format",
                         "name": "end_time",
                         "in": "query"
                     },
