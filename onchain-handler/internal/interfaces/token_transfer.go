@@ -19,6 +19,11 @@ type TokenTransferRepository interface {
 		startTime, endTime *time.Time,
 		fromAddress, toAddress *string,
 	) ([]domain.TokenTransferHistory, error)
+	GetTotalTokenAmount(
+		ctx context.Context,
+		startTime, endTime *time.Time,
+		fromAddress, toAddress *string,
+	) (float64, error)
 }
 
 type TokenTransferUCase interface {
@@ -32,4 +37,9 @@ type TokenTransferUCase interface {
 		page, size int,
 		fromAddress, toAddress *string,
 	) (dto.PaginationDTOResponse, error)
+	GetTotalTokenAmount(
+		ctx context.Context,
+		startTime, endTime *time.Time,
+		fromAddress, toAddress *string,
+	) (float64, error)
 }

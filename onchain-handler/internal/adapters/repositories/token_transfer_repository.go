@@ -79,3 +79,38 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 
 	return tokenTransfers, nil
 }
+
+func (r *tokenTransferRepository) GetTotalTokenAmount(
+	ctx context.Context,
+	startTime, endTime *time.Time,
+	fromAddress, toAddress *string,
+) (float64, error) {
+	var totalTokenAmount float64
+
+	// Build the base query for summing the token_amount
+	query := r.db.WithContext(ctx).
+		Table("onchain_token_transfer").
+		Where("symbol = ?", constants.USDT)
+
+	// Apply time range filter if both startTime and endTime are provided
+	if startTime != nil && endTime != nil {
+		query = query.Where("created_at BETWEEN ? AND ?", startTime, endTime)
+	}
+
+	// Apply from_address filter if provided
+	if fromAddress != nil && *fromAddress != "" {
+		query = query.Where("from_address = ?", *fromAddress)
+	}
+
+	// Apply to_address filter if provided
+	if toAddress != nil && *toAddress != "" {
+		query = query.Where("to_address = ?", *toAddress)
+	}
+
+	// Calculate the total token amount
+	if err := query.Select("SUM(token_amount)").Scan(&totalTokenAmount).Error; err != nil {
+		return 0, err
+	}
+
+	return totalTokenAmount, nil
+}

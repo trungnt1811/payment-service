@@ -264,6 +264,16 @@ func (h *tokenTransferHandler) GetWithdrawHistories(ctx *gin.Context) {
 		return
 	}
 
+	// Call the use case to calculate total token amount
+	totalTokenAmount, err := h.tokenTransferUCase.GetTotalTokenAmount(ctx, startTime, endTime, &receivingAddress, toAddress)
+	if err != nil {
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to calculate total token amount", err)
+		return
+	}
+
+	// Set the total token amount in the response
+	response.TotalTokenAmount = totalTokenAmount
+
 	// Return the response
 	ctx.JSON(http.StatusOK, response)
 }

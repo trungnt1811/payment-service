@@ -848,6 +848,9 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                },
+                "total_token_amount": {
+                    "type": "number"
                 }
             }
         },

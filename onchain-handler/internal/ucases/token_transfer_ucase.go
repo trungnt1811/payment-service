@@ -12,6 +12,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type tokenTransferUCase struct {
@@ -253,7 +254,7 @@ func (u *tokenTransferUCase) groupPayloadsByFromAddressAndSymbol(payloads []dto.
 }
 
 // GetTokenTransferHistories fetches token transfer histories from the repository with optional filters
-func (s *tokenTransferUCase) GetTokenTransferHistories(
+func (u *tokenTransferUCase) GetTokenTransferHistories(
 	ctx context.Context,
 	startTime, endTime *time.Time, // Time range to filter by
 	orderBy *string, // Order by field
@@ -266,7 +267,7 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 	offset := (page - 1) * size
 
 	// Fetch the token transfer histories using the repository with filters
-	listTokenTransfers, err := s.tokenTransferRepository.GetTokenTransferHistories(
+	listTokenTransfers, err := u.tokenTransferRepository.GetTokenTransferHistories(
 		ctx, limit, offset, orderBy, orderDirection, startTime, endTime, fromAddress, toAddress,
 	)
 	if err != nil {
@@ -298,7 +299,7 @@ func (s *tokenTransferUCase) GetTokenTransferHistories(
 	}, nil
 }
 
-func (s *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, payloads []dto.TokenTransferHistoryDTO) error {
+func (u *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, payloads []dto.TokenTransferHistoryDTO) error {
 	var models []domain.TokenTransferHistory
 
 	for _, payload := range payloads {
@@ -316,5 +317,21 @@ func (s *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, p
 		})
 	}
 
-	return s.tokenTransferRepository.CreateTokenTransferHistories(ctx, models)
+	return u.tokenTransferRepository.CreateTokenTransferHistories(ctx, models)
+}
+
+// GetTotalTokenAmount retrieves the total token amount for the specified filters.
+func (u *tokenTransferUCase) GetTotalTokenAmount(
+	ctx context.Context,
+	startTime, endTime *time.Time,
+	fromAddress, toAddress *string,
+) (float64, error) {
+	// Call the repository method to calculate the total token amount
+	totalTokenAmount, err := u.tokenTransferRepository.GetTotalTokenAmount(ctx, startTime, endTime, fromAddress, toAddress)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to calculate total token amount: %v", err)
+		return 0, fmt.Errorf("failed to calculate total token amount: %w", err)
+	}
+
+	return totalTokenAmount, nil
 }
