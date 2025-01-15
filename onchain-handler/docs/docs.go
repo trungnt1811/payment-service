@@ -723,6 +723,79 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/v1/withdraws": {
+            "get": {
+                "description": "Fetches a paginated list of withdraw histories filtered by time range, sender, and recipient addresses.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "withdraw"
+                ],
+                "summary": "Get list of withdraw histories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start time in UNIX timestamp format",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End time in UNIX timestamp format",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by recipient address",
+                        "name": "to_address",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting parameter in the format ` + "`" + `field_direction` + "`" + ` (e.g., id_asc, created_at_desc)",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful retrieval of withdraw histories",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaginationDTOResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {

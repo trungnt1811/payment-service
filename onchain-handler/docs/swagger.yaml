@@ -666,4 +666,54 @@ paths:
       summary: Create wallets for users
       tags:
       - user-wallet
+  /api/v1/withdraws:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a paginated list of withdraw histories filtered by time
+        range, sender, and recipient addresses.
+      parameters:
+      - description: Page number, default is 1
+        in: query
+        name: page
+        type: integer
+      - description: Page size, default is 10
+        in: query
+        name: size
+        type: integer
+      - description: Start time in UNIX timestamp format
+        in: query
+        name: start_time
+        type: integer
+      - description: End time in UNIX timestamp format
+        in: query
+        name: end_time
+        type: integer
+      - description: Filter by recipient address
+        in: query
+        name: to_address
+        type: string
+      - description: Sorting parameter in the format `field_direction` (e.g., id_asc,
+          created_at_desc)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of withdraw histories
+          schema:
+            $ref: '#/definitions/dto.PaginationDTOResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Get list of withdraw histories
+      tags:
+      - withdraw
 swagger: "2.0"

@@ -56,9 +56,10 @@ const (
 
 // Token transfer type
 const (
-	Transfer = "TRANSFER"
-	Withdraw = "WITHDRAW"
-	Deposit  = "DEPOSIT"
+	InternalTransfer = "INTERNAL_TRANSFER"
+	Transfer         = "TRANSFER"
+	Withdraw         = "WITHDRAW"
+	Deposit          = "DEPOSIT"
 )
 
 // ERC-20 transfer event ABI

@@ -343,7 +343,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 			Symbol:          nativeTokenSymbol,
 			ErrorMessage:    "",
 			Fee:             fee,
-			Type:            constants.Withdraw,
+			Type:            constants.InternalTransfer,
 		})
 		logger.GetLogger().Infof("Native token sent to %s for gas on network %s. Transaction hash: %s", address, w.network, txHash.Hex())
 	}
@@ -378,7 +378,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		Symbol:          constants.USDT,
 		ErrorMessage:    "",
 		Fee:             fee,
-		Type:            constants.Withdraw,
+		Type:            constants.InternalTransfer,
 	})
 	logger.GetLogger().Infof("USDT transferred from %s to receiving wallet on network %s. Transaction hash: %s", address, w.network, txHash.Hex())
 
