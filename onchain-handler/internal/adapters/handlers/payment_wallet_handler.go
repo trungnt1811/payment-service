@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
@@ -91,4 +92,45 @@ func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"receiving_wallet_address": address})
+}
+
+// SyncPaymentWalletBalance syncs the balance of a specific payment wallet.
+// @Summary Syncs a payment wallet balance.
+// @Description Fetches the balance of a payment wallet for a specific token and updates it in the database.
+// @Tags payment-wallet
+// @Accept json
+// @Produce json
+// @Param payload body dto.SyncWalletBalancePayload true "Sync wallet balance payload"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"wallet_address\": \"0x123\", \"usdt_amount\": 100.00}"
+// @Failure 400 {object} response.GeneralError "Invalid request payload or token symbol"
+// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Router /api/v1/payment-wallets/balance/sync [put]
+func (h *paymentWalletHandler) SyncPaymentWalletBalance(ctx *gin.Context) {
+	var payload dto.SyncWalletBalancePayload
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.GetLogger().Errorf("Invalid request payload: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	// Validate wallet address
+	if !utils.IsValidEthAddress(payload.WalletAddress) {
+		logger.GetLogger().Errorf("Invalid wallet address: %s", payload.WalletAddress)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid wallet address", fmt.Errorf("invalid wallet address: %s", payload.WalletAddress))
+		return
+	}
+
+	// Call the use case to fetch the wallet balance
+	usdtAmount, err := h.ucase.SyncWalletBalance(ctx, payload.WalletAddress, payload.Network)
+	if err != nil {
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to sync wallet balance", err)
+		return
+	}
+
+	// Return the balance as a JSON response
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":        true,
+		"wallet_address": payload.WalletAddress,
+		"usdt_amount":    usdtAmount,
+	})
 }

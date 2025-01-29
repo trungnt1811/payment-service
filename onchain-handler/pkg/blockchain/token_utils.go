@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
@@ -97,4 +98,49 @@ func GetNativeTokenSymbol(network constants.NetworkType) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported network type: %s", network)
 	}
+}
+
+// FetchTokenBalance retrieves the token balance for the given wallet address and token contract address either from the cache or directly from the blockchain.
+func FetchTokenBalance(
+	ctx context.Context,
+	ethClient pkginterfaces.Client,
+	tokenContractAddress, walletAddress, network string,
+	cacheRepo infrainterfaces.CacheRepository,
+) (*big.Float, error) {
+	// Step 1: Retrieve the raw token balance from the blockchain
+	rawBalance, err := ethClient.GetTokenBalance(ctx, tokenContractAddress, walletAddress)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get token balance from blockchain. Wallet: %s, Token: %s, Network: %s, Error: %w",
+			walletAddress,
+			tokenContractAddress,
+			network,
+			err,
+		)
+	}
+
+	// Step 2: Retrieve token decimals from the cache
+	decimals, err := GetTokenDecimalsFromCache(tokenContractAddress, network, cacheRepo)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to retrieve token decimals from cache. Token: %s, Network: %s, Error: %w",
+			tokenContractAddress,
+			network,
+			err,
+		)
+	}
+
+	// Step 3: Convert the raw balance to a human-readable format
+	factor := new(big.Float).SetFloat64(float64(10 ^ decimals))
+	humanReadableBalance := new(big.Float).Quo(new(big.Float).SetInt(rawBalance), factor)
+
+	logger.GetLogger().Infof(
+		"Token balance retrieved successfully. Wallet: %s, Token: %s, Network: %s, Balance: %s",
+		walletAddress,
+		tokenContractAddress,
+		network,
+		humanReadableBalance.String(),
+	)
+
+	return humanReadableBalance, nil
 }

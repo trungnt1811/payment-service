@@ -27,7 +27,6 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/workers"
 	"github.com/genefriendway/onchain-handler/migrations"
 	pkgblockchain "github.com/genefriendway/onchain-handler/pkg/blockchain"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain/eth"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
@@ -56,7 +55,7 @@ func RunApp(config *conf.Configuration) {
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to get AVAX C-Chain RPC URLs: %v", err)
 	}
-	ethClientAvax, err := eth.NewRoundRobinClient(avaxRpcUrls)
+	ethClientAvax, err := providers.ProvideEthClient(constants.AvaxCChain, avaxRpcUrls)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize AVAX C-Chain client: %v", err)
 	}
@@ -67,7 +66,7 @@ func RunApp(config *conf.Configuration) {
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to get BSC RPC URLs: %v", err)
 	}
-	ethClientBsc, err := eth.NewRoundRobinClient(bscRpcUrls)
+	ethClientBsc, err := providers.ProvideEthClient(constants.Bsc, bscRpcUrls)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize BSC client: %v", err)
 	}

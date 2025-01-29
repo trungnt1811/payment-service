@@ -3,7 +3,7 @@ package interfaces
 import "context"
 
 type PaymentWalletBalanceRepository interface {
-	UpsertPaymentWalletBalance(
+	AddPaymentWalletBalance(
 		ctx context.Context,
 		walletID uint64,
 		newBalance string,
@@ -14,6 +14,13 @@ type PaymentWalletBalanceRepository interface {
 		ctx context.Context,
 		walletID uint64,
 		amountToSubtract string,
+		network string,
+		symbol string,
+	) error
+	UpsertPaymentWalletBalance(
+		ctx context.Context,
+		walletID uint64,
+		newBalance string,
 		network string,
 		symbol string,
 	) error

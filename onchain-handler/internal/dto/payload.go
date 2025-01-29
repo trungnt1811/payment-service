@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/genefriendway/onchain-handler/constants"
+
 type TokenTransferPayloadDTO struct {
 	Network     string `json:"network"`
 	FromAddress string `json:"from_address"`
@@ -42,4 +44,9 @@ type PaymentWalletPayloadDTO struct {
 type UserWalletPayloadDTO struct {
 	UserID  uint64 `json:"user_id"`
 	Address string `json:"address"`
+}
+
+type SyncWalletBalancePayload struct {
+	WalletAddress string                `json:"wallet_address" binding:"required"`
+	Network       constants.NetworkType `json:"network" binding:"required"`
 }

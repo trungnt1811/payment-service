@@ -425,6 +425,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/payment-wallets/balance/sync": {
+            "put": {
+                "description": "Fetches the balance of a payment wallet for a specific token and updates it in the database.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-wallet"
+                ],
+                "summary": "Syncs a payment wallet balance.",
+                "parameters": [
+                    {
+                        "description": "Sync wallet balance payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SyncWalletBalancePayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response: {\\\"success\\\": true, \\\"wallet_address\\\": \\\"0x123\\\", \\\"usdt_amount\\\": 100.00}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request payload or token symbol",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-wallets/balances": {
             "get": {
                 "description": "Retrieves all payment wallets with balances grouped by network and token.",
@@ -479,58 +526,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/token-transfer": {
-            "post": {
-                "description": "This endpoint allows the distribution of tokens to multiple recipients. It accepts a list of transfer requests, validates the payload, and processes the token transfers based on the transaction type.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "token-transfer"
-                ],
-                "summary": "Distribute tokens to recipients",
-                "parameters": [
-                    {
-                        "description": "List of transfer requests. Each request must include request id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain).",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.TokenTransferPayloadDTO"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful distribution of tokens",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.TokenTransferResultDTOResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid payload or invalid recipient address/transaction type",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error, failed to distribute tokens",
                         "schema": {
                             "$ref": "#/definitions/response.GeneralError"
                         }
@@ -799,6 +794,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "constants.NetworkType": {
+            "type": "string",
+            "enum": [
+                "BSC",
+                "AVAX C-Chain"
+            ],
+            "x-enum-varnames": [
+                "Bsc",
+                "AvaxCChain"
+            ]
+        },
         "dto.NetworkBalanceDTO": {
             "type": "object",
             "properties": {
@@ -1015,6 +1021,21 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.SyncWalletBalancePayload": {
+            "type": "object",
+            "required": [
+                "network",
+                "wallet_address"
+            ],
+            "properties": {
+                "network": {
+                    "$ref": "#/definitions/constants.NetworkType"
+                },
+                "wallet_address": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.TokenBalanceDTO": {
             "type": "object",
             "properties": {
@@ -1023,43 +1044,6 @@ const docTemplate = `{
                 },
                 "symbol": {
                     "type": "string"
-                }
-            }
-        },
-        "dto.TokenTransferPayloadDTO": {
-            "type": "object",
-            "properties": {
-                "from_address": {
-                    "type": "string"
-                },
-                "network": {
-                    "type": "string"
-                },
-                "request_id": {
-                    "type": "string"
-                },
-                "symbol": {
-                    "type": "string"
-                },
-                "to_address": {
-                    "type": "string"
-                },
-                "token_amount": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.TokenTransferResultDTOResponse": {
-            "type": "object",
-            "properties": {
-                "error_message": {
-                    "type": "string"
-                },
-                "request_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "boolean"
                 }
             }
         },

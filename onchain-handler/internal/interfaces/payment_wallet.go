@@ -18,13 +18,14 @@ type PaymentWalletRepository interface {
 	GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error)
 	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *string) ([]domain.PaymentWallet, error)
 	ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error
+	GetWalletIDByAddress(ctx context.Context, address string) (uint64, error)
 }
 
 type PaymentWalletUCase interface {
 	CreateAndGenerateWallet(ctx context.Context, mnemonic, passphrase, salt string, inUse bool) error
 	IsRowExist(ctx context.Context) (bool, error)
 	GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletDTO, error)
-	UpsertPaymentWalletBalance(
+	AddPaymentWalletBalance(
 		ctx context.Context,
 		walletID uint64,
 		newBalance string,
@@ -43,4 +44,5 @@ type PaymentWalletUCase interface {
 	GetReceivingWalletAddress(
 		ctx context.Context, mnemonic, passphrase, salt string,
 	) (string, error)
+	SyncWalletBalance(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error)
 }

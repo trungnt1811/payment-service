@@ -1,6 +1,8 @@
 package constants
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -30,7 +32,6 @@ const (
 // Token symbols
 const (
 	USDT = "USDT"
-	LP   = "LP"
 )
 
 // Global cache key
@@ -143,6 +144,28 @@ const (
 	Bsc        NetworkType = "BSC"
 	AvaxCChain NetworkType = "AVAX C-Chain"
 )
+
+// UnmarshalJSON ensures only valid network types are parsed from JSON.
+func (t *NetworkType) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+
+	// validNetworks contains allowed values for NetworkType.
+	validNetworks := map[NetworkType]bool{
+		Bsc:        true,
+		AvaxCChain: true,
+	}
+
+	network := NetworkType(str)
+	if !validNetworks[network] {
+		return fmt.Errorf("invalid network type: %s", str)
+	}
+
+	*t = network
+	return nil
+}
 
 // SQL constants
 const (

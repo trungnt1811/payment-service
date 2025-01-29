@@ -1,4 +1,12 @@
 definitions:
+  constants.NetworkType:
+    enum:
+    - BSC
+    - AVAX C-Chain
+    type: string
+    x-enum-varnames:
+    - Bsc
+    - AvaxCChain
   dto.NetworkBalanceDTO:
     properties:
       network:
@@ -140,36 +148,22 @@ definitions:
       in_use:
         type: boolean
     type: object
+  dto.SyncWalletBalancePayload:
+    properties:
+      network:
+        $ref: '#/definitions/constants.NetworkType'
+      wallet_address:
+        type: string
+    required:
+    - network
+    - wallet_address
+    type: object
   dto.TokenBalanceDTO:
     properties:
       amount:
         type: string
       symbol:
         type: string
-    type: object
-  dto.TokenTransferPayloadDTO:
-    properties:
-      from_address:
-        type: string
-      network:
-        type: string
-      request_id:
-        type: string
-      symbol:
-        type: string
-      to_address:
-        type: string
-      token_amount:
-        type: string
-    type: object
-  dto.TokenTransferResultDTOResponse:
-    properties:
-      error_message:
-        type: string
-      request_id:
-        type: string
-      status:
-        type: boolean
     type: object
   response.GeneralError:
     properties:
@@ -464,6 +458,39 @@ paths:
       summary: Retrieves a payment wallet by its address.
       tags:
       - payment-wallet
+  /api/v1/payment-wallets/balance/sync:
+    put:
+      consumes:
+      - application/json
+      description: Fetches the balance of a payment wallet for a specific token and
+        updates it in the database.
+      parameters:
+      - description: Sync wallet balance payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SyncWalletBalancePayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Success response: {\"success\": true, \"wallet_address\":
+            \"0x123\", \"usdt_amount\": 100.00}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or token symbol
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.GeneralError'
+      summary: Syncs a payment wallet balance.
+      tags:
+      - payment-wallet
   /api/v1/payment-wallets/balances:
     get:
       consumes:
@@ -506,43 +533,6 @@ paths:
       summary: Retrieves the receiving wallet address.
       tags:
       - payment-wallet
-  /api/v1/token-transfer:
-    post:
-      consumes:
-      - application/json
-      description: This endpoint allows the distribution of tokens to multiple recipients.
-        It accepts a list of transfer requests, validates the payload, and processes
-        the token transfers based on the transaction type.
-      parameters:
-      - description: List of transfer requests. Each request must include request
-          id, from address, to address, amount, symbol (USDT) and network (AVAX C-Chain).
-        in: body
-        name: payload
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/dto.TokenTransferPayloadDTO'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successful distribution of tokens
-          schema:
-            items:
-              $ref: '#/definitions/dto.TokenTransferResultDTOResponse'
-            type: array
-        "400":
-          description: Invalid payload or invalid recipient address/transaction type
-          schema:
-            $ref: '#/definitions/response.GeneralError'
-        "500":
-          description: Internal server error, failed to distribute tokens
-          schema:
-            $ref: '#/definitions/response.GeneralError'
-      summary: Distribute tokens to recipients
-      tags:
-      - token-transfer
   /api/v1/token-transfers:
     get:
       consumes:

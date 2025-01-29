@@ -254,9 +254,9 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 					logger.GetLogger().Errorf("Failed to increment payment statistics on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 					continue
 				}
-				// Upsert payment wallet balances
-				if err = listener.paymentWalletUCase.UpsertPaymentWalletBalance(listener.ctx, order.Wallet.ID, payload.Amount, listener.network, payload.TokenSymbol); err != nil {
-					logger.GetLogger().Errorf("Failed to upsert payment wallet balance on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
+				// Add payment wallet balance
+				if err = listener.paymentWalletUCase.AddPaymentWalletBalance(listener.ctx, order.Wallet.ID, payload.Amount, listener.network, payload.TokenSymbol); err != nil {
+					logger.GetLogger().Errorf("Failed to add payment wallet balance on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 					continue
 				}
 			}

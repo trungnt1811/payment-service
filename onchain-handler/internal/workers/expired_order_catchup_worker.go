@@ -300,9 +300,9 @@ func (w *expiredOrderCatchupWorker) processLog(
 			logger.GetLogger().Errorf("Failed to increment payment statistics for order ID %d on network %s: %v", order.ID, w.network.String(), err)
 		}
 
-		// Upsert payment wallet balances
-		if err = w.paymentWalletUCase.UpsertPaymentWalletBalance(ctx, order.Wallet.ID, transferEventValueInEth, w.network, order.Symbol); err != nil {
-			logger.GetLogger().Errorf("Failed to upsert payment wallet balance on network %s for order ID %d, error: %v", w.network.String(), order.ID, err)
+		// Add the transferred amount to the payment wallet balance
+		if err = w.paymentWalletUCase.AddPaymentWalletBalance(ctx, order.Wallet.ID, transferEventValueInEth, w.network, order.Symbol); err != nil {
+			logger.GetLogger().Errorf("Failed to add payment wallet balance on network %s for order ID %d, error: %v", w.network.String(), order.ID, err)
 			continue
 		}
 

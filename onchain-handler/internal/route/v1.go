@@ -30,7 +30,6 @@ func RegisterRoutes(
 
 	// SECTION: tokens transfer
 	transferHandler := handlers.NewTokenTransferHandler(paymentWalletUCase, tokenTransferUCase, config)
-	// appRouter.POST("/token-transfer", transferHandler.Transfer)
 	appRouter.GET("/token-transfers", transferHandler.GetTokenTransferHistories)
 	appRouter.GET("/withdraws", transferHandler.GetWithdrawHistories)
 
@@ -51,6 +50,7 @@ func RegisterRoutes(
 	// appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
 	// appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
 	appRouter.GET("/payment-wallets/receiving-address", paymentWalletHander.GetReceivingWalletAddress)
+	appRouter.PUT("payment-wallets/balance/sync", paymentWalletHander.SyncPaymentWalletBalance)
 
 	// SECTION: metadata
 	metadataHandler := handlers.NewMetadataHandler(networkMetadataUCase)

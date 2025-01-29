@@ -189,3 +189,24 @@ func (r *paymentWalletRepository) ReleaseWalletsByIDs(ctx context.Context, walle
 	}
 	return nil
 }
+
+func (r *paymentWalletRepository) GetWalletIDByAddress(ctx context.Context, address string) (uint64, error) {
+	var walletID uint64
+	err := r.db.WithContext(ctx).
+		Model(&domain.PaymentWallet{}).
+		Select("id").
+		Where("address = ?", address).
+		Limit(1).
+		Scan(&walletID).
+		Error
+	if err != nil {
+		return 0, fmt.Errorf("failed to get wallet ID: %w", err)
+	}
+
+	// If walletID remains 0, it means no wallet was found, return an explicit error
+	if walletID == 0 {
+		return 0, fmt.Errorf("wallet not found for address: %s", address)
+	}
+
+	return walletID, nil
+}

@@ -52,7 +52,7 @@ func InitializePaymentEventHistoryUCase(db *gorm.DB, cacheRepo interfaces2.Cache
 func InitializePaymentWalletUCase(db *gorm.DB, config *conf.Configuration) interfaces.PaymentWalletUCase {
 	paymentWalletRepository := repositories.NewPaymentWalletRepository(db, config)
 	paymentWalletBalanceRepository := repositories.NewPaymentWalletBalanceRepository(db)
-	paymentWalletUCase := ucases.NewPaymentWalletUCase(db, paymentWalletRepository, paymentWalletBalanceRepository)
+	paymentWalletUCase := ucases.NewPaymentWalletUCase(db, paymentWalletRepository, paymentWalletBalanceRepository, config)
 	return paymentWalletUCase
 }
 

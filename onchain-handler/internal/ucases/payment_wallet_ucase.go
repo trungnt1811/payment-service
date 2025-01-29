@@ -6,28 +6,35 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
+	"github.com/genefriendway/onchain-handler/pkg/providers"
+	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type paymentWalletUCase struct {
 	db                             *gorm.DB
 	paymentWalletRepository        interfaces.PaymentWalletRepository
 	paymentWalletBalanceRepository interfaces.PaymentWalletBalanceRepository
+	config                         *conf.Configuration
 }
 
 func NewPaymentWalletUCase(
 	db *gorm.DB,
 	paymentWalletRepository interfaces.PaymentWalletRepository,
 	paymentWalletBalanceRepository interfaces.PaymentWalletBalanceRepository,
+	config *conf.Configuration,
 ) interfaces.PaymentWalletUCase {
 	return &paymentWalletUCase{
 		db:                             db,
 		paymentWalletRepository:        paymentWalletRepository,
 		paymentWalletBalanceRepository: paymentWalletBalanceRepository,
+		config:                         config,
 	}
 }
 
@@ -54,14 +61,14 @@ func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, addr
 	return wallet.ToDto(), nil
 }
 
-func (u *paymentWalletUCase) UpsertPaymentWalletBalance(
+func (u *paymentWalletUCase) AddPaymentWalletBalance(
 	ctx context.Context,
 	walletID uint64,
 	newBalance string,
 	network constants.NetworkType,
 	symbol string,
 ) error {
-	return u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, newBalance, network.String(), symbol)
+	return u.paymentWalletBalanceRepository.AddPaymentWalletBalance(ctx, walletID, newBalance, network.String(), symbol)
 }
 
 func (u *paymentWalletUCase) SubtractPaymentWalletBalance(
@@ -145,4 +152,56 @@ func (u *paymentWalletUCase) GetReceivingWalletAddress(
 		return "", err
 	}
 	return account.Address.Hex(), nil
+}
+
+func (u *paymentWalletUCase) SyncWalletBalance(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
+	// Check if the wallet exists and get its ID
+	walletID, err := u.paymentWalletRepository.GetWalletIDByAddress(ctx, walletAddress)
+	if err != nil {
+		return "", fmt.Errorf("failed to get wallet ID by address: %w", err)
+	}
+
+	// Get USDT contract address by network
+	usdtContractAddress, err := u.config.GetTokenAddress(constants.USDT, network.String())
+	if err != nil {
+		return "", fmt.Errorf("failed to get USDT contract address: %w", err)
+	}
+
+	// Get RPC URLs and Ethereum Client based on network
+	rpcUrls, err := conf.GetRpcUrls(network)
+	if err != nil {
+		return "", fmt.Errorf("failed to get RPC URLs: %w", err)
+	}
+
+	ethClient, err := providers.ProvideEthClient(network, rpcUrls)
+	if err != nil {
+		return "", fmt.Errorf("failed to initialize Ethereum client: %w", err)
+	}
+
+	// Fetch the USDT balance from the blockchain
+	usdtBalance, err := ethClient.GetTokenBalance(ctx, usdtContractAddress, walletAddress)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch USDT balance: %w", err)
+	}
+
+	// Get token decimals from cache
+	decimals, err := blockchain.GetTokenDecimalsFromCache(usdtContractAddress, network.String(), providers.ProvideCacheRepository(ctx))
+	if err != nil {
+		return "", fmt.Errorf("failed to get token decimals: %w", err)
+	}
+
+	// Convert balance from smallest unit
+	usdtAmount, err := utils.ConvertSmallestUnitToFloatToken(usdtBalance.String(), decimals)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert USDT balance to float: %w", err)
+	}
+
+	// Update the wallet balance
+	err = u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, usdtAmount, network.String(), constants.USDT)
+	if err != nil {
+		return "", fmt.Errorf("failed to upsert wallet balance: %w", err)
+	}
+
+	// Return the balance as a float string
+	return usdtAmount, nil
 }

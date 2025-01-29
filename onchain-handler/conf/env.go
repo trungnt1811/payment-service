@@ -36,50 +36,29 @@ type PaymentGatewayConfiguration struct {
 }
 
 type BlockchainConfiguration struct {
-	AvaxNetwork         AvaxNetworkConfiguration      `mapstructure:",squash"`
-	BscNetwork          BscNetworkConfiguration       `mapstructure:",squash"`
-	LPTreasuryPool      LPTreasuryPoolConfiguration   `mapstructure:",squash"`
-	USDTTreasuryPool    USDTTreasuryPoolConfiguration `mapstructure:",squash"`
-	LPRevenuePool       LPRevenuePoolConfiguration    `mapstructure:",squash"`
-	GasBufferMultiplier string                        `mapstructure:"GAS_BUFFER_MULTIPLIER"`
+	AvaxNetwork         AvaxNetworkConfiguration `mapstructure:",squash"`
+	BscNetwork          BscNetworkConfiguration  `mapstructure:",squash"`
+	GasBufferMultiplier string                   `mapstructure:"GAS_BUFFER_MULTIPLIER"`
 }
 
 type AvaxNetworkConfiguration struct {
-	AvaxRpcUrls                   string `mapstructure:"AVAX_RPC_URLS"`
-	AvaxChainID                   uint32 `mapstructure:"AVAX_CHAIN_ID"`
-	AvaxStartBlockListener        uint64 `mapstructure:"AVAX_START_BLOCK_LISTENER"`
-	AvaxUSDTContractAddress       string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
-	AvaxLifePointContractAddress  string `mapstructure:"AVAX_LIFE_POINT_CONTRACT_ADDRESS"`
-	AvaxBulkSenderContractAddress string `mapstructure:"AVAX_BULK_SENDER_CONTRACT_ADDRESS"`
+	AvaxRpcUrls             string `mapstructure:"AVAX_RPC_URLS"`
+	AvaxChainID             uint32 `mapstructure:"AVAX_CHAIN_ID"`
+	AvaxStartBlockListener  uint64 `mapstructure:"AVAX_START_BLOCK_LISTENER"`
+	AvaxUSDTContractAddress string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
 }
 
 type BscNetworkConfiguration struct {
-	BscRpcUrls                   string `mapstructure:"BSC_RPC_URLS"`
-	BscChainID                   uint32 `mapstructure:"BSC_CHAIN_ID"`
-	BscStartBlockListener        uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
-	BscUSDTContractAddress       string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
-	BscBulkSenderContractAddress string `mapstructure:"BSC_BULK_SENDER_CONTRACT_ADDRESS"`
+	BscRpcUrls             string `mapstructure:"BSC_RPC_URLS"`
+	BscChainID             uint32 `mapstructure:"BSC_CHAIN_ID"`
+	BscStartBlockListener  uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
+	BscUSDTContractAddress string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
 }
 
 type WalletConfiguration struct {
 	Mnemonic   string `mapstructure:"MNEMONIC"`
 	Passphrase string `mapstructure:"PASSPHRASE"`
 	Salt       string `mapstructure:"SALT"`
-}
-
-type LPTreasuryPoolConfiguration struct {
-	LPTreasuryAddress    string `mapstructure:"LP_TREASURY_ADDRESS"`
-	PrivateKeyLPTreasury string `mapstructure:"PRIVATE_KEY_LP_TREASURY"`
-}
-
-type USDTTreasuryPoolConfiguration struct {
-	USDTTreasuryAddress    string `mapstructure:"USDT_TREASURY_ADDRESS"`
-	PrivateKeyUSDTTreasury string `mapstructure:"PRIVATE_KEY_USDT_TREASURY"`
-}
-
-type LPRevenuePoolConfiguration struct {
-	LPRevenueAddress    string `mapstructure:"LP_REVENUE_ADDRESS"`
-	PrivateKeyLPRevenue string `mapstructure:"PRIVATE_KEY_LP_REVENUE"`
 }
 
 type Configuration struct {
@@ -97,44 +76,35 @@ type Configuration struct {
 var configuration Configuration
 
 var defaultConfigurations = map[string]any{
-	"REDIS_ADDRESS":                     "localhost:6379",
-	"REDIS_TTL":                         "60",
-	"APP_PORT":                          "8080",
-	"ENV_FILE":                          ".env",
-	"ENV":                               "DEV",
-	"LOG_LEVEL":                         "debug",
-	"DB_USER":                           "",
-	"DB_PASSWORD":                       "",
-	"DB_HOST":                           "",
-	"DB_PORT":                           "",
-	"DB_NAME":                           "",
-	"INIT_WALLET_COUNT":                 10,
-	"ORDER_CUTOFF_TIME":                 1440,
-	"EXPIRED_ORDER_TIME":                15,
-	"PAYMENT_COVERING":                  1,
-	"GAS_BUFFER_MULTIPLIER":             2,
-	"WITHDRAW_WORKER_INTERVAL":          "hourly",
-	"MASTER_WALLET_ADDRESS":             "",
-	"AVAX_RPC_URLS":                     "",
-	"AVAX_CHAIN_ID":                     0,
-	"AVAX_START_BLOCK_LISTENER":         0,
-	"AVAX_USDT_CONTRACT_ADDRESS":        "",
-	"AVAX_LIFE_POINT_CONTRACT_ADDRESS":  "",
-	"AVAX_BULK_SENDER_CONTRACT_ADDRESS": "",
-	"BSC_RPC_URLS":                      "",
-	"BSC_CHAIN_ID":                      0,
-	"BSC_START_BLOCK_LISTENER":          0,
-	"BSC_USDT_CONTRACT_ADDRESS":         "",
-	"BSC_BULK_SENDER_CONTRACT_ADDRESS":  "",
-	"MNEMONIC":                          "",
-	"PASSPHRASE":                        "",
-	"SALT":                              "",
-	"LP_TREASURY_ADDRESS":               "",
-	"PRIVATE_KEY_LP_TREASURY":           "",
-	"USDT_TREASURY_ADDRESS":             "",
-	"PRIVATE_KEY_USDT_TREASURY":         "",
-	"LP_REVENUE_ADDRESS":                "",
-	"PRIVATE_KEY_LP_REVENUE":            "",
+	"REDIS_ADDRESS":              "localhost:6379",
+	"REDIS_TTL":                  "60",
+	"APP_PORT":                   "8080",
+	"ENV_FILE":                   ".env",
+	"ENV":                        "DEV",
+	"LOG_LEVEL":                  "debug",
+	"DB_USER":                    "",
+	"DB_PASSWORD":                "",
+	"DB_HOST":                    "",
+	"DB_PORT":                    "",
+	"DB_NAME":                    "",
+	"INIT_WALLET_COUNT":          10,
+	"ORDER_CUTOFF_TIME":          1440,
+	"EXPIRED_ORDER_TIME":         15,
+	"PAYMENT_COVERING":           1,
+	"GAS_BUFFER_MULTIPLIER":      2,
+	"WITHDRAW_WORKER_INTERVAL":   "hourly",
+	"MASTER_WALLET_ADDRESS":      "",
+	"AVAX_RPC_URLS":              "",
+	"AVAX_CHAIN_ID":              0,
+	"AVAX_START_BLOCK_LISTENER":  0,
+	"AVAX_USDT_CONTRACT_ADDRESS": "",
+	"BSC_RPC_URLS":               "",
+	"BSC_CHAIN_ID":               0,
+	"BSC_START_BLOCK_LISTENER":   0,
+	"BSC_USDT_CONTRACT_ADDRESS":  "",
+	"MNEMONIC":                   "",
+	"PASSPHRASE":                 "",
+	"SALT":                       "",
 }
 
 // loadDefaultConfigs sets default values for critical configurations
@@ -205,45 +175,15 @@ func GetRedisConnectionURL() string {
 	return configuration.Redis.RedisAddress
 }
 
-// Helper function to get pools' private key by pools' addresses
-func (config Configuration) GetPoolPrivateKey(poolAddress string) (string, error) {
-	switch poolAddress {
-	// LP Treasury pool
-	case config.Blockchain.LPTreasuryPool.LPTreasuryAddress:
-		return config.Blockchain.LPTreasuryPool.PrivateKeyLPTreasury, nil
-	// LP Revenue pool
-	case config.Blockchain.LPRevenuePool.LPRevenueAddress:
-		return config.Blockchain.LPRevenuePool.PrivateKeyLPRevenue, nil
-	// USDT Treasury pool
-	case config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress:
-		return config.Blockchain.USDTTreasuryPool.PrivateKeyUSDTTreasury, nil
-	default:
-		return "", fmt.Errorf("failed to get private key for pool address: %s", poolAddress)
-	}
-}
-
-func (config Configuration) GetPoolAddress(poolName string) (string, error) {
-	switch poolName {
-	case constants.LPRevenue:
-		return config.Blockchain.LPRevenuePool.LPRevenueAddress, nil
-	case constants.LPTreasury:
-		return config.Blockchain.LPTreasuryPool.LPTreasuryAddress, nil
-	case constants.USDTTreasury:
-		return config.Blockchain.USDTTreasuryPool.USDTTreasuryAddress, nil
-	default:
-		return "", fmt.Errorf("unrecognized pool name: %s", poolName)
-	}
-}
-
-func (config Configuration) GetExpiredOrderTime() time.Duration {
+func (config *Configuration) GetExpiredOrderTime() time.Duration {
 	return time.Duration(config.PaymentGateway.ExpiredOrderTime) * time.Minute
 }
 
-func (config Configuration) GetOrderCutoffTime() time.Duration {
+func (config *Configuration) GetOrderCutoffTime() time.Duration {
 	return time.Duration(config.PaymentGateway.OrderCutoffTime) * time.Minute
 }
 
-func (config Configuration) GetPaymentCovering() float64 {
+func (config *Configuration) GetPaymentCovering() float64 {
 	paymentCoveringStr := config.PaymentGateway.PaymentCovering
 	if paymentCoveringStr == "" {
 		log.Error().Msg("PaymentCovering is not set or is empty in the configuration")
@@ -265,7 +205,7 @@ func (config Configuration) GetPaymentCovering() float64 {
 	return paymentCoveringFloat
 }
 
-func (config Configuration) GetGasBufferMultiplier() float64 {
+func (config *Configuration) GetGasBufferMultiplier() float64 {
 	multiplierStr := config.Blockchain.GasBufferMultiplier
 	if multiplierStr == "" {
 		log.Error().Msg("GetGasBufferMultiplier is not set or is empty in the configuration")
@@ -281,15 +221,35 @@ func (config Configuration) GetGasBufferMultiplier() float64 {
 	return multiplier
 }
 
-func (config Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
+func (config *Configuration) GetTokenSymbol(tokenAddress string) (string, error) {
 	tokenSymbols := map[string]string{
-		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress:      constants.USDT,
-		config.Blockchain.BscNetwork.BscUSDTContractAddress:        constants.USDT,
-		config.Blockchain.AvaxNetwork.AvaxLifePointContractAddress: constants.LP,
+		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress: constants.USDT,
+		config.Blockchain.BscNetwork.BscUSDTContractAddress:   constants.USDT,
 	}
 
 	if symbol, exists := tokenSymbols[tokenAddress]; exists {
 		return symbol, nil
 	}
 	return "", fmt.Errorf("unknown token address: %s", tokenAddress)
+}
+
+func (config *Configuration) GetTokenAddress(symbol, network string) (string, error) {
+	tokenAddresses := map[string]map[string]string{
+		constants.AvaxCChain.String(): {
+			constants.USDT: config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		},
+		constants.Bsc.String(): {
+			constants.USDT: config.Blockchain.BscNetwork.BscUSDTContractAddress,
+		},
+	}
+
+	// Check if the network exists in the mapping
+	if tokensForNetwork, exists := tokenAddresses[network]; exists {
+		// Check if the symbol exists in the network's tokens
+		if address, exists := tokensForNetwork[symbol]; exists {
+			return address, nil
+		}
+		return "", fmt.Errorf("unknown token symbol for network %s: %s", network, symbol)
+	}
+	return "", fmt.Errorf("unsupported network: %s", network)
 }
