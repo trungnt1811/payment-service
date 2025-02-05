@@ -315,15 +315,25 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		return fmt.Errorf("failed to convert private key: %w", err)
 	}
 
-	// Step 2: Calculate required gas
-	requiredGas, err := w.calculateRequiredGas(ctx, address, receivingWalletAddress, walletInfo)
+	// Step 2: Check if the payment wallet has a balance (onchain check)
+	tokenAmount, err := w.ethClient.GetTokenBalance(ctx, w.tokenContractAddress, address)
+	if err != nil {
+		return fmt.Errorf("failed to get USDT balance for payment wallet %s on network %s: %w", address, w.network, err)
+	}
+	if tokenAmount.Cmp(big.NewInt(0)) == 0 {
+		logger.GetLogger().Infof("No USDT balance in payment wallet %s in network %s. Skipping transfer to receiving wallet", address, w.network)
+		return nil
+	}
+
+	// Step 3: Calculate required gas
+	requiredGas, err := w.calculateRequiredGas(ctx, address, receivingWalletAddress, tokenAmount)
 	if err != nil {
 		return fmt.Errorf("failed to calculate required gas for wallet %s on network %s: %w", address, w.network, err)
 	}
 
 	var payloads []dto.TokenTransferHistoryDTO
 
-	// Step 3: Transfer native token for gas if required
+	// Step 4: Transfer native token for gas if required
 	if requiredGas.Cmp(big.NewInt(0)) > 0 {
 		txHash, gasUsed, gasPrice, err := w.ethClient.TransferNativeToken(ctx, w.chainID, receivingWalletPrivateKey, address, requiredGas)
 		if err != nil {
@@ -348,22 +358,22 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		logger.GetLogger().Infof("Native token sent to %s for gas on network %s. Transaction hash: %s", address, w.network, txHash.Hex())
 	}
 
-	// Step 4: Transfer USDT to the receiving wallet
+	// Step 5: Transfer USDT to the receiving wallet
 	txHash, gasUsed, gasPrice, err := w.ethClient.TransferToken(
-		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, walletInfo.TokenAmount,
+		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, tokenAmount,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to transfer USDT from %s to receiving wallet on network %s: %w", address, w.network, err)
 	}
 
 	fee := utils.CalculateFee(gasUsed, gasPrice)
-	tokenAmount, err := utils.ConvertSmallestUnitToFloatToken(walletInfo.TokenAmount.String(), decimals)
+	tokenAmountStr, err := utils.ConvertSmallestUnitToFloatToken(tokenAmount.String(), decimals)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to convert token amount for transfer USDT on network %s: %v", w.network, tokenAmount)
 	}
 
 	// Update payment wallet balance
-	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmount, w.network, constants.USDT); err != nil {
+	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmountStr, w.network, constants.USDT); err != nil {
 		logger.GetLogger().Errorf("Failed to subtract payment wallet balance on network %s: %v", w.network, err)
 		return err
 	}
@@ -373,7 +383,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		TransactionHash: txHash.Hex(),
 		FromAddress:     address,
 		ToAddress:       receivingWalletAddress,
-		TokenAmount:     tokenAmount,
+		TokenAmount:     tokenAmountStr,
 		Status:          true,
 		Symbol:          constants.USDT,
 		ErrorMessage:    "",
@@ -382,7 +392,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	})
 	logger.GetLogger().Infof("USDT transferred from %s to receiving wallet on network %s. Transaction hash: %s", address, w.network, txHash.Hex())
 
-	// Step 5: Persist transfer histories
+	// Step 6: Persist transfer histories
 	if err := w.tokenTransferUCase.CreateTokenTransferHistories(w.ctx, payloads); err != nil {
 		logger.GetLogger().Errorf("Failed to create token transfer histories on network %s: %v", w.network, err)
 		return err
@@ -392,13 +402,13 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 }
 
 // calculateRequiredGas calculates the required gas for a wallet withdrawal.
-func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, address, receivingWalletAddress string, walletInfo walletInfo) (*big.Int, error) {
+func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, address, receivingWalletAddress string, tokenAmount *big.Int) (*big.Int, error) {
 	// Step 1: Estimate the gas required for ERC20 token transfer
 	estimatedGas, err := w.ethClient.EstimateGasERC20(
 		common.HexToAddress(w.tokenContractAddress),
 		common.HexToAddress(address),
 		common.HexToAddress(receivingWalletAddress),
-		walletInfo.TokenAmount,
+		tokenAmount,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to estimate gas on network %s: %w", w.network, err)
