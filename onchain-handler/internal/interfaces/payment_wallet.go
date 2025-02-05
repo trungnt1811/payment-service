@@ -16,7 +16,13 @@ type PaymentWalletRepository interface {
 	ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*domain.PaymentWallet, error)
 	GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error)
 	GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error)
-	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *string) ([]domain.PaymentWallet, error)
+	GetPaymentWalletsWithBalances(
+		ctx context.Context,
+		limit, offset int,
+		nonZeroOnly bool,
+		network, address *string,
+	) ([]domain.PaymentWallet, error)
+	GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error)
 	ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error
 	GetWalletIDByAddress(ctx context.Context, address string) (uint64, error)
 }
@@ -24,7 +30,7 @@ type PaymentWalletRepository interface {
 type PaymentWalletUCase interface {
 	CreateAndGenerateWallet(ctx context.Context, mnemonic, passphrase, salt string, inUse bool) error
 	IsRowExist(ctx context.Context) (bool, error)
-	GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletDTO, error)
+	GetPaymentWalletByAddress(ctx context.Context, network *constants.NetworkType, address string) (dto.PaymentWalletBalanceDTO, error)
 	AddPaymentWalletBalance(
 		ctx context.Context,
 		walletID uint64,
@@ -40,7 +46,12 @@ type PaymentWalletUCase interface {
 		symbol string,
 	) error
 	GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error)
-	GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error)
+	GetPaymentWalletsWithBalances(
+		ctx context.Context, nonZeroOnly bool, network *constants.NetworkType,
+	) ([]dto.PaymentWalletBalanceDTO, error)
+	GetPaymentWalletsWithBalancesPagination(
+		ctx context.Context, page, size int, nonZeroOnly bool, network *constants.NetworkType,
+	) (dto.PaginationDTOResponse, error)
 	GetReceivingWalletAddress(
 		ctx context.Context, mnemonic, passphrase, salt string,
 	) (string, error)

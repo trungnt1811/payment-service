@@ -3,6 +3,7 @@ package constants
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -145,6 +146,12 @@ const (
 	AvaxCChain NetworkType = "AVAX C-Chain"
 )
 
+// ValidNetworks contains the allowed values for NetworkType
+var ValidNetworks = map[NetworkType]bool{
+	Bsc:        true,
+	AvaxCChain: true,
+}
+
 // UnmarshalJSON ensures only valid network types are parsed from JSON.
 func (t *NetworkType) UnmarshalJSON(data []byte) error {
 	var str string
@@ -152,18 +159,19 @@ func (t *NetworkType) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// validNetworks contains allowed values for NetworkType.
-	validNetworks := map[NetworkType]bool{
-		Bsc:        true,
-		AvaxCChain: true,
+	// Normalize input (trim spaces and convert to uppercase)
+	normalized := NetworkType(strings.ToUpper(strings.TrimSpace(str)))
+
+	// Check if it's a valid network
+	if !ValidNetworks[normalized] {
+		supportedNetworks := make([]string, 0, len(ValidNetworks))
+		for key := range ValidNetworks {
+			supportedNetworks = append(supportedNetworks, string(key))
+		}
+		return fmt.Errorf("unsupported network type: %s. Supported networks: %v", str, supportedNetworks)
 	}
 
-	network := NetworkType(str)
-	if !validNetworks[network] {
-		return fmt.Errorf("invalid network type: %s", str)
-	}
-
-	*t = network
+	*t = normalized
 	return nil
 }
 

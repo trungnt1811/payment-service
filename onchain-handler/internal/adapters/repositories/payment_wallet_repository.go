@@ -138,41 +138,89 @@ func (r *paymentWalletRepository) GetPaymentWallets(ctx context.Context) ([]doma
 	return wallets, nil
 }
 
-func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *string) ([]domain.PaymentWallet, error) {
+func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
+	ctx context.Context,
+	limit, offset int,
+	nonZeroOnly bool,
+	network, address *string,
+) ([]domain.PaymentWallet, error) {
 	var wallets []domain.PaymentWallet
 
-	// Build the base query
 	query := r.db.WithContext(ctx).
 		Order("id ASC").
 		Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
-			// Apply filters to the balances
+			// Apply filters to balances inside Preload
 			if nonZeroOnly {
-				db = db.Where("balance > ?", "0")
+				db = db.Where("payment_wallet_balance.balance > ?", "0")
 			}
 			if network != nil {
-				db = db.Where("network = ?", *network)
+				db = db.Where("payment_wallet_balance.network = ?", *network)
 			}
 			return db
-		})
-
-	// Apply join and filtering to ensure wallets with no balances are excluded
-	query = query.Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
+		}).
+		Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
 		Group("payment_wallet.id")
 
+	// Apply non-zero balance filtering at the wallet level
 	if nonZeroOnly {
-		query = query.Having("SUM(CASE WHEN payment_wallet_balance.balance > 0 THEN 1 ELSE 0 END) > 0")
+		query = query.Where("EXISTS (SELECT 1 FROM payment_wallet_balance WHERE payment_wallet_balance.wallet_id = payment_wallet.id AND payment_wallet_balance.balance > 0)")
 	}
 
+	// Apply optional address filtering
+	if address != nil {
+		query = query.Where("payment_wallet.address = ?", *address)
+	}
+
+	// Apply optional network filtering
 	if network != nil {
 		query = query.Where("payment_wallet_balance.network = ?", *network)
 	}
 
-	// Execute the query
+	// Apply Limit & Offset for Pagination
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	// Execute the query to fetch wallets
 	if err := query.Find(&wallets).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch payment wallets with balances: %w", err)
 	}
 
 	return wallets, nil
+}
+
+func (r *paymentWalletRepository) GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error) {
+	var totalBalances []struct {
+		Network      string
+		TotalBalance string
+	}
+
+	// Start query to sum balances per network
+	query := r.db.WithContext(ctx).
+		Table("payment_wallet_balance").
+		Select("network, COALESCE(SUM(balance), '0') as total_balance"). //	Ensures zero if no balance exists
+		Group("network")
+
+	// Apply optional network filter
+	if network != nil {
+		query = query.Where("network = ?", *network)
+	}
+
+	// Execute query
+	if err := query.Scan(&totalBalances).Error; err != nil {
+		return nil, fmt.Errorf("failed to compute total balance per network: %w", err)
+	}
+
+	// Convert to map
+	totalBalanceMap := make(map[string]string)
+	for _, row := range totalBalances {
+		totalBalanceMap[row.Network] = row.TotalBalance
+	}
+
+	return totalBalanceMap, nil
 }
 
 func (r *paymentWalletRepository) ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error {

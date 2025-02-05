@@ -401,13 +401,19 @@ const docTemplate = `{
                         "name": "address",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by network (e.g., BSC, AVAX C-Chain)",
+                        "name": "network",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.PaymentWalletDTO"
+                            "$ref": "#/definitions/dto.PaymentWalletBalanceDTO"
                         }
                     },
                     "400": {
@@ -474,7 +480,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-wallets/balances": {
             "get": {
-                "description": "Retrieves all payment wallets with balances grouped by network and token.",
+                "description": "Retrieves all payment wallets with balances grouped by network and token. Supports optional filtering by network.",
                 "consumes": [
                     "application/json"
                 ],
@@ -485,14 +491,40 @@ const docTemplate = `{
                     "payment-wallet"
                 ],
                 "summary": "Retrieves all payment wallets with balances.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number, default is 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, default is 10",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by network (e.g., BSC, AVAX C-Chain)",
+                        "name": "network",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dto.PaymentWalletBalanceDTO"
+                                "$ref": "#/definitions/dto.PaginationDTOResponse"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid network",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralError"
                         }
                     },
                     "500": {
@@ -855,6 +887,12 @@ const docTemplate = `{
                 "total": {
                     "type": "integer"
                 },
+                "total_balance_per_network": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "total_token_amount": {
                     "type": "number"
                 }
@@ -1004,20 +1042,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.NetworkBalanceDTO"
                     }
-                }
-            }
-        },
-        "dto.PaymentWalletDTO": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "in_use": {
-                    "type": "boolean"
                 }
             }
         },

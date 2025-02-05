@@ -40,6 +40,10 @@ definitions:
         type: integer
       total:
         type: integer
+      total_balance_per_network:
+        additionalProperties:
+          type: string
+        type: object
       total_token_amount:
         type: number
     type: object
@@ -138,15 +142,6 @@ definitions:
         items:
           $ref: '#/definitions/dto.NetworkBalanceDTO'
         type: array
-    type: object
-  dto.PaymentWalletDTO:
-    properties:
-      address:
-        type: string
-      id:
-        type: integer
-      in_use:
-        type: boolean
     type: object
   dto.SyncWalletBalancePayload:
     properties:
@@ -440,13 +435,17 @@ paths:
         name: address
         required: true
         type: string
+      - description: Filter by network (e.g., BSC, AVAX C-Chain)
+        in: query
+        name: network
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.PaymentWalletDTO'
+            $ref: '#/definitions/dto.PaymentWalletBalanceDTO'
         "400":
           description: Invalid address
           schema:
@@ -496,7 +495,20 @@ paths:
       consumes:
       - application/json
       description: Retrieves all payment wallets with balances grouped by network
-        and token.
+        and token. Supports optional filtering by network.
+      parameters:
+      - description: Page number, default is 1
+        in: query
+        name: page
+        type: integer
+      - description: Page size, default is 10
+        in: query
+        name: size
+        type: integer
+      - description: Filter by network (e.g., BSC, AVAX C-Chain)
+        in: query
+        name: network
+        type: string
       produces:
       - application/json
       responses:
@@ -504,8 +516,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dto.PaymentWalletBalanceDTO'
+              $ref: '#/definitions/dto.PaginationDTOResponse'
             type: array
+        "400":
+          description: Invalid network
+          schema:
+            $ref: '#/definitions/response.GeneralError'
         "500":
           description: Internal server error
           schema:

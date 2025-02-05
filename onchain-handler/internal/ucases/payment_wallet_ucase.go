@@ -53,12 +53,54 @@ func (u *paymentWalletUCase) IsRowExist(ctx context.Context) (bool, error) {
 	return u.paymentWalletRepository.IsRowExist(ctx)
 }
 
-func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletDTO, error) {
-	wallet, err := u.paymentWalletRepository.GetPaymentWalletByAddress(ctx, address)
-	if err != nil {
-		return dto.PaymentWalletDTO{}, err
+func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, network *constants.NetworkType, address string) (dto.PaymentWalletBalanceDTO, error) {
+	// Convert `network` to `*string`
+	var parsedNetwork *string
+	if network != nil {
+		networkStr := network.String()
+		parsedNetwork = &networkStr
 	}
-	return wallet.ToDto(), nil
+
+	//	Fetch wallet with balances filtered by address
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, false, parsedNetwork, &address)
+	if err != nil {
+		return dto.PaymentWalletBalanceDTO{}, err
+	}
+
+	// If no wallet found, return an error
+	if len(wallets) == 0 {
+		return dto.PaymentWalletBalanceDTO{}, fmt.Errorf("wallet with address %s not found", address)
+	}
+
+	// Extract the first (and only) wallet from the result
+	wallet := wallets[0]
+
+	// Prepare network balances map
+	networkBalances := make(map[string][]dto.TokenBalanceDTO)
+
+	// Group balances by network
+	for _, balance := range wallet.PaymentWalletBalances {
+		networkBalances[balance.Network] = append(networkBalances[balance.Network], dto.TokenBalanceDTO{
+			Symbol: balance.Symbol,
+			Amount: balance.Balance,
+		})
+	}
+
+	// Convert grouped balances to DTO format
+	var networkBalanceDTOs []dto.NetworkBalanceDTO
+	for network, tokenBalances := range networkBalances {
+		networkBalanceDTOs = append(networkBalanceDTOs, dto.NetworkBalanceDTO{
+			Network:       network,
+			TokenBalances: tokenBalances,
+		})
+	}
+
+	// Build and return the final DTO
+	return dto.PaymentWalletBalanceDTO{
+		ID:              wallet.ID,
+		Address:         wallet.Address,
+		NetworkBalances: networkBalanceDTOs,
+	}, nil
 }
 
 func (u *paymentWalletUCase) AddPaymentWalletBalance(
@@ -94,22 +136,20 @@ func (u *paymentWalletUCase) GetPaymentWallets(ctx context.Context) ([]dto.Payme
 }
 
 func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error) {
-	// Convert `network` to `*string` if it's not nil
+	// Convert `network` to `*string`
 	var parsedNetwork *string
 	if network != nil {
 		networkStr := network.String()
 		parsedNetwork = &networkStr
-	} else {
-		parsedNetwork = nil
 	}
 
-	// Fetch wallets with balances from the repository
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, nonZeroOnly, parsedNetwork)
+	// Fetch wallets & total balance per network
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, nonZeroOnly, parsedNetwork, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Prepare the result DTOs
+	// Prepare result DTOs
 	var dtos []dto.PaymentWalletBalanceDTO
 
 	for _, wallet := range wallets {
@@ -142,6 +182,85 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 	}
 
 	return dtos, nil
+}
+
+func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
+	ctx context.Context, page, size int, nonZeroOnly bool, network *constants.NetworkType,
+) (dto.PaginationDTOResponse, error) {
+	// Setup pagination variables
+	limit := size + 1 // Fetch one extra record to determine if there's a next page
+	offset := (page - 1) * size
+
+	// Convert `network` to `*string`
+	var parsedNetwork *string
+	if network != nil {
+		networkStr := network.String()
+		parsedNetwork = &networkStr
+	}
+
+	// Fetch total balance per network
+	totalBalancePerNetwork, err := u.paymentWalletRepository.GetTotalBalancePerNetwork(ctx, parsedNetwork)
+	if err != nil {
+		return dto.PaginationDTOResponse{}, err
+	}
+
+	// Fetch wallets per network
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, limit, offset, nonZeroOnly, parsedNetwork, nil)
+	if err != nil {
+		return dto.PaginationDTOResponse{}, err
+	}
+
+	// Prepare the result DTOs
+	var dtos []interface{}
+
+	// Iterate through wallets and map them to DTOs
+	for i, wallet := range wallets {
+		if i >= size { // Stop at requested size to prevent including the extra record
+			break
+		}
+
+		networkBalances := make(map[string][]dto.TokenBalanceDTO) // Map to group balances by network
+
+		// Group balances by network
+		for _, balance := range wallet.PaymentWalletBalances {
+			networkBalances[balance.Network] = append(networkBalances[balance.Network], dto.TokenBalanceDTO{
+				Symbol: balance.Symbol,
+				Amount: balance.Balance,
+			})
+		}
+
+		// Convert grouped balances to DTOs
+		var networkBalanceDTOs []dto.NetworkBalanceDTO
+		for network, tokenBalances := range networkBalances {
+			networkBalanceDTOs = append(networkBalanceDTOs, dto.NetworkBalanceDTO{
+				Network:       network,
+				TokenBalances: tokenBalances,
+			})
+		}
+
+		// Build the PaymentWalletBalanceDTO
+		dto := dto.PaymentWalletBalanceDTO{
+			ID:              wallet.ID,
+			Address:         wallet.Address,
+			NetworkBalances: networkBalanceDTOs,
+		}
+		dtos = append(dtos, dto)
+	}
+
+	// Determine if there's a next page
+	nextPage := page
+	if len(wallets) > size {
+		nextPage += 1
+	}
+
+	// Return paginated response
+	return dto.PaginationDTOResponse{
+		NextPage:               nextPage,
+		Page:                   page,
+		Size:                   size,
+		TotalBalancePerNetwork: totalBalancePerNetwork,
+		Data:                   dtos,
+	}, nil
 }
 
 func (u *paymentWalletUCase) GetReceivingWalletAddress(

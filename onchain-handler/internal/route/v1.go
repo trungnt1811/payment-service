@@ -47,8 +47,8 @@ func RegisterRoutes(
 
 	// SECTION: payment wallet
 	paymentWalletHander := handlers.NewPaymentWalletHandler(paymentWalletUCase, config)
-	// appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
-	// appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
+	appRouter.GET("/payment-wallet/:address", paymentWalletHander.GetPaymentWalletByAddress)
+	appRouter.GET("/payment-wallets/balances", paymentWalletHander.GetPaymentWalletsWithBalances)
 	appRouter.GET("/payment-wallets/receiving-address", paymentWalletHander.GetReceivingWalletAddress)
 	appRouter.PUT("payment-wallets/balance/sync", paymentWalletHander.SyncPaymentWalletBalance)
 

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
@@ -33,7 +34,8 @@ func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase, config *conf.C
 // @Accept json
 // @Produce json
 // @Param address path string true "Address"
-// @Success 200 {object} dto.PaymentWalletDTO
+// @Param network query string false "Filter by network (e.g., BSC, AVAX C-Chain)"
+// @Success 200 {object} dto.PaymentWalletBalanceDTO
 // @Failure 400 {object} response.GeneralError "Invalid address"
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallet/{address} [get]
@@ -45,7 +47,22 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 		return
 	}
 
-	wallet, err := h.ucase.GetPaymentWalletByAddress(ctx, address)
+	// Get the network query parameter (if provided)
+	networkStr := ctx.Query("network")
+	var network *constants.NetworkType
+
+	// Validate and parse the network type
+	if networkStr != "" {
+		parsedNetwork := constants.NetworkType(networkStr)
+		if !constants.ValidNetworks[parsedNetwork] { // Ensure it's a valid network
+			logger.GetLogger().Errorf("Invalid network parameter: %s", networkStr)
+			httpresponse.Error(ctx, http.StatusBadRequest, "Invalid network parameter", nil)
+			return
+		}
+		network = &parsedNetwork
+	}
+
+	wallet, err := h.ucase.GetPaymentWalletByAddress(ctx, network, address)
 	if err != nil {
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallet by address", err)
 		return
@@ -55,15 +72,44 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 
 // GetPaymentWalletsWithBalances retrieves all payment wallets with their balances.
 // @Summary Retrieves all payment wallets with balances.
-// @Description Retrieves all payment wallets with balances grouped by network and token.
+// @Description Retrieves all payment wallets with balances grouped by network and token. Supports optional filtering by network.
 // @Tags payment-wallet
 // @Accept json
 // @Produce json
-// @Success 200 {array} dto.PaymentWalletBalanceDTO
+// @Param page query int false "Page number, default is 1"
+// @Param size query int false "Page size, default is 10"
+// @Param network query string false "Filter by network (e.g., BSC, AVAX C-Chain)"
+// @Success 200 {array} dto.PaginationDTOResponse
+// @Failure 400 {object} response.GeneralError "Invalid network"
 // @Failure 500 {object} response.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/balances [get]
 func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
-	wallets, err := h.ucase.GetPaymentWalletsWithBalances(ctx, false, nil)
+	// Parse pagination parameters
+	page, size, err := utils.ParsePaginationParams(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Invalid pagination parameters: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve user wallets, invalid pagination parameters", err)
+		return
+	}
+
+	// Get the network query parameter (if provided)
+	networkStr := ctx.Query("network")
+	var network *constants.NetworkType
+
+	// Validate and parse the network type
+	if networkStr != "" {
+		parsedNetwork := constants.NetworkType(networkStr)
+		if !constants.ValidNetworks[parsedNetwork] { // Ensure it's a valid network
+			logger.GetLogger().Errorf("Invalid network parameter: %s", networkStr)
+			httpresponse.Error(ctx, http.StatusBadRequest, "Invalid network parameter", nil)
+			return
+		}
+		network = &parsedNetwork
+	}
+
+	// Retrieve wallets with optional network filtering
+	nonZeroOnly := true
+	wallets, err := h.ucase.GetPaymentWalletsWithBalancesPagination(ctx, page, size, nonZeroOnly, network)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment wallets with balances: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallets with balances", err)
