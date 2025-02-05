@@ -162,7 +162,9 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 			return db
 		}).
 		Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
-		Group("payment_wallet.id")
+		Group("payment_wallet.id").
+		Having("COUNT(payment_wallet_balance.id) > 0"). // Ensures at least 1 balance exists
+		Order("payment_wallet.id ASC")
 
 	// Apply non-zero balance filtering at the wallet level
 	if nonZeroOnly {
