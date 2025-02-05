@@ -147,26 +147,14 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 	var wallets []domain.PaymentWallet
 
 	query := r.db.WithContext(ctx).
-		Order("id ASC").
-		Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
-			// Apply USDT-only filter
-			db = db.Where("payment_wallet_balance.symbol = ?", constants.USDT)
-
-			// Apply filters to balances inside Preload
-			if nonZeroOnly {
-				db = db.Where("payment_wallet_balance.balance > ?", "0")
-			}
-			if network != nil {
-				db = db.Where("payment_wallet_balance.network = ?", *network)
-			}
-			return db
-		}).
+		Select("payment_wallet.*").
 		Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
+		Where("payment_wallet_balance.symbol = ?", constants.USDT). // USDT-only filter
 		Group("payment_wallet.id").
-		Having("COUNT(payment_wallet_balance.id) > 0"). // Ensures at least 1 balance exists
+		Having("COUNT(payment_wallet_balance.wallet_id) > 0"). // Ensures at least one balance
 		Order("payment_wallet.id ASC")
 
-	// Apply non-zero balance filtering at the wallet level
+	// Apply non-zero balance filter at wallet level
 	if nonZeroOnly {
 		query = query.Where("EXISTS (SELECT 1 FROM payment_wallet_balance WHERE payment_wallet_balance.wallet_id = payment_wallet.id AND payment_wallet_balance.balance > 0)")
 	}
@@ -181,7 +169,7 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 		query = query.Where("payment_wallet_balance.network = ?", *network)
 	}
 
-	// Apply Limit & Offset for Pagination
+	// Apply pagination
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -189,8 +177,15 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 		query = query.Offset(offset)
 	}
 
-	// Execute the query to fetch wallets
-	if err := query.Find(&wallets).Error; err != nil {
+	// Execute the query and **preload balances** (ensures non-null `network_balances`)
+	if err := query.Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
+		// ✅ Apply `nonZeroOnly` filter inside `Preload`
+		db = db.Where("payment_wallet_balance.symbol = ?", constants.USDT)
+		if nonZeroOnly {
+			db = db.Where("payment_wallet_balance.balance > 0")
+		}
+		return db
+	}).Find(&wallets).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch payment wallets with balances: %w", err)
 	}
 
