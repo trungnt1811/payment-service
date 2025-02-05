@@ -164,7 +164,7 @@ func (w *paymentWalletWithdrawWorker) withdraw(ctx context.Context) error {
 	}
 
 	// Step 3: Fetch payment wallets with balances
-	wallets, err := w.paymentWalletUCase.GetPaymentWalletsWithBalances(ctx, true, &w.network)
+	wallets, err := w.paymentWalletUCase.GetPaymentWalletsWithBalances(ctx, &w.network)
 	if err != nil {
 		return fmt.Errorf("failed to get payment wallets with balances on network %s: %w", w.network, err)
 	}

@@ -53,7 +53,9 @@ func (u *paymentWalletUCase) IsRowExist(ctx context.Context) (bool, error) {
 	return u.paymentWalletRepository.IsRowExist(ctx)
 }
 
-func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, network *constants.NetworkType, address string) (dto.PaymentWalletBalanceDTO, error) {
+func (u *paymentWalletUCase) GetPaymentWalletByAddress(
+	ctx context.Context, network *constants.NetworkType, address string,
+) (dto.PaymentWalletBalanceDTO, error) {
 	// Convert `network` to `*string`
 	var parsedNetwork *string
 	if network != nil {
@@ -62,18 +64,10 @@ func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, netw
 	}
 
 	//	Fetch wallet with balances filtered by address
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, false, parsedNetwork, &address)
+	wallet, err := u.paymentWalletRepository.GetPaymentWalletWithBalancesByAddress(ctx, parsedNetwork, &address)
 	if err != nil {
 		return dto.PaymentWalletBalanceDTO{}, err
 	}
-
-	// If no wallet found, return an error
-	if len(wallets) == 0 {
-		return dto.PaymentWalletBalanceDTO{}, fmt.Errorf("wallet with address %s not found", address)
-	}
-
-	// Extract the first (and only) wallet from the result
-	wallet := wallets[0]
 
 	// Prepare network balances map
 	networkBalances := make(map[string][]dto.TokenBalanceDTO)
@@ -93,6 +87,11 @@ func (u *paymentWalletUCase) GetPaymentWalletByAddress(ctx context.Context, netw
 			Network:       network,
 			TokenBalances: tokenBalances,
 		})
+	}
+
+	// Ensure `networkBalanceDTOs` is **not nil** (return `[]` instead of `null`)
+	if networkBalanceDTOs == nil {
+		networkBalanceDTOs = []dto.NetworkBalanceDTO{}
 	}
 
 	// Build and return the final DTO
@@ -135,7 +134,7 @@ func (u *paymentWalletUCase) GetPaymentWallets(ctx context.Context) ([]dto.Payme
 	return dtos, nil
 }
 
-func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, nonZeroOnly bool, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error) {
+func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error) {
 	// Convert `network` to `*string`
 	var parsedNetwork *string
 	if network != nil {
@@ -144,7 +143,7 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 	}
 
 	// Fetch wallets & total balance per network
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, nonZeroOnly, parsedNetwork, nil)
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, parsedNetwork)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +184,7 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 }
 
 func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
-	ctx context.Context, page, size int, nonZeroOnly bool, network *constants.NetworkType,
+	ctx context.Context, page, size int, network *constants.NetworkType,
 ) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
 	limit := size + 1 // Fetch one extra record to determine if there's a next page
@@ -205,7 +204,7 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
 	}
 
 	// Fetch wallets per network
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, limit, offset, nonZeroOnly, parsedNetwork, nil)
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, limit, offset, parsedNetwork)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}

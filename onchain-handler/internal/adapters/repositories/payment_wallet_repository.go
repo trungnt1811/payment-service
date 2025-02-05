@@ -141,28 +141,17 @@ func (r *paymentWalletRepository) GetPaymentWallets(ctx context.Context) ([]doma
 func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 	ctx context.Context,
 	limit, offset int,
-	nonZeroOnly bool,
-	network, address *string,
+	network *string,
 ) ([]domain.PaymentWallet, error) {
 	var wallets []domain.PaymentWallet
 
 	query := r.db.WithContext(ctx).
 		Select("payment_wallet.*").
 		Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
-		Where("payment_wallet_balance.symbol = ?", constants.USDT). // USDT-only filter
+		Where("payment_wallet_balance.symbol = ?", constants.USDT). // USDT filter
 		Group("payment_wallet.id").
-		Having("COUNT(payment_wallet_balance.wallet_id) > 0"). // Ensures at least one balance
+		Having("SUM(payment_wallet_balance.balance) > 0"). // Ensure only wallets with USDT appear
 		Order("payment_wallet.id ASC")
-
-	// Apply non-zero balance filter at wallet level
-	if nonZeroOnly {
-		query = query.Where("EXISTS (SELECT 1 FROM payment_wallet_balance WHERE payment_wallet_balance.wallet_id = payment_wallet.id AND payment_wallet_balance.balance > 0)")
-	}
-
-	// Apply optional address filtering
-	if address != nil {
-		query = query.Where("payment_wallet.address = ?", *address)
-	}
 
 	// Apply optional network filtering
 	if network != nil {
@@ -177,19 +166,56 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 		query = query.Offset(offset)
 	}
 
-	// Execute the query and **preload balances** (ensures non-null `network_balances`)
+	// Execute query and Preload balances (ensures no null values)
 	if err := query.Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
-		// ✅ Apply `nonZeroOnly` filter inside `Preload`
-		db = db.Where("payment_wallet_balance.symbol = ?", constants.USDT)
-		if nonZeroOnly {
-			db = db.Where("payment_wallet_balance.balance > 0")
-		}
-		return db
+		// Preload only USDT balances that are > 0
+		return db.Where("payment_wallet_balance.symbol = ?", constants.USDT).
+			Where("payment_wallet_balance.balance > 0")
 	}).Find(&wallets).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch payment wallets with balances: %w", err)
 	}
 
 	return wallets, nil
+}
+
+func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
+	ctx context.Context,
+	network, address *string,
+) (domain.PaymentWallet, error) {
+	var wallet domain.PaymentWallet
+
+	query := r.db.WithContext(ctx).
+		Select("payment_wallet.*").
+		Joins("LEFT JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id AND payment_wallet_balance.symbol = ?", constants.USDT). // Use LEFT JOIN to include zero balances
+		Group("payment_wallet.id").
+		Order("payment_wallet.id ASC")
+
+	// Apply required address filtering (should not be nil)
+	if address != nil {
+		query = query.Where("payment_wallet.address = ?", *address)
+	} else {
+		return domain.PaymentWallet{}, fmt.Errorf("address is required")
+	}
+
+	// Apply optional network filtering
+	if network != nil {
+		query = query.Where("payment_wallet_balance.network = ?", *network)
+	}
+
+	// Execute query and Preload balances (ensures no null values)
+	err := query.Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
+		// ✅ Preload **all** USDT balances (even if 0)
+		return db.Where("payment_wallet_balance.symbol = ?", constants.USDT)
+	}).First(&wallet).Error // Use `First` instead of `Find`
+	// Handle case when wallet is not found
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.PaymentWallet{}, fmt.Errorf("wallet not found: %w", err)
+		}
+		return domain.PaymentWallet{}, fmt.Errorf("failed to fetch payment wallet with balances: %w", err)
+	}
+
+	return wallet, nil
 }
 
 func (r *paymentWalletRepository) GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error) {

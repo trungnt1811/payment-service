@@ -108,8 +108,7 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 	}
 
 	// Retrieve wallets with optional network filtering
-	nonZeroOnly := true
-	wallets, err := h.ucase.GetPaymentWalletsWithBalancesPagination(ctx, page, size, nonZeroOnly, network)
+	wallets, err := h.ucase.GetPaymentWalletsWithBalancesPagination(ctx, page, size, network)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment wallets with balances: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallets with balances", err)

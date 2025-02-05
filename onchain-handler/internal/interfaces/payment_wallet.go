@@ -19,9 +19,12 @@ type PaymentWalletRepository interface {
 	GetPaymentWalletsWithBalances(
 		ctx context.Context,
 		limit, offset int,
-		nonZeroOnly bool,
-		network, address *string,
+		network *string,
 	) ([]domain.PaymentWallet, error)
+	GetPaymentWalletWithBalancesByAddress(
+		ctx context.Context,
+		network, address *string,
+	) (domain.PaymentWallet, error)
 	GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error)
 	ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error
 	GetWalletIDByAddress(ctx context.Context, address string) (uint64, error)
@@ -47,10 +50,10 @@ type PaymentWalletUCase interface {
 	) error
 	GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error)
 	GetPaymentWalletsWithBalances(
-		ctx context.Context, nonZeroOnly bool, network *constants.NetworkType,
+		ctx context.Context, network *constants.NetworkType,
 	) ([]dto.PaymentWalletBalanceDTO, error)
 	GetPaymentWalletsWithBalancesPagination(
-		ctx context.Context, page, size int, nonZeroOnly bool, network *constants.NetworkType,
+		ctx context.Context, page, size int, network *constants.NetworkType,
 	) (dto.PaginationDTOResponse, error)
 	GetReceivingWalletAddress(
 		ctx context.Context, mnemonic, passphrase, salt string,
