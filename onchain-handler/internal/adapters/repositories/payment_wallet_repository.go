@@ -204,7 +204,7 @@ func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
 
 	// Execute query and Preload balances (ensures no null values)
 	err := query.Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
-		// ✅ Preload **all** USDT balances (even if 0)
+		// Preload all USDT balances (even if 0)
 		return db.Where("payment_wallet_balance.symbol = ?", constants.USDT)
 	}).First(&wallet).Error // Use `First` instead of `Find`
 	// Handle case when wallet is not found
