@@ -149,6 +149,9 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 	query := r.db.WithContext(ctx).
 		Order("id ASC").
 		Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
+			// Apply USDT-only filter
+			db = db.Where("payment_wallet_balance.symbol = ?", constants.USDT)
+
 			// Apply filters to balances inside Preload
 			if nonZeroOnly {
 				db = db.Where("payment_wallet_balance.balance > ?", "0")
@@ -198,10 +201,11 @@ func (r *paymentWalletRepository) GetTotalBalancePerNetwork(ctx context.Context,
 		TotalBalance string
 	}
 
-	// Start query to sum balances per network
+	// Start query to sum only USDT balances per network
 	query := r.db.WithContext(ctx).
 		Table("payment_wallet_balance").
 		Select("network, COALESCE(SUM(balance), '0') as total_balance"). //	Ensures zero if no balance exists
+		Where("symbol = ?", constants.USDT).                             // Filter by USDT only
 		Group("network")
 
 	// Apply optional network filter
