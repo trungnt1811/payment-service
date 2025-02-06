@@ -6,7 +6,7 @@ type PaymentWalletBalanceRepository interface {
 	AddPaymentWalletBalance(
 		ctx context.Context,
 		walletID uint64,
-		newBalance string,
+		amountToAdd string,
 		network string,
 		symbol string,
 	) error

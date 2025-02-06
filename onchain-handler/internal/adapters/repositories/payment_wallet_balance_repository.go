@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/big"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -24,28 +26,45 @@ func NewPaymentWalletBalanceRepository(db *gorm.DB) interfaces.PaymentWalletBala
 func (r *paymentWalletBalanceRepository) AddPaymentWalletBalance(
 	ctx context.Context,
 	walletID uint64,
-	newBalance string,
+	amountToAdd string,
 	network string,
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Prepare the wallet balance record
-		walletBalance := domain.PaymentWalletBalance{
+		// Lock the existing balance row
+		var existingBalance string
+		err := tx.Raw(`
+			SELECT balance 
+			FROM payment_wallet_balance 
+			WHERE wallet_id = ? AND network = ? AND symbol = ? 
+			FOR UPDATE
+		`, walletID, network, symbol).Scan(&existingBalance).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("failed to lock balance row: %w", err)
+		}
+
+		// Convert existing balance and amount to add
+		existingBalanceFloat, _ := new(big.Float).SetString(existingBalance)
+		newBalanceFloat, _ := new(big.Float).SetString(amountToAdd)
+
+		// Calculate updated balance
+		updatedBalance := new(big.Float).Add(existingBalanceFloat, newBalanceFloat)
+
+		// Use ON CONFLICT to handle insert/update logic safely
+		err = tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"balance": updatedBalance.String(),
+			}),
+		}).Create(&domain.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,
-			Balance:  newBalance,
-		}
-
-		// Use ON CONFLICT clause to perform upsert
-		err := tx.Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance": gorm.Expr("payment_wallet_balance.balance + ?", newBalance),
-			}),
-		}).Create(&walletBalance).Error
+			Balance:  updatedBalance.String(),
+		}).Error
 		if err != nil {
-			return fmt.Errorf("failed to upsert wallet balance: %w", err)
+			return fmt.Errorf("failed to add wallet balance: %w", err)
 		}
 
 		return nil
@@ -60,21 +79,41 @@ func (r *paymentWalletBalanceRepository) SubtractPaymentWalletBalance(
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Prepare the wallet balance record
-		walletBalance := domain.PaymentWalletBalance{
+		// Lock the existing balance row
+		var existingBalance string
+		err := tx.Raw(`
+			SELECT balance 
+			FROM payment_wallet_balance 
+			WHERE wallet_id = ? AND network = ? AND symbol = ? 
+			FOR UPDATE
+		`, walletID, network, symbol).Scan(&existingBalance).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("failed to lock balance row: %w", err)
+		}
+
+		// Convert existing balance and amount to subtract
+		existingBalanceFloat, _ := new(big.Float).SetString(existingBalance)
+		amountToSubtractFloat, _ := new(big.Float).SetString(amountToSubtract)
+
+		// Calculate new balance (ensuring it does not go negative)
+		newBalance := new(big.Float).Sub(existingBalanceFloat, amountToSubtractFloat)
+		if newBalance.Cmp(big.NewFloat(0)) < 0 {
+			newBalance.SetFloat64(0)
+		}
+
+		// Use ON CONFLICT to handle insert/update logic safely
+		err = tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"balance": newBalance.String(),
+			}),
+		}).Create(&domain.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,
-			Balance:  "0", // Default balance for new records
-		}
-
-		// Use ON CONFLICT clause to perform upsert with subtraction
-		err := tx.Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance": gorm.Expr("GREATEST(payment_wallet_balance.balance - ?, 0)", amountToSubtract),
-			}),
-		}).Create(&walletBalance).Error
+			Balance:  newBalance.String(),
+		}).Error
 		if err != nil {
 			return fmt.Errorf("failed to subtract wallet balance: %w", err)
 		}
@@ -91,11 +130,22 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Use ON CONFLICT to either insert or update the balance
-		err := tx.Clauses(clause.OnConflict{
+		// Lock row to prevent race conditions
+		err := tx.Exec(`
+			SELECT 1 FROM payment_wallet_balance 
+			WHERE wallet_id = ? AND network = ? AND symbol = ? 
+			FOR UPDATE
+		`, walletID, network, symbol).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("failed to lock balance row: %w", err)
+		}
+
+		// Overwrite balance using `ON CONFLICT`
+		err = tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance": newBalance, // Directly set balance to new value
+				"balance": newBalance, // Directly overwrites balance
 			}),
 		}).Create(&domain.PaymentWalletBalance{
 			WalletID: walletID,
@@ -106,6 +156,7 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 		if err != nil {
 			return fmt.Errorf("failed to upsert wallet balance: %w", err)
 		}
+
 		return nil
 	})
 }
