@@ -22,8 +22,7 @@ type PaymentWalletRepository interface {
 		network *string,
 	) ([]domain.PaymentWallet, error)
 	GetPaymentWalletWithBalancesByAddress(
-		ctx context.Context,
-		network, address *string,
+		ctx context.Context, address *string,
 	) (domain.PaymentWallet, error)
 	GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error)
 	ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error
@@ -33,7 +32,7 @@ type PaymentWalletRepository interface {
 type PaymentWalletUCase interface {
 	CreateAndGenerateWallet(ctx context.Context, mnemonic, passphrase, salt string, inUse bool) error
 	IsRowExist(ctx context.Context) (bool, error)
-	GetPaymentWalletByAddress(ctx context.Context, network *constants.NetworkType, address string) (dto.PaymentWalletBalanceDTO, error)
+	GetPaymentWalletByAddress(ctx context.Context, address string) (dto.PaymentWalletBalanceDTO, error)
 	AddPaymentWalletBalance(
 		ctx context.Context,
 		walletID uint64,

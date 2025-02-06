@@ -159,8 +159,8 @@ func (t *NetworkType) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// Normalize input (trim spaces and convert to uppercase)
-	normalized := NetworkType(strings.ToUpper(strings.TrimSpace(str)))
+	// Normalize input
+	normalized := NetworkType(strings.TrimSpace(str))
 
 	// Check if it's a valid network
 	if !ValidNetworks[normalized] {

@@ -34,7 +34,6 @@ func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase, config *conf.C
 // @Accept json
 // @Produce json
 // @Param address path string true "Address"
-// @Param network query string false "Filter by network (e.g., BSC, AVAX C-Chain)"
 // @Success 200 {object} dto.PaymentWalletBalanceDTO
 // @Failure 400 {object} response.GeneralError "Invalid address"
 // @Failure 500 {object} response.GeneralError "Internal server error"
@@ -47,22 +46,7 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 		return
 	}
 
-	// Get the network query parameter (if provided)
-	networkStr := ctx.Query("network")
-	var network *constants.NetworkType
-
-	// Validate and parse the network type
-	if networkStr != "" {
-		parsedNetwork := constants.NetworkType(networkStr)
-		if !constants.ValidNetworks[parsedNetwork] { // Ensure it's a valid network
-			logger.GetLogger().Errorf("Invalid network parameter: %s", networkStr)
-			httpresponse.Error(ctx, http.StatusBadRequest, "Invalid network parameter", nil)
-			return
-		}
-		network = &parsedNetwork
-	}
-
-	wallet, err := h.ucase.GetPaymentWalletByAddress(ctx, network, address)
+	wallet, err := h.ucase.GetPaymentWalletByAddress(ctx, address)
 	if err != nil {
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallet by address", err)
 		return

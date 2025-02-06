@@ -435,10 +435,6 @@ paths:
         name: address
         required: true
         type: string
-      - description: Filter by network (e.g., BSC, AVAX C-Chain)
-        in: query
-        name: network
-        type: string
       produces:
       - application/json
       responses:

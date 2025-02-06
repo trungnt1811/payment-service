@@ -54,17 +54,10 @@ func (u *paymentWalletUCase) IsRowExist(ctx context.Context) (bool, error) {
 }
 
 func (u *paymentWalletUCase) GetPaymentWalletByAddress(
-	ctx context.Context, network *constants.NetworkType, address string,
+	ctx context.Context, address string,
 ) (dto.PaymentWalletBalanceDTO, error) {
-	// Convert `network` to `*string`
-	var parsedNetwork *string
-	if network != nil {
-		networkStr := network.String()
-		parsedNetwork = &networkStr
-	}
-
 	//	Fetch wallet with balances filtered by address
-	wallet, err := u.paymentWalletRepository.GetPaymentWalletWithBalancesByAddress(ctx, parsedNetwork, &address)
+	wallet, err := u.paymentWalletRepository.GetPaymentWalletWithBalancesByAddress(ctx, &address)
 	if err != nil {
 		return dto.PaymentWalletBalanceDTO{}, err
 	}

@@ -401,12 +401,6 @@ const docTemplate = `{
                         "name": "address",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by network (e.g., BSC, AVAX C-Chain)",
-                        "name": "network",
-                        "in": "query"
                     }
                 ],
                 "responses": {

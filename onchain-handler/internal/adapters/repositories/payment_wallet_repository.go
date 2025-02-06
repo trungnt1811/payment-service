@@ -179,8 +179,7 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 }
 
 func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
-	ctx context.Context,
-	network, address *string,
+	ctx context.Context, address *string,
 ) (domain.PaymentWallet, error) {
 	var wallet domain.PaymentWallet
 
@@ -195,11 +194,6 @@ func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
 		query = query.Where("payment_wallet.address = ?", *address)
 	} else {
 		return domain.PaymentWallet{}, fmt.Errorf("address is required")
-	}
-
-	// Apply optional network filtering
-	if network != nil {
-		query = query.Where("payment_wallet_balance.network = ?", *network)
 	}
 
 	// Execute query and Preload balances (ensures no null values)
