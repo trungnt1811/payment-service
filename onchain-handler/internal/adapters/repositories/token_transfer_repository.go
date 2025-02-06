@@ -107,9 +107,9 @@ func (r *tokenTransferRepository) GetTotalTokenAmount(
 		query = query.Where("to_address = ?", *toAddress)
 	}
 
-	// Calculate the total token amount
-	if err := query.Select("SUM(token_amount)").Scan(&totalTokenAmount).Error; err != nil {
-		return 0, err
+	// Ensure SUM never returns NULL
+	if err := query.Select("COALESCE(SUM(token_amount), 0)").Scan(&totalTokenAmount).Error; err != nil {
+		return 0, fmt.Errorf("failed to calculate total token amount: %w", err)
 	}
 
 	return totalTokenAmount, nil
