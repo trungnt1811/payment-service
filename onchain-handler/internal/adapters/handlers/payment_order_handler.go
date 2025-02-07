@@ -174,13 +174,19 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 		}
 	}
 
-	// Parse and validate time filter parameters
 	timeFilterField := ctx.Query("time_filter_field")
+	// Default to created_at if time_filter_field is not provided
+	if timeFilterField == "" {
+		timeFilterField = "created_at"
+	}
+	// Validate time_filter_field
 	if timeFilterField != "" && timeFilterField != "created_at" && timeFilterField != "succeeded_at" {
 		logger.GetLogger().Errorf("Invalid time_filter_field: %s", timeFilterField)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid time_filter_field. Use 'created_at' or 'succeeded_at'.", nil)
 		return
 	}
+
+	// Parse and validate time parameters
 	startTime, err := utils.ParseOptionalUnixTimestamp(ctx.Query("start_time"))
 	if err != nil {
 		logger.GetLogger().Errorf("Invalid start_time: %v", err)
