@@ -210,11 +210,11 @@ func initializeLoggerAndMode(config *conf.Configuration) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Set the log level in the logger package
-	pkglogger.SetLogLevel(logLevel)
-
 	// Retrieve the initialized logger
 	appLogger := pkglogger.GetLogger()
+
+	// Set the log level in the logger package
+	pkglogger.SetLogLevel(logLevel)
 
 	// Log application startup details
 	appLogger.Infof("Application '%s' started with log level '%s' in '%s' mode", config.AppName, logLevel, config.Env)
