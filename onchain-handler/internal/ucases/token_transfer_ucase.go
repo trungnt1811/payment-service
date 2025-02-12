@@ -10,24 +10,20 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/domain"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type tokenTransferUCase struct {
 	tokenTransferRepository interfaces.TokenTransferRepository
-	ethClient               pkginterfaces.Client
 	config                  *conf.Configuration
 }
 
 func NewTokenTransferUCase(
 	tokenTransferRepository interfaces.TokenTransferRepository,
-	ethClient pkginterfaces.Client,
 	config *conf.Configuration,
 ) interfaces.TokenTransferUCase {
 	return &tokenTransferUCase{
 		tokenTransferRepository: tokenTransferRepository,
-		ethClient:               ethClient,
 		config:                  config,
 	}
 }

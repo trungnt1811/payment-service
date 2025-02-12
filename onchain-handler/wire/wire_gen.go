@@ -12,7 +12,6 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/ucases"
-	interfaces3 "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/google/wire"
 	"gorm.io/gorm"
 )
@@ -36,9 +35,9 @@ func InitializePaymentOrderUCase(db *gorm.DB, cacheRepo interfaces2.CacheReposit
 	return paymentOrderUCase
 }
 
-func InitializeTokenTransferUCase(db *gorm.DB, ethClient interfaces3.Client, config *conf.Configuration) interfaces.TokenTransferUCase {
+func InitializeTokenTransferUCase(db *gorm.DB, config *conf.Configuration) interfaces.TokenTransferUCase {
 	tokenTransferRepository := repositories.NewTokenTransferRepository(db)
-	tokenTransferUCase := ucases.NewTokenTransferUCase(tokenTransferRepository, ethClient, config)
+	tokenTransferUCase := ucases.NewTokenTransferUCase(tokenTransferRepository, config)
 	return tokenTransferUCase
 }
 

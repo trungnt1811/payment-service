@@ -85,7 +85,7 @@ func RunApp(config *conf.Configuration) {
 	paymentWalletUCase := wire.InitializePaymentWalletUCase(db, config)
 	userWalletUCase := wire.InitializeUserWalletUCase(db, config)
 	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
-	tokenTransferUCase := wire.InitializeTokenTransferUCase(db, ethClientAvax, config)
+	tokenTransferUCase := wire.InitializeTokenTransferUCase(db, config)
 	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
 	paymentStatisticsUCase := wire.InitializePaymentStatisticsUCase(db)
 
