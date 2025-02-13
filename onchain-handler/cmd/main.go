@@ -7,15 +7,13 @@ import (
 	"strings"
 	"syscall"
 
-	"gorm.io/gorm/logger"
-
 	"github.com/gin-gonic/gin"
 
 	app "github.com/genefriendway/onchain-handler/cmd/app"
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/conf/database"
 	"github.com/genefriendway/onchain-handler/constants"
 	_ "github.com/genefriendway/onchain-handler/docs"
+	"github.com/genefriendway/onchain-handler/infra/database"
 	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/dto"
 	"github.com/genefriendway/onchain-handler/migrations"
@@ -34,7 +32,8 @@ func main() {
 	config := conf.GetConfiguration()
 
 	// Initialize database connection
-	db := database.DBConnWithLoglevel(logger.Info)
+	pgsql := database.NewPostgreSQL(config)
+	db := pgsql.Connect()
 	if err := migrations.RunMigrations(db); err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to migrate database: %v", err)
 	}
