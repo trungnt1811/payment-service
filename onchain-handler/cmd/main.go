@@ -15,7 +15,7 @@ import (
 	_ "github.com/genefriendway/onchain-handler/docs"
 	"github.com/genefriendway/onchain-handler/infra/database"
 	"github.com/genefriendway/onchain-handler/infra/queue"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/migrations"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"

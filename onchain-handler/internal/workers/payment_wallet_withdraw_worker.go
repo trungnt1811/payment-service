@@ -11,7 +11,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"

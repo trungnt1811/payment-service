@@ -3,7 +3,7 @@ package ucases
 import (
 	"context"
 
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 

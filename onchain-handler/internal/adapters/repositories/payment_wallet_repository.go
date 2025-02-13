@@ -13,7 +13,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 )
@@ -31,9 +31,9 @@ func NewPaymentWalletRepository(db *gorm.DB, config *conf.Configuration) interfa
 }
 
 func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) {
-	var wallet domain.PaymentWallet
+	var wallet entities.PaymentWallet
 	// Try to fetch the first row from the PaymentWallet table
-	err := r.db.WithContext(ctx).Model(&domain.PaymentWallet{}).First(&wallet).Error
+	err := r.db.WithContext(ctx).Model(&entities.PaymentWallet{}).First(&wallet).Error
 	if err != nil {
 		// If the error is "record not found", return false without error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -48,8 +48,8 @@ func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) 
 
 // ClaimFirstAvailableWallet attempts to find the first available wallet and mark it as in-use.
 // If no available wallet is found, it creates a new one.
-func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*domain.PaymentWallet, error) {
-	var wallet domain.PaymentWallet
+func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*entities.PaymentWallet, error) {
+	var wallet entities.PaymentWallet
 
 	// Attempt to find and lock the first available wallet
 	err := tx.WithContext(ctx).
@@ -80,13 +80,13 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx con
 	return &wallet, nil
 }
 
-func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*domain.PaymentWallet, error) {
+func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*entities.PaymentWallet, error) {
 	// Generate a unique, temporary address
 	uuidPart := strings.ReplaceAll(uuid.New().String(), "-", "") // Remove dashes from UUID
 	tempAddress := "temp-" + uuidPart[:min(len(uuidPart), 37)]   // Ensure total length <= 42
 
 	// Insert a placeholder wallet with the unique temporary address
-	placeholderWallet := domain.PaymentWallet{
+	placeholderWallet := entities.PaymentWallet{
 		InUse:   inUse,
 		Address: tempAddress, // Unique temporary address within 42 characters
 	}
@@ -119,8 +119,8 @@ func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*dom
 	return &placeholderWallet, nil
 }
 
-func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context, address string) (*domain.PaymentWallet, error) {
-	var wallet domain.PaymentWallet
+func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context, address string) (*entities.PaymentWallet, error) {
+	var wallet entities.PaymentWallet
 	if err := r.db.WithContext(ctx).Where("address = ?", address).First(&wallet).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -130,8 +130,8 @@ func (r *paymentWalletRepository) GetPaymentWalletByAddress(ctx context.Context,
 	return &wallet, nil
 }
 
-func (r *paymentWalletRepository) GetPaymentWallets(ctx context.Context) ([]domain.PaymentWallet, error) {
-	var wallets []domain.PaymentWallet
+func (r *paymentWalletRepository) GetPaymentWallets(ctx context.Context) ([]entities.PaymentWallet, error) {
+	var wallets []entities.PaymentWallet
 	if err := r.db.WithContext(ctx).Find(&wallets).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch payment wallets: %w", err)
 	}
@@ -142,8 +142,8 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 	ctx context.Context,
 	limit, offset int,
 	network *string,
-) ([]domain.PaymentWallet, error) {
-	var wallets []domain.PaymentWallet
+) ([]entities.PaymentWallet, error) {
+	var wallets []entities.PaymentWallet
 
 	query := r.db.WithContext(ctx).
 		Select("payment_wallet.*").
@@ -180,8 +180,8 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 
 func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
 	ctx context.Context, address *string,
-) (domain.PaymentWallet, error) {
-	var wallet domain.PaymentWallet
+) (entities.PaymentWallet, error) {
+	var wallet entities.PaymentWallet
 
 	query := r.db.WithContext(ctx).
 		Select("payment_wallet.*").
@@ -193,7 +193,7 @@ func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
 	if address != nil {
 		query = query.Where("payment_wallet.address = ?", *address)
 	} else {
-		return domain.PaymentWallet{}, fmt.Errorf("address is required")
+		return entities.PaymentWallet{}, fmt.Errorf("address is required")
 	}
 
 	// Execute query and Preload balances (ensures no null values)
@@ -204,9 +204,9 @@ func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
 	// Handle case when wallet is not found
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.PaymentWallet{}, fmt.Errorf("wallet not found: %w", err)
+			return entities.PaymentWallet{}, fmt.Errorf("wallet not found: %w", err)
 		}
-		return domain.PaymentWallet{}, fmt.Errorf("failed to fetch payment wallet with balances: %w", err)
+		return entities.PaymentWallet{}, fmt.Errorf("failed to fetch payment wallet with balances: %w", err)
 	}
 
 	return wallet, nil
@@ -249,7 +249,7 @@ func (r *paymentWalletRepository) ReleaseWalletsByIDs(ctx context.Context, walle
 		return nil // No IDs provided, nothing to release
 	}
 
-	err := r.db.WithContext(ctx).Model(&domain.PaymentWallet{}).
+	err := r.db.WithContext(ctx).Model(&entities.PaymentWallet{}).
 		Where("id IN ?", walletIDs).
 		Update("in_use", false).
 		Error
@@ -262,7 +262,7 @@ func (r *paymentWalletRepository) ReleaseWalletsByIDs(ctx context.Context, walle
 func (r *paymentWalletRepository) GetWalletIDByAddress(ctx context.Context, address string) (uint64, error) {
 	var walletID uint64
 	err := r.db.WithContext(ctx).
-		Model(&domain.PaymentWallet{}).
+		Model(&entities.PaymentWallet{}).
 		Select("id").
 		Where("address = ?", address).
 		Limit(1).

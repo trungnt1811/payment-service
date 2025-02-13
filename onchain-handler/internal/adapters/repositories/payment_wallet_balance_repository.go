@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
@@ -57,7 +57,7 @@ func (r *paymentWalletBalanceRepository) AddPaymentWalletBalance(
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"balance": updatedBalance.String(),
 			}),
-		}).Create(&domain.PaymentWalletBalance{
+		}).Create(&entities.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,
@@ -108,7 +108,7 @@ func (r *paymentWalletBalanceRepository) SubtractPaymentWalletBalance(
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"balance": newBalance.String(),
 			}),
-		}).Create(&domain.PaymentWalletBalance{
+		}).Create(&entities.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,
@@ -147,7 +147,7 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"balance": newBalance, // Directly overwrites balance
 			}),
-		}).Create(&domain.PaymentWalletBalance{
+		}).Create(&entities.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,

@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 )
 
 type PaymentEventHistoryRepository struct {
@@ -23,8 +23,8 @@ func NewPaymentEventHistoryRepository(db *gorm.DB) *PaymentEventHistoryRepositor
 // and returns the created records.
 func (r *PaymentEventHistoryRepository) CreatePaymentEventHistory(
 	ctx context.Context,
-	paymentEvents []domain.PaymentEventHistory,
-) ([]domain.PaymentEventHistory, error) {
+	paymentEvents []entities.PaymentEventHistory,
+) ([]entities.PaymentEventHistory, error) {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&paymentEvents).Error; err != nil {
 			return fmt.Errorf("failed to create payment event history records: %w", err)

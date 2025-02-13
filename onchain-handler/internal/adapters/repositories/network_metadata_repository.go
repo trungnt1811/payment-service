@@ -5,7 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 )
 
 type NetworkMetadataRepository struct {
@@ -19,8 +19,8 @@ func NewNetworkMetadataRepository(db *gorm.DB) *NetworkMetadataRepository {
 	}
 }
 
-func (r *NetworkMetadataRepository) GetNetworksMetadata(ctx context.Context) ([]domain.NetworkMetadata, error) {
-	var networksMetadata []domain.NetworkMetadata
+func (r *NetworkMetadataRepository) GetNetworksMetadata(ctx context.Context) ([]entities.NetworkMetadata, error) {
+	var networksMetadata []entities.NetworkMetadata
 	if err := r.db.WithContext(ctx).Find(&networksMetadata).Error; err != nil {
 		return nil, err
 	}

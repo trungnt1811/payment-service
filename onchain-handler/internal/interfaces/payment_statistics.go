@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/genefriendway/onchain-handler/internal/domain"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 )
 
 type PaymentStatisticsRepository interface {
@@ -21,7 +21,7 @@ type PaymentStatisticsRepository interface {
 		granularity string,
 		startTime, endTime time.Time,
 		vendorID string,
-	) ([]domain.PaymentStatistics, error)
+	) ([]entities.PaymentStatistics, error)
 }
 
 type PaymentStatisticsUCase interface {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -75,10 +75,10 @@ func (u *tokenTransferUCase) GetTokenTransferHistories(
 }
 
 func (u *tokenTransferUCase) CreateTokenTransferHistories(ctx context.Context, payloads []dto.TokenTransferHistoryDTO) error {
-	var models []domain.TokenTransferHistory
+	var models []entities.TokenTransferHistory
 
 	for _, payload := range payloads {
-		models = append(models, domain.TokenTransferHistory{
+		models = append(models, entities.TokenTransferHistory{
 			Network:         payload.Network,
 			TransactionHash: payload.TransactionHash,
 			FromAddress:     payload.FromAddress,

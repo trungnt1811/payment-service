@@ -3,8 +3,8 @@ package ucases
 import (
 	"context"
 
-	"github.com/genefriendway/onchain-handler/internal/domain"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
@@ -24,9 +24,9 @@ func (u *paymentEventHistoryUCase) CreatePaymentEventHistory(
 	ctx context.Context,
 	payloads []dto.PaymentEventPayloadDTO,
 ) error {
-	var eventHistories []domain.PaymentEventHistory
+	var eventHistories []entities.PaymentEventHistory
 	for _, payload := range payloads {
-		eventHistory := domain.PaymentEventHistory{
+		eventHistory := entities.PaymentEventHistory{
 			PaymentOrderID:  payload.PaymentOrderID,
 			TransactionHash: payload.TransactionHash,
 			FromAddress:     payload.FromAddress,

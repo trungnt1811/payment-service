@@ -13,7 +13,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -44,9 +44,9 @@ func NewPaymentOrderCacheRepository(
 func (c *paymentOrderCache) CreatePaymentOrders(
 	tx *gorm.DB,
 	ctx context.Context,
-	orders []domain.PaymentOrder,
+	orders []entities.PaymentOrder,
 	vendorID string,
-) ([]domain.PaymentOrder, error) {
+) ([]entities.PaymentOrder, error) {
 	// Validate input
 	if len(orders) == 0 {
 		return nil, fmt.Errorf("no orders to create")
@@ -81,7 +81,7 @@ func (c *paymentOrderCache) CreatePaymentOrders(
 	return createdOrders, nil
 }
 
-func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]domain.PaymentOrder, error) {
+func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]entities.PaymentOrder, error) {
 	// Handle nil network gracefully in the cache key
 	networkStr := "nil"
 	if network != nil {
@@ -95,7 +95,7 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, o
 	}
 
 	// Attempt to retrieve data from cache
-	var paymentOrders []domain.PaymentOrder
+	var paymentOrders []entities.PaymentOrder
 	if err := c.cache.RetrieveItem(key, &paymentOrders); err == nil {
 		// Cache hit: return the cached data
 		return paymentOrders, nil
@@ -117,13 +117,13 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, o
 
 func (c *paymentOrderCache) UpdatePaymentOrder(
 	ctx context.Context,
-	order *domain.PaymentOrder,
+	order *entities.PaymentOrder,
 ) error {
 	// Construct the cache key for the payment order
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
-	var cachedOrder domain.PaymentOrder
+	var cachedOrder entities.PaymentOrder
 	cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 	if cacheErr != nil {
 		// Log the cache miss but proceed with the update
@@ -155,7 +155,7 @@ func (c *paymentOrderCache) UpdatePaymentOrder(
 }
 
 // mergePaymentOrderFields updates only the modified fields of `src` into `dst`.
-func mergePaymentOrderFields(dst, src *domain.PaymentOrder) {
+func mergePaymentOrderFields(dst, src *entities.PaymentOrder) {
 	if src.Status != "" {
 		dst.Status = src.Status
 		if src.Status == constants.Success {
@@ -194,7 +194,7 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
-	var cachedOrder domain.PaymentOrder
+	var cachedOrder entities.PaymentOrder
 	cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 	if cacheErr == nil {
 		// Update the network in the cached order
@@ -223,7 +223,7 @@ func (c *paymentOrderCache) BatchUpdateOrdersToExpired(
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 		// Attempt to retrieve the order from the cache
-		var cachedOrder domain.PaymentOrder
+		var cachedOrder entities.PaymentOrder
 		cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 
 		// If found in cache, update it
@@ -261,7 +261,7 @@ func (c *paymentOrderCache) BatchUpdateOrderBlockHeights(ctx context.Context, or
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 		// Attempt to retrieve the order from the cache
-		var cachedOrder domain.PaymentOrder
+		var cachedOrder entities.PaymentOrder
 		cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 
 		// If found in cache, update it
@@ -287,12 +287,12 @@ func (c *paymentOrderCache) BatchUpdateOrderBlockHeights(ctx context.Context, or
 	return nil
 }
 
-func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network string) ([]domain.PaymentOrder, error) {
+func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
 	// Generate a consistent cache key
 	key := &caching.Keyer{Raw: fmt.Sprintf("%sGetExpiredPaymentOrders_network:%s", keyPrefixPaymentOrder, network)}
 
 	// Attempt to retrieve data from cache
-	var paymentOrders []domain.PaymentOrder
+	var paymentOrders []entities.PaymentOrder
 	if err := c.cache.RetrieveItem(key, &paymentOrders); err == nil {
 		// Cache hit: return the cached data
 		return paymentOrders, nil
@@ -325,7 +325,7 @@ func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) ([]
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
 
 		// Attempt to retrieve the cached order
-		var cachedOrder domain.PaymentOrder
+		var cachedOrder entities.PaymentOrder
 		cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 
 		if cacheErr == nil {
@@ -356,7 +356,7 @@ func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
 
 		// Attempt to retrieve the cached order
-		var cachedOrder domain.PaymentOrder
+		var cachedOrder entities.PaymentOrder
 		cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 
 		if cacheErr == nil {
@@ -383,7 +383,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 	orderDirection constants.OrderDirection,
 	startTime, endTime *time.Time,
 	timeFilterField *string,
-) ([]domain.PaymentOrder, error) {
+) ([]entities.PaymentOrder, error) {
 	// Generate a unique cache key based on input parameters
 	requestIDsKey := strings.Join(requestIDs, ",")
 	cacheKey := &caching.Keyer{
@@ -392,7 +392,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 	}
 
 	// Attempt to retrieve the data from the cache
-	var paymentOrders []domain.PaymentOrder
+	var paymentOrders []entities.PaymentOrder
 	if err := c.cache.RetrieveItem(cacheKey, &paymentOrders); err == nil {
 		// Cache hit: return the cached data
 		return paymentOrders, nil
@@ -414,12 +414,12 @@ func (c *paymentOrderCache) GetPaymentOrders(
 	return paymentOrders, nil
 }
 
-func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) (*domain.PaymentOrder, error) {
+func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) (*entities.PaymentOrder, error) {
 	// Construct the cache key using the order ID
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
 
 	// Attempt to retrieve the payment order from the cache
-	var cachedOrder domain.PaymentOrder
+	var cachedOrder entities.PaymentOrder
 	if err := c.cache.RetrieveItem(cacheKey, &cachedOrder); err == nil {
 		// Cache hit: return the cached order
 		return &cachedOrder, nil
@@ -442,12 +442,12 @@ func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) 
 	return order, nil
 }
 
-func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]domain.PaymentOrder, error) {
+func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]entities.PaymentOrder, error) {
 	// Construct the cache key using the order IDs
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + fmt.Sprint(ids)}
 
 	// Attempt to retrieve the payment orders from the cache
-	var cachedOrders []domain.PaymentOrder
+	var cachedOrders []entities.PaymentOrder
 	if err := c.cache.RetrieveItem(cacheKey, &cachedOrders); err == nil {
 		// Cache hit: return the cached orders
 		return cachedOrders, nil
@@ -470,7 +470,7 @@ func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 	return orders, nil
 }
 
-func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*domain.PaymentOrder, error) {
+func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*entities.PaymentOrder, error) {
 	// Fetch the order ID using the request ID
 	orderID, err := c.GetPaymentOrderIDByRequestID(ctx, requestID)
 	if err != nil {
@@ -481,7 +481,7 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
-	var cachedOrder domain.PaymentOrder
+	var cachedOrder entities.PaymentOrder
 	if err := c.cache.RetrieveItem(cacheKey, &cachedOrder); err == nil {
 		// Cache hit: return the cached order
 		return &cachedOrder, nil

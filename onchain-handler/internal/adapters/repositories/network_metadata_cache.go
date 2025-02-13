@@ -5,7 +5,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -28,9 +28,9 @@ func NewNetworkMetadataCacheRepository(repo *NetworkMetadataRepository,
 	}
 }
 
-func (c *networkMetadataCache) GetNetworksMetadata(ctx context.Context) ([]domain.NetworkMetadata, error) {
+func (c *networkMetadataCache) GetNetworksMetadata(ctx context.Context) ([]entities.NetworkMetadata, error) {
 	key := &caching.Keyer{Raw: keyPrefixNetworkMetadata + "GetNetworksMetadata"}
-	var networkMetadatas []domain.NetworkMetadata
+	var networkMetadatas []entities.NetworkMetadata
 
 	// Try to retrieve data from cache
 	err := c.cache.RetrieveItem(key, &networkMetadatas)

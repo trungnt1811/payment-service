@@ -12,8 +12,8 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
@@ -137,7 +137,7 @@ func (u *paymentOrderUCase) processOrderPayloads(
 
 	// Begin transaction
 	return u.db.Transaction(func(tx *gorm.DB) error {
-		var orders []domain.PaymentOrder
+		var orders []entities.PaymentOrder
 
 		for _, payload := range payloads {
 			// Claim an available wallet
@@ -150,7 +150,7 @@ func (u *paymentOrderUCase) processOrderPayloads(
 			claimedWalletIDs = append(claimedWalletIDs, wallet.ID)
 
 			// Create a new payment order
-			order := domain.PaymentOrder{
+			order := entities.PaymentOrder{
 				Amount:      payload.Amount,
 				WalletID:    wallet.ID,
 				Wallet:      *wallet,
@@ -190,7 +190,7 @@ func (u *paymentOrderUCase) processOrderPayloads(
 
 // mapOrderIDsAndSignPayloads maps order IDs and signs payloads.
 func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
-	orders []domain.PaymentOrder,
+	orders []entities.PaymentOrder,
 ) ([]dto.CreatedPaymentOrderDTO, error) {
 	var response []dto.CreatedPaymentOrderDTO
 
@@ -441,7 +441,7 @@ func (u *paymentOrderUCase) GetPaymentOrderByRequestID(ctx context.Context, requ
 }
 
 // Helper function to map PaymentOrder to PaymentOrderDTOResponse
-func mapOrderToDTO(order domain.PaymentOrder) dto.PaymentOrderDTOResponse {
+func mapOrderToDTO(order entities.PaymentOrder) dto.PaymentOrderDTOResponse {
 	dto := dto.PaymentOrderDTOResponse{
 		ID:                  order.ID,
 		RequestID:           order.RequestID,
@@ -465,7 +465,7 @@ func mapOrderToDTO(order domain.PaymentOrder) dto.PaymentOrderDTOResponse {
 }
 
 // Helper function to map PaymentEventHistory to PaymentHistoryDTO
-func mapEventHistoriesToDTO(eventHistories []domain.PaymentEventHistory) []dto.PaymentHistoryDTO {
+func mapEventHistoriesToDTO(eventHistories []entities.PaymentEventHistory) []dto.PaymentHistoryDTO {
 	eventHistoriesDTO := make([]dto.PaymentHistoryDTO, len(eventHistories))
 	for i, eventHistory := range eventHistories {
 		eventHistoriesDTO[i] = dto.PaymentHistoryDTO{

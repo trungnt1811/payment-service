@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 

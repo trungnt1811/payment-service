@@ -8,7 +8,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/infra/caching"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -33,8 +33,8 @@ func NewPaymentEventHistoryCacheRepository(
 
 func (c *paymentEventHistoryCache) CreatePaymentEventHistory(
 	ctx context.Context,
-	paymentEvents []domain.PaymentEventHistory,
-) ([]domain.PaymentEventHistory, error) {
+	paymentEvents []entities.PaymentEventHistory,
+) ([]entities.PaymentEventHistory, error) {
 	// Create payment event history records in the repository
 	createdEvents, err := c.paymentEventHistoryRepository.CreatePaymentEventHistory(ctx, paymentEvents)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *paymentEventHistoryCache) CreatePaymentEventHistory(
 	}
 
 	// Group payment events by PaymentOrderID
-	eventsByOrderID := make(map[uint64][]domain.PaymentEventHistory)
+	eventsByOrderID := make(map[uint64][]entities.PaymentEventHistory)
 	for _, event := range createdEvents {
 		eventsByOrderID[event.PaymentOrderID] = append(eventsByOrderID[event.PaymentOrderID], event)
 	}
@@ -53,7 +53,7 @@ func (c *paymentEventHistoryCache) CreatePaymentEventHistory(
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 		// Retrieve the associated payment order from the cache
-		var cachedOrder domain.PaymentOrder
+		var cachedOrder entities.PaymentOrder
 		cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
 
 		// If found in cache, process the events

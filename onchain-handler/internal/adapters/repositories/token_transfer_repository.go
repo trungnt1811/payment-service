@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
@@ -22,7 +22,7 @@ func NewTokenTransferRepository(db *gorm.DB) interfaces.TokenTransferRepository 
 	}
 }
 
-func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Context, models []domain.TokenTransferHistory) error {
+func (r *tokenTransferRepository) CreateTokenTransferHistories(ctx context.Context, models []entities.TokenTransferHistory) error {
 	err := r.db.WithContext(ctx).Create(&models).Error
 	if err != nil {
 		return fmt.Errorf("failed to create transfer histories: %w", err)
@@ -37,8 +37,8 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 	orderDirection constants.OrderDirection,
 	startTime, endTime *time.Time, // Range of time to filter by
 	fromAddress, toAddress *string, // Address filters
-) ([]domain.TokenTransferHistory, error) {
-	var tokenTransfers []domain.TokenTransferHistory
+) ([]entities.TokenTransferHistory, error) {
+	var tokenTransfers []entities.TokenTransferHistory
 
 	orderColumn := "id" // Default values for ordering
 	if orderBy != nil && *orderBy != "" {

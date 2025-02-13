@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 )
 
 type TokenTransferRepository interface {
-	CreateTokenTransferHistories(ctx context.Context, models []domain.TokenTransferHistory) error
+	CreateTokenTransferHistories(ctx context.Context, models []entities.TokenTransferHistory) error
 	GetTokenTransferHistories(
 		ctx context.Context,
 		limit, offset int,
@@ -18,7 +18,7 @@ type TokenTransferRepository interface {
 		orderDirection constants.OrderDirection,
 		startTime, endTime *time.Time,
 		fromAddress, toAddress *string,
-	) ([]domain.TokenTransferHistory, error)
+	) ([]entities.TokenTransferHistory, error)
 	GetTotalTokenAmount(
 		ctx context.Context,
 		startTime, endTime *time.Time,

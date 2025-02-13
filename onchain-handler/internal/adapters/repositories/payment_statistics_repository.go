@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
@@ -42,7 +42,7 @@ func (r *paymentStatisticsRepository) IncrementStatistics(
 		}
 
 		// Attempt to update with row-level locking
-		result := tx.Model(&domain.PaymentStatistics{}).
+		result := tx.Model(&entities.PaymentStatistics{}).
 			Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("granularity = ? AND period_start = ? AND vendor_id = ? AND symbol = ?", granularity, periodStart.UTC(), vendorID, symbol).
 			Updates(updates)
@@ -53,7 +53,7 @@ func (r *paymentStatisticsRepository) IncrementStatistics(
 
 		// If no rows were updated, insert a new record
 		if result.RowsAffected == 0 {
-			newStatistic := domain.PaymentStatistics{
+			newStatistic := entities.PaymentStatistics{
 				Granularity:      granularity,
 				PeriodStart:      periodStart.UTC(),
 				TotalOrders:      0,
@@ -84,11 +84,11 @@ func (r *paymentStatisticsRepository) GetStatisticsByTimeRangeAndGranularity(
 	granularity string,
 	startTime, endTime time.Time,
 	vendorID string,
-) ([]domain.PaymentStatistics, error) {
-	var statistics []domain.PaymentStatistics
+) ([]entities.PaymentStatistics, error) {
+	var statistics []entities.PaymentStatistics
 
 	// Handle grouping for granularities other than DAILY
-	query := r.db.WithContext(ctx).Model(&domain.PaymentStatistics{}).Order("period_start ASC")
+	query := r.db.WithContext(ctx).Model(&entities.PaymentStatistics{}).Order("period_start ASC")
 
 	// Modify query based on granularity
 	switch granularity {

@@ -1,9 +1,9 @@
-package domain
+package entities
 
 import (
 	"time"
 
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 )
 
 // PaymentStatistics represents the payment statistics domain model.

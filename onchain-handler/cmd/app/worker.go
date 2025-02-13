@@ -9,7 +9,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/infra/queue"
-	"github.com/genefriendway/onchain-handler/internal/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/listeners"
 	"github.com/genefriendway/onchain-handler/internal/workers"
