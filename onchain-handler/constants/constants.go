@@ -168,3 +168,24 @@ const (
 	Monthly = "MONTHLY"
 	Yearly  = "YEARLY"
 )
+
+// Gas price multiplier
+const (
+	GasPriceMultiplier = 2.0
+)
+
+// Withdraw interval
+const (
+	WithdrawIntervalDaily  = "daily"
+	WithdrawIntervalHourly = "hourly"
+)
+
+// Eth client cooldown
+const (
+	EthClientCooldown = 5 * time.Minute
+)
+
+// Network delay
+const (
+	DefaultNetworkDelay = 10 * time.Second
+)

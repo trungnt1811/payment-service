@@ -46,8 +46,8 @@ The following environment variables are required for the application to run. Set
 ### General Configuration
 | Variable                | Description                                                            | Default               |
 |-------------------------|------------------------------------------------------------------------|-----------------------|
-| `ENV`                   | Environment mode: `DEV`, `PROD`.                                       | `DEV`                 |
-| `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`.                       | `debug`               |
+| `ENV`                   | Environment mode: `DEV`, `PROD`.                                       | `DEV`                |
+| `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`.                       | `debug`                |
 | `APP_NAME`              | Application name.                                                      | `onchain-handler`     |
 | `APP_PORT`              | Port to run the application.                                           | `8080`                |
 
@@ -63,24 +63,24 @@ The following environment variables are required for the application to run. Set
 ### Blockchain Configuration
 | Variable                     | Description                                                                                | Default                                                      |
 |------------------------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------|
-| `BSC_RPC_URLS`               | List of Binance Smart Chain RPC URLs.                                                         | `https://rpc.ankr.com/bsc/...` (ask developer) |
-| `BSC_CHAIN_ID`               | Binance Smart Chain ID.      | `56`                                           |
-| `BSC_START_BLOCK_LISTENER`   | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.**                             | `45011000` (ask developer)   |
-| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                             | `0x55d398326f99059fF775485246999027B3197955`   |
-| `AVAX_RPC_URLS`              | List of Avalanche RPC URLs.  | `https://rpc.ankr.com/avalanche/...` (ask developer) |
-| `AVAX_CHAIN_ID`              | Avalanche Chain ID.          | `43114`                                                       |
-| `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `54567000` (ask developer)                       |
-| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                       | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`                  |
-| `GAS_BUFFER_MULTIPLIER`      | Multiplier to buffer estimated gas calculations.                              | `2`                             |
+| `BSC_RPC_URLS`               | List of Binance Smart Chain RPC URLs.                                                      | `https://rpc.ankr.com/bsc_testnet_chapel/...` (ask developer) |
+| `BSC_CHAIN_ID`               | Binance Smart Chain ID.      | `0`     (ask developer)                                     |
+| `BSC_START_BLOCK_LISTENER`   | Starting block for listening on BSC. **Avoid setting it too far back to prevent pruning.**                             | `0` (ask developer)          |
+| `BSC_USDT_CONTRACT_ADDRESS`  | Contract address for USDT on Binance Smart Chain.                                          | `0x...` (ask developer)              |
+| `AVAX_RPC_URLS`              | List of Avalanche RPC URLs.  | `https://rpc.ankr.com/avalanche_fuji/...` (ask developer)   |
+| `AVAX_CHAIN_ID`              | Avalanche Chain ID.          | `0`  (ask developer)                                        |
+| `AVAX_START_BLOCK_LISTENER`  | Starting block for listening on Avalanche. **Avoid setting it too far back to prevent pruning.** | `0` (ask developer)            |
+| `AVAX_USDT_CONTRACT_ADDRESS` | Contract address for USDT on Avalanche.                                       | `0x...` (ask developer)                     |
+| `GAS_BUFFER_MULTIPLIER`      | Multiplier to buffer estimated gas calculations.                              | `2`                            |
 
 ### Additional Configuration
 | Variable                     | Description                                                            | Default               |
 |------------------------------|------------------------------------------------------------------------|-----------------------|
 | `INIT_WALLET_COUNT`          | Initial count of wallets to be generated.                              | `10`                  |
-| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `3`                   |
-| `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.                 | `10`|
-| `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)                  |
-| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `net motor more...` (ask devops)           |
+| `EXPIRED_ORDER_TIME`         | Time (in minutes) for an order to move from `PEDNING` to `EXPIRED`.    | `15`                  |
+| `ORDER_CUTOFF_TIME`          | Maximum duration (in minutes) for an order to move from `EXPIRED` to `FAILED`.                 | `1440`|
+| `PAYMENT_COVERING`           | Discount amount applied to each order.                                 | `1` (1 USDT)          |
+| `MNEMONIC`                   | Secret mnemonic phrase for HD wallet derivation.                       | `your mnemonic` (ask devops)           |
 | `PASSPHRASE`                 | Passphrase for HD wallet derivation.                                   | `your passphrase` (ask devops)           |
 | `SALT`                       | Salt for HD wallet derivation.                                         | `your salt` (ask devops)                |
 | `MASTER_WALLET_ADDRESS`      | The address of the master wallet where funds from receiving wallets are consolidated. Ensure this is securely configured.| `your master wallet address` (ask devops) |
@@ -91,11 +91,11 @@ The following environment variables are required for the application to run. Set
 ### Overview
 
 The **Receiving Wallet** is a centralized wallet designed to:
-1. **Collect USDT** from all Payment Wallets daily.
+1. **Collect USDT** from all Payment Wallets.
 2. Consolidate the collected **USDT** and transfer it to the **Master Wallet**.
 3. **Distribute Gas Fees** (BNB for Binance Smart Chain and AVAX for Avalanche) to Payment Wallets to ensure sufficient gas for future transactions.
 
-A worker automates these processes daily at **00:00 UTC**.
+A worker automates these processes daily at **00:00 UTC** or optionally configurable to run hourly based on operational needs.
 
 ---
 
@@ -108,7 +108,7 @@ A worker automates these processes daily at **00:00 UTC**.
 #### Transaction Fees Per Network
 | **Network**      | **Gas Fee per USDT Transfer** | 
 |------------------|-------------------------------|
-| Binance Smart Chain (BSC) | **0.00016 BNB**      | 
+| Binance Smart Chain (BSC) | **0.0002 BNB**       | 
 | Avalanche (AVAX)          | **0.0028 AVAX**      | 
 
 #### Monthly Estimation (30 Days)
@@ -116,7 +116,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 
 | **Network**      | **Gas Fee per Day**             | **Monthly Gas Fee**  |
 |------------------|---------------------------------|----------------------|
-| Binance Smart Chain (BSC) | **10 × 0.00016 BNB = 0.0016 BNB** | **0.048 BNB** |
+| Binance Smart Chain (BSC) | **10 × 0.0002 BNB = 0.002 BNB**   | **0.06 BNB**  |
 | Avalanche (AVAX)          | **10 × 0.0028 AVAX = 0.028 AVAX** | **0.84 AVAX** |
 
 ---
@@ -126,7 +126,7 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 #### Monthly Top-Up Recommendation
 | **Network**      | **Estimated Gas (Monthly)** | **Recommended Top-Up (30% Buffer)**  |
 |------------------|-----------------------------|--------------------------------------|
-| Binance Smart Chain (BSC) | **0.048 BNB**      | **0.0624 BNB**                       | 
+| Binance Smart Chain (BSC) | **0.06 BNB**       | **0.078 BNB**                        | 
 | Avalanche (AVAX)          | **0.84 AVAX**      | **1.092 AVAX**                       |
 
 **Notes**:
@@ -138,7 +138,9 @@ For **10 Payment Wallets reused daily**, the estimated gas fees are:
 ### Payment Wallets Withdrawing Worker
 
 #### Worker Schedule
-A worker runs daily at **00:00 UTC** to:
+The worker is configured to run either:
+  Daily at 00:00 UTC, or
+  Hourly (based on the WITHDRAW_WORKER_INTERVAL configuration) to:
 1. **Collect USDT** from all Payment Wallets into the Receiving Wallet.
 2. **Transfer USDT** from the Receiving Wallet to the Master Wallet.
 3. **Distribute Gas Fees** (BNB and AVAX) to Payment Wallets to ensure they are operational.
@@ -157,6 +159,6 @@ A worker runs daily at **00:00 UTC** to:
 - **BSC_START_BLOCK_LISTENER** and **AVAX_START_BLOCK_LISTENER**:
   - Ensure the starting block is not too far in the past to avoid issues with pruned nodes.
 - **Gas Fee Recommendations**:
-  - Top up the Receiving Wallet monthly with **0.0624 BNB** and **1.092 AVAX** for seamless operations.
+  - Top up the Receiving Wallet monthly with **0.078 BNB** and **1.092 AVAX** for seamless operations.
 - **Payment Wallets Withdrawing Worker**:
   - Runs daily to minimize manual intervention and ensure all Payment Wallets are operational with sufficient gas.
