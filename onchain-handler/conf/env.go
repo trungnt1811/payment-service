@@ -2,12 +2,12 @@ package conf
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/genefriendway/onchain-handler/constants"
@@ -132,15 +132,15 @@ func init() {
 
 	// Attempt to read config file
 	if err := viper.ReadInConfig(); err != nil {
-		log.Warn().Msgf("Config file \"%s\" not found, falling back to environment variables", envFile)
+		log.Printf("Config file \"%s\" not found, falling back to environment variables", envFile)
 	}
 
 	// Unmarshal values into struct
 	if err := viper.Unmarshal(&configuration); err != nil {
-		log.Fatal().Err(err).Msg("Error unmarshalling configuration")
+		log.Fatalf("Error unmarshalling configuration: %v", err)
 	}
 
-	log.Info().Msg("Configuration loaded successfully")
+	log.Println("Configuration loaded successfully")
 }
 
 func GetRpcUrls(network constants.NetworkType) ([]string, error) {
@@ -187,19 +187,19 @@ func (config *Configuration) GetOrderCutoffTime() time.Duration {
 func (config *Configuration) GetPaymentCovering() float64 {
 	paymentCoveringStr := config.PaymentGateway.PaymentCovering
 	if paymentCoveringStr == "" {
-		log.Error().Msg("PaymentCovering is not set or is empty in the configuration")
+		log.Println("PaymentCovering is not set or is empty in the configuration")
 		return 0.0
 	}
 
 	// Convert string to float64
 	paymentCoveringFloat, err := strconv.ParseFloat(paymentCoveringStr, 64)
 	if err != nil {
-		log.Error().Err(err).Str("PaymentCovering", paymentCoveringStr).Msg("Error parsing PaymentCovering as float64")
+		log.Printf("Error parsing PaymentCovering as float64: %v. Using default value: 0", err)
 		return 0.0
 	}
 
 	if paymentCoveringFloat < 0 {
-		log.Error().Float64("PaymentCovering", paymentCoveringFloat).Msg("PaymentCovering must be greater than or equal 0")
+		log.Printf("PaymentCovering must be greater than or equal 0. Using default value: 0")
 		return 0.0
 	}
 
@@ -209,7 +209,7 @@ func (config *Configuration) GetPaymentCovering() float64 {
 func (config *Configuration) GetGasBufferMultiplier() float64 {
 	multiplierStr := config.Blockchain.GasBufferMultiplier
 	if multiplierStr == "" {
-		log.Error().Msg("GetGasBufferMultiplier is not set or is empty in the configuration")
+		log.Println("GetGasBufferMultiplier is not set or is empty in the configuration")
 		return 1.0
 	}
 
