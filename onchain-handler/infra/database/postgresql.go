@@ -26,10 +26,17 @@ func NewPostgreSQL(config *conf.Configuration) interfaces.SQLDBConnection {
 
 func (pgsql *postgreSQL) getDBConnectionURL() string {
 	config := pgsql.config
+
+	// Determine SSL mode based on the configuration
+	sslMode := "disable"
+	if config.Database.SSLMode {
+		sslMode = "enable"
+	}
+
 	// Format for PostgreSQL connection URL
-	return fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+	return fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
 		config.Database.DbHost, config.Database.DbPort,
-		config.Database.DbUser, config.Database.DbName, config.Database.DbPassword)
+		config.Database.DbUser, config.Database.DbName, config.Database.DbPassword, sslMode)
 }
 
 func (pgsql *postgreSQL) Connect() *gorm.DB {

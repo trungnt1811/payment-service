@@ -24,6 +24,7 @@ type DatabaseConfiguration struct {
 	DbHost     string `mapstructure:"DB_HOST"`
 	DbPort     string `mapstructure:"DB_PORT"`
 	DbName     string `mapstructure:"DB_NAME"`
+	SSLMode    bool   `mapstructure:"DB_SSL_MODE"`
 }
 
 type PaymentGatewayConfiguration struct {
@@ -87,6 +88,7 @@ var defaultConfigurations = map[string]any{
 	"DB_HOST":                    "",
 	"DB_PORT":                    "",
 	"DB_NAME":                    "",
+	"DB_SSL_MODE":                false,
 	"INIT_WALLET_COUNT":          10,
 	"ORDER_CUTOFF_TIME":          1440,
 	"EXPIRED_ORDER_TIME":         15,
