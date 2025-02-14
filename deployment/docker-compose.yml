@@ -11,7 +11,7 @@ x-restart-policy: &restart-policy
 services:
   nginx-proxy:
     <<: [ *logging-defaults, *restart-policy ]
-    container_name: ${CONTAINER_NAME_PREFIX}-nginx-proxy
+    container_name: ${CONTAINER_NAME_PREFIX}.nginx-proxy
     build:
       context: ./services/nginx-proxy
       args:
@@ -37,7 +37,7 @@ services:
       - nginx-proxy
   nginx-letsencrypt:
     <<: [ *logging-defaults, *restart-policy ]
-    container_name: ${CONTAINER_NAME_PREFIX}-nginx-letsencrypt
+    container_name: ${CONTAINER_NAME_PREFIX}.nginx-letsencrypt
     build:
       context: ./services/nginx-letsencrypt
       args:
@@ -60,6 +60,8 @@ services:
       - ZEROSSL_API_KEY=${ZEROSSL_API_KEY}
       - ACME_EMAIL=${ACME_EMAIL}
   app:
+    <<: [ *logging-defaults, *restart-policy ]
+    container_name: ${CONTAINER_NAME_PREFIX}.app
     build:
       context: ./services/nginx-proxy
       args:
@@ -123,6 +125,8 @@ services:
       - nginx-proxy
 
   db:
+    <<: [ *logging-defaults, *restart-policy ]
+    container_name: ${CONTAINER_NAME_PREFIX}.db
     build:
       context: ./services/nginx-proxy
       args:
