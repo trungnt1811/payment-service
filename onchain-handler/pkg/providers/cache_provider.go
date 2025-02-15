@@ -17,6 +17,7 @@ var (
 func ProvideCacheRepository(ctx context.Context) interfaces.CacheRepository {
 	once.Do(func() {
 		cacheClient := caching.NewGoCacheClient()
+		//	cacheClient := caching.NewRedisCacheClient()
 		cacheRepo = caching.NewCachingRepository(ctx, cacheClient)
 	})
 	return cacheRepo

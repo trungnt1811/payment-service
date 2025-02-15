@@ -11,11 +11,8 @@ import (
 
 	app "github.com/genefriendway/onchain-handler/cmd/app"
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/constants"
 	_ "github.com/genefriendway/onchain-handler/docs"
 	"github.com/genefriendway/onchain-handler/infra/database"
-	"github.com/genefriendway/onchain-handler/infra/queue"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/migrations"
 	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
@@ -32,8 +29,8 @@ func main() {
 	config := conf.GetConfiguration()
 
 	// Initialize database connection
-	pgsql := database.NewPostgreSQL(config)
-	db := pgsql.Connect()
+	pgsqlClient := database.NewPostgreSQLClient(&config.Database)
+	db := pgsqlClient.Connect()
 	if err := migrations.RunMigrations(db); err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to migrate database: %v", err)
 	}
@@ -54,14 +51,13 @@ func main() {
 	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
 	paymentStatisticsUCase := wire.InitializePaymentStatisticsUCase(db)
 
-	// Initialize payment order queue
-	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrders)
-
-	// Run the application worker
-	app.RunWorker(
-		ctx, db, config, paymentOrderQueue, cacheRepository,
-		blockstateUcase, paymentEventHistoryUCase, paymentOrderUCase, tokenTransferUCase, paymentWalletUCase, paymentStatisticsUCase,
-	)
+	if config.WorkerEnabled {
+		// Run the application workers
+		app.RunWorkers(
+			ctx, db, config, cacheRepository,
+			blockstateUcase, paymentEventHistoryUCase, paymentOrderUCase, tokenTransferUCase, paymentWalletUCase, paymentStatisticsUCase,
+		)
+	}
 
 	// Run the application server
 	app.RunServer(
@@ -117,16 +113,4 @@ func waitForShutdownSignal(cancel context.CancelFunc) {
 	<-sigC
 	pkglogger.GetLogger().Debug("Shutting down gracefully...")
 	cancel()
-}
-
-// initializePaymentWallets initializes the payment wallets
-func initializePaymentOrderQueue(
-	ctx context.Context,
-	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
-) *queue.Queue[dto.PaymentOrderDTO] {
-	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, loader)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Create payment order queue error: %v", err)
-	}
-	return paymentOrderQueue
 }

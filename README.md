@@ -50,6 +50,7 @@ The following environment variables are required for the application to run. Set
 | `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`.                       | `debug`               |
 | `APP_NAME`              | Application name.                                                      | `onchain-handler`     |
 | `APP_PORT`              | Port to run the application.                                           | `8080`                |
+| `WORKER_ENABLED`        | Enables or disables the workers and blockchain listeners. `true` to enable, `false` to disable.                  | `true`                                                                 |
 
 ### Database Configuration
 | Variable                | Description                                                            | Default               |

@@ -7,10 +7,11 @@ import (
 	"sync"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
-type Queue[T comparable] struct {
+type queue[T comparable] struct {
 	ctx     context.Context
 	mu      sync.Mutex
 	items   []T
@@ -20,8 +21,8 @@ type Queue[T comparable] struct {
 }
 
 // NewQueue creates a new queue with an initial load of items.
-func NewQueue[T comparable](ctx context.Context, limit int, loader func(ctx context.Context, limit, offset int) ([]T, error)) (*Queue[T], error) {
-	q := &Queue[T]{
+func NewQueue[T comparable](ctx context.Context, limit int, loader func(ctx context.Context, limit, offset int) ([]T, error)) (interfaces.Queue[T], error) {
+	q := queue[T]{
 		ctx:     ctx,
 		items:   make([]T, 0, limit),
 		itemSet: make(map[T]struct{}),
@@ -32,11 +33,11 @@ func NewQueue[T comparable](ctx context.Context, limit int, loader func(ctx cont
 	if err := q.loadInitialItems(); err != nil {
 		return nil, err
 	}
-	return q, nil
+	return &q, nil
 }
 
 // loadInitialItems populates the queue with the first set of items.
-func (q *Queue[T]) loadInitialItems() error {
+func (q *queue[T]) loadInitialItems() error {
 	items, err := q.loader(q.ctx, q.limit, 0)
 	if err != nil {
 		return fmt.Errorf("failed to load initial items: %w", err)
@@ -52,20 +53,8 @@ func (q *Queue[T]) loadInitialItems() error {
 	return nil
 }
 
-// Check item is in the queue
-func (q *Queue[T]) Contains(item T) bool {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	if _, exists := q.itemSet[item]; exists {
-		return true
-	}
-
-	return false
-}
-
 // Enqueue adds a new item, ensuring no duplicates and enforcing the limit.
-func (q *Queue[T]) Enqueue(item T) error {
+func (q *queue[T]) Enqueue(item T) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -95,7 +84,7 @@ func isNilable(item interface{}) bool {
 }
 
 // Dequeue removes the first item that matches the condition.
-func (q *Queue[T]) Dequeue(condition func(T) bool) error {
+func (q *queue[T]) Dequeue(condition func(T) bool) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -118,7 +107,7 @@ func (q *Queue[T]) Dequeue(condition func(T) bool) error {
 }
 
 // FillQueue loads more items to fill up to the limit.
-func (q *Queue[T]) FillQueue() error {
+func (q *queue[T]) FillQueue() error {
 	q.mu.Lock()
 
 	// If current items exceed the MaxQueueLimit, log a message and return early
@@ -158,7 +147,7 @@ func (q *Queue[T]) FillQueue() error {
 	return nil
 }
 
-func (q *Queue[T]) scaleQueue() {
+func (q *queue[T]) scaleQueue() {
 	if q.limit >= constants.MaxQueueLimit {
 		q.limit = constants.MaxQueueLimit
 		logger.GetLogger().Infof("Reached max queue limit: %d", q.limit)
@@ -175,7 +164,7 @@ func (q *Queue[T]) scaleQueue() {
 }
 
 // maybeShrink reduces the queue's size if it's consistently underutilized.
-func (q *Queue[T]) maybeShrink() {
+func (q *queue[T]) maybeShrink() {
 	if len(q.items) >= int(float64(q.limit)*constants.ShrinkThreshold) {
 		return
 	}
@@ -192,7 +181,7 @@ func (q *Queue[T]) maybeShrink() {
 }
 
 // GetItems returns a copy of all current items.
-func (q *Queue[T]) GetItems() []T {
+func (q *queue[T]) GetItems() []T {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -203,7 +192,7 @@ func (q *Queue[T]) GetItems() []T {
 }
 
 // ReplaceItemAtIndex replaces an item at a specific index with a new item.
-func (q *Queue[T]) ReplaceItemAtIndex(index int, newItem T) error {
+func (q *queue[T]) ReplaceItemAtIndex(index int, newItem T) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -221,30 +210,4 @@ func (q *Queue[T]) ReplaceItemAtIndex(index int, newItem T) error {
 	q.itemSet[newItem] = struct{}{}
 
 	return nil
-}
-
-// GetSmallestValue finds the smallest value according to a comparator function.
-func (q *Queue[T]) GetSmallestValue(compare func(T, T) bool) (T, error) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	if len(q.items) == 0 {
-		var zero T
-		return zero, fmt.Errorf("queue is empty")
-	}
-
-	smallest := q.items[0]
-	for _, item := range q.items[1:] {
-		if compare(item, smallest) {
-			smallest = item
-		}
-	}
-
-	return smallest, nil
-}
-
-func (q *Queue[T]) GetLimit() int {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	return q.limit
 }

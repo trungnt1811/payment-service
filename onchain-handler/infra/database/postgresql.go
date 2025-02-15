@@ -14,11 +14,11 @@ import (
 
 // postgreSQL implements SQLDBConnection interface
 type postgreSQL struct {
-	config *conf.Configuration
+	config *conf.DatabaseConfiguration
 }
 
-// NewPostgreSQL creates a new PostgreSQL instance
-func NewPostgreSQL(config *conf.Configuration) interfaces.SQLDBConnection {
+// NewPostgreSQLClient creates a new sql client instance
+func NewPostgreSQLClient(config *conf.DatabaseConfiguration) interfaces.SQLClient {
 	return &postgreSQL{
 		config: config,
 	}
@@ -29,14 +29,14 @@ func (pgsql *postgreSQL) getDBConnectionURL() string {
 
 	// Determine SSL mode based on the configuration
 	sslMode := "disable"
-	if config.Database.SSLMode {
+	if config.SSLMode {
 		sslMode = "enable"
 	}
 
 	// Format for PostgreSQL connection URL
 	return fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		config.Database.DbHost, config.Database.DbPort,
-		config.Database.DbUser, config.Database.DbName, config.Database.DbPassword, sslMode)
+		config.DbHost, config.DbPort,
+		config.DbUser, config.DbName, config.DbPassword, sslMode)
 }
 
 func (pgsql *postgreSQL) Connect() *gorm.DB {

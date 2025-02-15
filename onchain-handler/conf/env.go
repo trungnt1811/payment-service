@@ -72,17 +72,19 @@ type Configuration struct {
 	AppPort        uint32                      `mapstructure:"APP_PORT"`
 	Env            string                      `mapstructure:"ENV"`
 	LogLevel       string                      `mapstructure:"LOG_LEVEL"`
+	WorkerEnabled  bool                        `mapstructure:"WORKER_ENABLED"`
 }
 
 var configuration Configuration
 
 var defaultConfigurations = map[string]any{
 	"REDIS_ADDRESS":              "localhost:6379",
-	"REDIS_TTL":                  "60",
+	"REDIS_TTL":                  "60m",
 	"APP_PORT":                   "8080",
 	"ENV_FILE":                   ".env",
 	"ENV":                        "DEV",
 	"LOG_LEVEL":                  "debug",
+	"WORKER_ENABLED":             true,
 	"DB_USER":                    "",
 	"DB_PASSWORD":                "",
 	"DB_HOST":                    "",
@@ -172,8 +174,8 @@ func GetConfiguration() *Configuration {
 	return &configuration
 }
 
-func GetRedisConnectionURL() string {
-	return configuration.Redis.RedisAddress
+func GetRedisConfiguration() *RedisConfiguration {
+	return &configuration.Redis
 }
 
 func (config *Configuration) GetExpiredOrderTime() time.Duration {

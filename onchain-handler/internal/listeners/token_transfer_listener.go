@@ -14,7 +14,6 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/infra/queue"
 	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
@@ -37,7 +36,7 @@ type tokenTransferListener struct {
 	tokenContractAddress     string
 	tokenDecimals            uint8
 	parsedABI                abi.ABI
-	queue                    *queue.Queue[dto.PaymentOrderDTO]
+	queue                    infrainterfaces.Queue[dto.PaymentOrderDTO]
 	mu                       sync.Mutex // Mutex for ticker synchronization
 }
 
@@ -53,7 +52,7 @@ func NewTokenTransferListener(
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	network constants.NetworkType,
 	tokenContractAddress string,
-	orderQueue *queue.Queue[dto.PaymentOrderDTO],
+	orderQueue infrainterfaces.Queue[dto.PaymentOrderDTO],
 ) (interfaces.EventListener, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {

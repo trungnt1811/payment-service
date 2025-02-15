@@ -101,20 +101,6 @@ func TestEnqueue(t *testing.T) {
 	})
 }
 
-func TestContains(t *testing.T) {
-	t.Run("Item Containment", func(t *testing.T) {
-		loader := func(ctx context.Context, limit, offset int) ([]int, error) {
-			return []int{1, 2, 3}, nil
-		}
-
-		q, err := NewQueue(context.Background(), 10, loader)
-		require.NoError(t, err)
-
-		require.True(t, q.Contains(2))
-		require.False(t, q.Contains(4))
-	})
-}
-
 func TestDequeue(t *testing.T) {
 	t.Run("Dequeue Item", func(t *testing.T) {
 		loader := func(ctx context.Context, limit, offset int) ([]int, error) {
@@ -160,21 +146,6 @@ func TestFillQueue(t *testing.T) {
 	})
 }
 
-func TestGetSmallestValue(t *testing.T) {
-	t.Run("Retrieve Smallest Value", func(t *testing.T) {
-		loader := func(ctx context.Context, limit, offset int) ([]int, error) {
-			return []int{3, 1, 2}, nil
-		}
-
-		q, err := NewQueue(context.Background(), 10, loader)
-		require.NoError(t, err)
-
-		smallest, err := q.GetSmallestValue(func(a, b int) bool { return a < b })
-		require.NoError(t, err)
-		require.Equal(t, 1, smallest)
-	})
-}
-
 func TestGetItems(t *testing.T) {
 	t.Run("Retrieve All Items", func(t *testing.T) {
 		loader := func(ctx context.Context, limit, offset int) ([]int, error) {
@@ -190,19 +161,6 @@ func TestGetItems(t *testing.T) {
 
 		items[0] = 100
 		require.Equal(t, []int{1, 2, 3, 4, 5}, q.GetItems())
-	})
-}
-
-func TestGetLimit(t *testing.T) {
-	t.Run("Retrieve Queue Limit", func(t *testing.T) {
-		loader := func(ctx context.Context, limit, offset int) ([]int, error) {
-			return []int{1, 2, 3}, nil
-		}
-
-		q, err := NewQueue(context.Background(), 10, loader)
-		require.NoError(t, err)
-
-		require.Equal(t, 10, q.GetLimit())
 	})
 }
 

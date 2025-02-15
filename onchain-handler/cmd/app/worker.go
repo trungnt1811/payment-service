@@ -19,11 +19,10 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/providers"
 )
 
-func RunWorker(
+func RunWorkers(
 	ctx context.Context,
 	db *gorm.DB,
 	config *conf.Configuration,
-	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
 	cacheRepository infrainterfaces.CacheRepository,
 	blockstateUcase interfaces.BlockStateUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
@@ -32,6 +31,9 @@ func RunWorker(
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 ) {
+	// Initialize payment order queue
+	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrders)
+
 	// Initialize AVAX C-Chain client
 	avaxRpcUrls, err := conf.GetRpcUrls(constants.AvaxCChain)
 	if err != nil {
@@ -135,6 +137,18 @@ func RunWorker(
 	)
 }
 
+// initializePaymentWallets initializes the payment wallets
+func initializePaymentOrderQueue(
+	ctx context.Context,
+	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
+) infrainterfaces.Queue[dto.PaymentOrderDTO] {
+	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, loader)
+	if err != nil {
+		pkglogger.GetLogger().Fatalf("Create payment order queue error: %v", err)
+	}
+	return paymentOrderQueue
+}
+
 // persistTokenDecimalsToCache fetches token decimals from the blockchain and persists them to the cache
 func persistTokenDecimalsToCache(
 	ctx context.Context,
@@ -221,7 +235,7 @@ func startEventListeners(
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
-	paymentOrderQueue *queue.Queue[dto.PaymentOrderDTO],
+	paymentOrderQueue infrainterfaces.Queue[dto.PaymentOrderDTO],
 ) {
 	baseEventListener := listeners.NewBaseEventListener(
 		ethClient,
