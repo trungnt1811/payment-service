@@ -24,13 +24,13 @@ const (
 )
 
 type paymentOrderCache struct {
-	paymentOrderRepository *PaymentOrderRepository
+	paymentOrderRepository interfaces.PaymentOrderRepository
 	cache                  infrainterfaces.CacheRepository
 	config                 *conf.Configuration
 }
 
 func NewPaymentOrderCacheRepository(
-	repo *PaymentOrderRepository,
+	repo interfaces.PaymentOrderRepository,
 	cache infrainterfaces.CacheRepository,
 	config *conf.Configuration,
 ) interfaces.PaymentOrderRepository {

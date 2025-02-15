@@ -15,11 +15,12 @@ const (
 )
 
 type networkMetadataCache struct {
-	networkMetadataRepository *NetworkMetadataRepository
+	networkMetadataRepository interfaces.NetworkMetadataRepository
 	cache                     infrainterfaces.CacheRepository
 }
 
-func NewNetworkMetadataCacheRepository(repo *NetworkMetadataRepository,
+func NewNetworkMetadataCacheRepository(
+	repo interfaces.NetworkMetadataRepository,
 	cache infrainterfaces.CacheRepository,
 ) interfaces.NetworkMetadataRepository {
 	return &networkMetadataCache{

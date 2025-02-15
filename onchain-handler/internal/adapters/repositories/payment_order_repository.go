@@ -12,22 +12,23 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
+	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
-type PaymentOrderRepository struct {
+type paymentOrderRepository struct {
 	db     *gorm.DB
 	config *conf.Configuration
 }
 
-func NewPaymentOrderRepository(db *gorm.DB, config *conf.Configuration) *PaymentOrderRepository {
-	return &PaymentOrderRepository{
+func NewPaymentOrderRepository(db *gorm.DB, config *conf.Configuration) interfaces.PaymentOrderRepository {
+	return &paymentOrderRepository{
 		db:     db,
 		config: config,
 	}
 }
 
-func (r *PaymentOrderRepository) CreatePaymentOrders(
+func (r *paymentOrderRepository) CreatePaymentOrders(
 	tx *gorm.DB, ctx context.Context, orders []entities.PaymentOrder, vendorID string,
 ) ([]entities.PaymentOrder, error) {
 	// Validate input
@@ -52,7 +53,7 @@ func (r *PaymentOrderRepository) CreatePaymentOrders(
 }
 
 // GetActivePaymentOrders retrieves active orders that have not expired or are in "Processing" status.
-func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]entities.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]entities.PaymentOrder, error) {
 	var orders []entities.PaymentOrder
 	currentTime := time.Now().UTC() // Get the current UTC time
 
@@ -80,7 +81,7 @@ func (r *PaymentOrderRepository) GetActivePaymentOrders(ctx context.Context, lim
 	return orders, nil
 }
 
-func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *entities.PaymentOrder) error {
+func (r *paymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *entities.PaymentOrder) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Construct the updates map, excluding block_height and upcoming_block_height if they are 0
 		updates := map[string]interface{}{
@@ -143,7 +144,7 @@ func (r *PaymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *
 }
 
 // UpdateOrderNetwork updates the network and block height of a payment order by its request ID.
-func (r *PaymentOrderRepository) UpdateOrderNetwork(
+func (r *paymentOrderRepository) UpdateOrderNetwork(
 	ctx context.Context, requestID, network string, blockHeight uint64,
 ) error {
 	// Prepare the update map
@@ -172,7 +173,7 @@ func (r *PaymentOrderRepository) UpdateOrderNetwork(
 }
 
 // BatchUpdateOrdersToExpired updates the status of multiple payment orders to "Expired" by their OrderIDs.
-func (r *PaymentOrderRepository) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
+func (r *paymentOrderRepository) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
 	// Build the SQL CASE statement for updating different statuses based on order IDs
 	caseSQL := constants.SqlCase
 	for _, orderID := range orderIDs {
@@ -198,7 +199,7 @@ func (r *PaymentOrderRepository) BatchUpdateOrdersToExpired(ctx context.Context,
 }
 
 // BatchUpdateOrderBlockHeights updates the block heights of multiple payment orders by their OrderIDs.
-func (r *PaymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error {
+func (r *paymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error {
 	// Check if the lengths of orderIDs and blockHeights match
 	if len(orderIDs) != len(blockHeights) {
 		return fmt.Errorf("the number of order IDs and block heights must be the same")
@@ -229,7 +230,7 @@ func (r *PaymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Contex
 }
 
 // GetExpiredPaymentOrders retrieves orders for a specific network that are expired within a day.
-func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
 	var orders []entities.PaymentOrder
 
 	orderCutoffTime := r.config.GetOrderCutoffTime()
@@ -254,7 +255,7 @@ func (r *PaymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, ne
 
 // UpdateExpiredOrdersToFailed updates all expired orders to "Failed" and sets their associated wallets' "in_use" status to false.
 // It returns the IDs of the updated orders.
-func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
+func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
 	orderCutoffTime := r.config.GetOrderCutoffTime()
 	cutoffTime := time.Now().UTC().Add(-orderCutoffTime)
 
@@ -315,7 +316,7 @@ func (r *PaymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 }
 
 // UpdateActiveOrdersToExpired updates all active orders to "Expired" and returns their IDs.
-func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
+func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
 	orderCutoffTime := r.config.GetOrderCutoffTime()
 
 	currentTime := time.Now().UTC()
@@ -355,7 +356,7 @@ func (r *PaymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context
 	return updatedIDs, nil
 }
 
-func (r *PaymentOrderRepository) GetPaymentOrders(
+func (r *paymentOrderRepository) GetPaymentOrders(
 	ctx context.Context,
 	limit, offset int,
 	vendorID string,
@@ -422,7 +423,7 @@ func (r *PaymentOrderRepository) GetPaymentOrders(
 }
 
 // GetPaymentOrdersByID retrieves a single payment order by its ID.
-func (r *PaymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uint64) (*entities.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uint64) (*entities.PaymentOrder, error) {
 	var order entities.PaymentOrder
 
 	// Execute query to find the payment order by ID with preloaded PaymentEventHistories
@@ -440,7 +441,7 @@ func (r *PaymentOrderRepository) GetPaymentOrderByID(ctx context.Context, id uin
 }
 
 // GetPaymentOrdersByIDs retrieves multiple payment orders by their IDs.
-func (r *PaymentOrderRepository) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]entities.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]entities.PaymentOrder, error) {
 	var orders []entities.PaymentOrder
 
 	if len(ids) == 0 {
@@ -460,7 +461,7 @@ func (r *PaymentOrderRepository) GetPaymentOrdersByIDs(ctx context.Context, ids 
 }
 
 // GetPaymentOrderByRequestID retrieves a single payment order by its request ID.
-func (r *PaymentOrderRepository) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*entities.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*entities.PaymentOrder, error) {
 	var order entities.PaymentOrder
 
 	// Execute query to find the payment order by request ID with preloaded PaymentEventHistories
@@ -478,7 +479,7 @@ func (r *PaymentOrderRepository) GetPaymentOrderByRequestID(ctx context.Context,
 }
 
 // GetPaymentOrderIDByRequestID retrieves the ID of a payment order by its request ID.
-func (r *PaymentOrderRepository) GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error) {
+func (r *paymentOrderRepository) GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error) {
 	var orderID uint64
 
 	// Query to fetch only the ID

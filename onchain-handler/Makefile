@@ -33,6 +33,3 @@ lint:
 
 swagger:
 	swag init -g cmd/main.go
-
-wiring: 
-	wire ./wire

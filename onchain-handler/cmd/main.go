@@ -42,27 +42,30 @@ func main() {
 	cacheRepository := providers.ProvideCacheRepository(ctx)
 
 	// Initialize use cases
-	blockstateUcase := wire.InitializeBlockStateUCase(db)
-	paymentEventHistoryUCase := wire.InitializePaymentEventHistoryUCase(db, cacheRepository, config)
-	paymentWalletUCase := wire.InitializePaymentWalletUCase(db, config)
-	userWalletUCase := wire.InitializeUserWalletUCase(db, config)
-	paymentOrderUCase := wire.InitializePaymentOrderUCase(db, cacheRepository, config)
-	tokenTransferUCase := wire.InitializeTokenTransferUCase(db, config)
-	networkMetadataUCase := wire.InitializeNetworkMetadataUCase(db, cacheRepository)
-	paymentStatisticsUCase := wire.InitializePaymentStatisticsUCase(db)
+	ucases := wire.InitializeUseCases(db, config, cacheRepository)
 
 	if config.WorkerEnabled {
 		// Run the application workers
 		app.RunWorkers(
 			ctx, db, config, cacheRepository,
-			blockstateUcase, paymentEventHistoryUCase, paymentOrderUCase, tokenTransferUCase, paymentWalletUCase, paymentStatisticsUCase,
+			ucases.BlockStateUCase,
+			ucases.PaymentEventHistoryUCase,
+			ucases.PaymentOrderUCase,
+			ucases.TokenTransferUCase,
+			ucases.PaymentWalletUCase,
+			ucases.PaymentStatisticsUCase,
 		)
 	}
 
 	// Run the application server
 	app.RunServer(
 		ctx, db, config, cacheRepository,
-		paymentWalletUCase, userWalletUCase, paymentOrderUCase, tokenTransferUCase, networkMetadataUCase, paymentStatisticsUCase,
+		ucases.PaymentWalletUCase,
+		ucases.UserWalletUCase,
+		ucases.PaymentOrderUCase,
+		ucases.TokenTransferUCase,
+		ucases.NetworkMetadataUCase,
+		ucases.PaymentStatisticsUCase,
 	)
 
 	// Handle shutdown signals
