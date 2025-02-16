@@ -51,6 +51,7 @@ The following environment variables are required for the application to run. Set
 | `APP_NAME`              | Application name.                                                      | `onchain-handler`     |
 | `APP_PORT`              | Port to run the application.                                           | `8080`                |
 | `WORKER_ENABLED`        | Enables or disables the workers and blockchain listeners. `true` to enable, `false` to disable.                  | `true`                                                                 |
+| `CACHE_TYPE`            | Defines the caching mechanism to be used. Options: `redis` and `in-memory`                     |`in-memory`               |
 
 ### Database Configuration
 | Variable                | Description                                                            | Default               |

@@ -72,6 +72,7 @@ type Configuration struct {
 	AppPort        uint32                      `mapstructure:"APP_PORT"`
 	Env            string                      `mapstructure:"ENV"`
 	LogLevel       string                      `mapstructure:"LOG_LEVEL"`
+	CacheType      string                      `mapstructure:"CACHE_TYPE"`
 	WorkerEnabled  bool                        `mapstructure:"WORKER_ENABLED"`
 }
 
@@ -84,6 +85,7 @@ var defaultConfigurations = map[string]any{
 	"ENV_FILE":                   ".env",
 	"ENV":                        "DEV",
 	"LOG_LEVEL":                  "debug",
+	"CACHE_TYPE":                 "in-memory",
 	"WORKER_ENABLED":             true,
 	"DB_USER":                    "",
 	"DB_PASSWORD":                "",
@@ -176,6 +178,10 @@ func GetConfiguration() *Configuration {
 
 func GetRedisConfiguration() *RedisConfiguration {
 	return &configuration.Redis
+}
+
+func GetCacheType() string {
+	return configuration.CacheType
 }
 
 func (config *Configuration) GetExpiredOrderTime() time.Duration {
