@@ -52,6 +52,8 @@ The following environment variables are required for the application to run. Set
 | `APP_PORT`              | Port to run the application.                                           | `8080`                |
 | `WORKER_ENABLED`        | Enables or disables the workers and blockchain listeners. `true` to enable, `false` to disable.                  | `true`                                                                 |
 | `CACHE_TYPE`            | Defines the caching mechanism to be used. Options: `redis` and `in-memory`                     |`in-memory`               |
+| `REDIS_ADDRESS`         | The address of the Redis server. Required if `CACHE_TYPE=redis`.       | `localhost:6379`      |
+| `REDIS_TTL`             | Time-to-live (TTL) for cache entries when using Redis.                 | `60m`                 |
 
 ### Database Configuration
 | Variable                | Description                                                            | Default               |
