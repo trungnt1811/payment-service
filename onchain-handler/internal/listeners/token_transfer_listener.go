@@ -25,7 +25,6 @@ import (
 // tokenTransferListener listens for token transfers and processes them using a queue of payment orders.
 type tokenTransferListener struct {
 	ctx                      context.Context
-	config                   *conf.Configuration
 	cacheRepo                infrainterfaces.CacheRepository
 	baseEventListener        interfaces.BaseEventListener
 	paymentOrderUCase        interfaces.PaymentOrderUCase
@@ -43,7 +42,6 @@ type tokenTransferListener struct {
 // NewTokenTransferListener creates a new tokenTransferListener with a payment order queue.
 func NewTokenTransferListener(
 	ctx context.Context,
-	config *conf.Configuration,
 	cacheRepo infrainterfaces.CacheRepository,
 	baseEventListener interfaces.BaseEventListener,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
@@ -66,7 +64,6 @@ func NewTokenTransferListener(
 
 	listener := &tokenTransferListener{
 		ctx:                      ctx,
-		config:                   config,
 		cacheRepo:                cacheRepo,
 		baseEventListener:        baseEventListener,
 		paymentOrderUCase:        paymentOrderUCase,
@@ -112,7 +109,7 @@ func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration
 
 func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog types.Log) (interface{}, error) {
 	// Retrieve the token symbol for the event's contract address
-	tokenSymbol, err := listener.config.GetTokenSymbol(vLog.Address.Hex())
+	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
 	}
@@ -173,7 +170,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	listener.dequeueOrders()
 
 	// Retrieve the token symbol for the event's contract address
-	tokenSymbol, err := listener.config.GetTokenSymbol(vLog.Address.Hex())
+	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
 	}
@@ -291,7 +288,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(
-		orderAmount, listener.config.GetPaymentCovering(), listener.tokenDecimals,
+		orderAmount, conf.GetPaymentCovering(), listener.tokenDecimals,
 	)
 
 	// Get newest order state in cache

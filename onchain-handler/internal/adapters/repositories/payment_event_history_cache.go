@@ -16,18 +16,15 @@ import (
 type paymentEventHistoryCache struct {
 	paymentEventHistoryRepository *PaymentEventHistoryRepository
 	cache                         infrainterfaces.CacheRepository
-	config                        *conf.Configuration
 }
 
 func NewPaymentEventHistoryCacheRepository(
 	repo *PaymentEventHistoryRepository,
 	cache infrainterfaces.CacheRepository,
-	config *conf.Configuration,
 ) interfaces.PaymentEventHistoryRepository {
 	return &paymentEventHistoryCache{
 		paymentEventHistoryRepository: repo,
 		cache:                         cache,
-		config:                        config,
 	}
 }
 
@@ -62,7 +59,7 @@ func (c *paymentEventHistoryCache) CreatePaymentEventHistory(
 			cachedOrder.PaymentEventHistories = append(cachedOrder.PaymentEventHistories, events...)
 
 			// Save the updated cached order back to the cache
-			if err := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); err != nil {
+			if err := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); err != nil {
 				logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, err)
 			}
 		} else {

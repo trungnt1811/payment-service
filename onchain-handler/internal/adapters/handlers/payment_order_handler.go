@@ -22,16 +22,14 @@ import (
 )
 
 type paymentOrderHandler struct {
-	ucase  interfaces.PaymentOrderUCase
-	config *conf.Configuration
+	ucase interfaces.PaymentOrderUCase
 }
 
 func NewPaymentOrderHandler(
-	ucase interfaces.PaymentOrderUCase, config *conf.Configuration,
+	ucase interfaces.PaymentOrderUCase,
 ) *paymentOrderHandler {
 	return &paymentOrderHandler{
-		ucase:  ucase,
-		config: config,
+		ucase: ucase,
 	}
 }
 
@@ -76,7 +74,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	}
 
 	// Call the use case to create the payment orders
-	response, err := h.ucase.CreatePaymentOrders(ctx, req, vendorID, h.config.GetExpiredOrderTime())
+	response, err := h.ucase.CreatePaymentOrders(ctx, req, vendorID, conf.GetExpiredOrderTime())
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to create payment orders: %v", err)
 		if postgresql.IsUniqueViolation(err) {

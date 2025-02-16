@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
@@ -15,16 +14,13 @@ import (
 
 type tokenTransferUCase struct {
 	tokenTransferRepository interfaces.TokenTransferRepository
-	config                  *conf.Configuration
 }
 
 func NewTokenTransferUCase(
 	tokenTransferRepository interfaces.TokenTransferRepository,
-	config *conf.Configuration,
 ) interfaces.TokenTransferUCase {
 	return &tokenTransferUCase{
 		tokenTransferRepository: tokenTransferRepository,
-		config:                  config,
 	}
 }
 

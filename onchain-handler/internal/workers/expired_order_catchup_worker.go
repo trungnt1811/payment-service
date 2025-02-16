@@ -26,7 +26,6 @@ import (
 
 // expiredOrderCatchupWorker is a worker that processes expired orders.
 type expiredOrderCatchupWorker struct {
-	config                   *conf.Configuration
 	paymentOrderUCase        interfaces.PaymentOrderUCase
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
 	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
@@ -43,7 +42,6 @@ type expiredOrderCatchupWorker struct {
 }
 
 func NewExpiredOrderCatchupWorker(
-	config *conf.Configuration,
 	paymentOrderUCase interfaces.PaymentOrderUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
@@ -66,7 +64,6 @@ func NewExpiredOrderCatchupWorker(
 	}
 
 	return &expiredOrderCatchupWorker{
-		config:                   config,
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
 		paymentStatisticsUCase:   paymentStatisticsUCase,
@@ -237,7 +234,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 ) error {
 	logger.GetLogger().Infof("Processing log entry on network %s from address: %s", w.network.String(), vLog.Address.Hex())
 
-	tokenSymbol, err := w.config.GetTokenSymbol(vLog.Address.Hex())
+	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
 		return fmt.Errorf("failed to get token symbol from token contract address on network %s: %w", w.network.String(), err)
 	}
@@ -373,7 +370,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
-	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(orderAmount, w.config.GetPaymentCovering(), w.tokenDecimals)
+	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(orderAmount, conf.GetPaymentCovering(), w.tokenDecimals)
 
 	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, w.tokenDecimals)
 	if err != nil {

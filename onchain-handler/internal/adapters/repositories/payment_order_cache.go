@@ -26,18 +26,15 @@ const (
 type paymentOrderCache struct {
 	paymentOrderRepository interfaces.PaymentOrderRepository
 	cache                  infrainterfaces.CacheRepository
-	config                 *conf.Configuration
 }
 
 func NewPaymentOrderCacheRepository(
 	repo interfaces.PaymentOrderRepository,
 	cache infrainterfaces.CacheRepository,
-	config *conf.Configuration,
 ) interfaces.PaymentOrderRepository {
 	return &paymentOrderCache{
 		paymentOrderRepository: repo,
 		cache:                  cache,
-		config:                 config,
 	}
 }
 
@@ -67,7 +64,7 @@ func (c *paymentOrderCache) CreatePaymentOrders(
 	var cacheErrors []error
 	for _, order := range createdOrders {
 		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
-		if err := c.cache.SaveItem(cacheKey, order, c.config.GetExpiredOrderTime()); err != nil {
+		if err := c.cache.SaveItem(cacheKey, order, conf.GetExpiredOrderTime()); err != nil {
 			logger.GetLogger().Warnf("Failed to cache payment order ID %d: %v", order.ID, err)
 			cacheErrors = append(cacheErrors, err)
 		}
@@ -141,12 +138,12 @@ func (c *paymentOrderCache) UpdatePaymentOrder(
 		mergePaymentOrderFields(&cachedOrder, order)
 
 		// Save the updated order back into the cache
-		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
 			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", order.ID, saveErr)
 		}
 	} else {
 		// Cache miss: add the updated order directly to the cache
-		if saveErr := c.cache.SaveItem(cacheKey, order, c.config.GetExpiredOrderTime()); saveErr != nil {
+		if saveErr := c.cache.SaveItem(cacheKey, order, conf.GetExpiredOrderTime()); saveErr != nil {
 			logger.GetLogger().Warnf("Failed to cache updated payment order ID %d: %v", order.ID, saveErr)
 		}
 	}
@@ -202,7 +199,7 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 		cachedOrder.BlockHeight = blockHeight
 
 		// Save the updated order back into the cache
-		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
 			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
 		}
 	} else {
@@ -232,7 +229,7 @@ func (c *paymentOrderCache) BatchUpdateOrdersToExpired(
 			cachedOrder.Status = constants.Expired
 
 			// Save the updated order back into the cache
-			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
 				logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
 			}
 		} else {
@@ -270,7 +267,7 @@ func (c *paymentOrderCache) BatchUpdateOrderBlockHeights(ctx context.Context, or
 			cachedOrder.BlockHeight = blockHeights[i]
 
 			// Save the updated order back into the cache
-			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
 				logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
 			}
 		} else {
@@ -331,7 +328,7 @@ func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) ([]
 		if cacheErr == nil {
 			// If found in cache, update the status and save back
 			cachedOrder.Status = constants.Failed
-			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
 				logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", id, saveErr)
 			}
 		} else {
@@ -362,7 +359,7 @@ func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]
 		if cacheErr == nil {
 			// If found in cache, update the status and save back
 			cachedOrder.Status = constants.Expired
-			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, c.config.GetExpiredOrderTime()); saveErr != nil {
+			if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
 				logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", id, saveErr)
 			}
 		} else {
@@ -435,7 +432,7 @@ func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) 
 	}
 
 	// Cache the fetched payment order for future use
-	if cacheErr := c.cache.SaveItem(cacheKey, *order, c.config.GetExpiredOrderTime()); cacheErr != nil {
+	if cacheErr := c.cache.SaveItem(cacheKey, *order, conf.GetExpiredOrderTime()); cacheErr != nil {
 		logger.GetLogger().Warnf("Failed to cache payment order ID %d: %v", id, cacheErr)
 	}
 
@@ -463,7 +460,7 @@ func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uin
 	}
 
 	// Cache the fetched payment orders for future use
-	if cacheErr := c.cache.SaveItem(cacheKey, orders, c.config.GetExpiredOrderTime()); cacheErr != nil {
+	if cacheErr := c.cache.SaveItem(cacheKey, orders, conf.GetExpiredOrderTime()); cacheErr != nil {
 		logger.GetLogger().Warnf("Failed to cache payment orders IDs %v: %v", ids, cacheErr)
 	}
 
@@ -497,7 +494,7 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	// Cache the fetched payment order for future use
-	if cacheErr := c.cache.SaveItem(cacheKey, *order, c.config.GetExpiredOrderTime()); cacheErr != nil {
+	if cacheErr := c.cache.SaveItem(cacheKey, *order, conf.GetExpiredOrderTime()); cacheErr != nil {
 		logger.GetLogger().Warnf("Failed to cache payment order with Request ID %d: %v", requestID, cacheErr)
 	}
 
@@ -525,7 +522,7 @@ func (c *paymentOrderCache) GetPaymentOrderIDByRequestID(ctx context.Context, re
 	}
 
 	// Cache the fetched payment order ID for future use
-	if cacheErr := c.cache.SaveItem(cacheKey, orderID, c.config.GetExpiredOrderTime()); cacheErr != nil {
+	if cacheErr := c.cache.SaveItem(cacheKey, orderID, conf.GetExpiredOrderTime()); cacheErr != nil {
 		logger.GetLogger().Warnf("Failed to cache payment order ID with Request ID %s: %v", requestID, cacheErr)
 	}
 

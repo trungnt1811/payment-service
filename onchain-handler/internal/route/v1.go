@@ -34,7 +34,7 @@ func RegisterRoutes(
 	appRouter.GET("/withdraws", transferHandler.GetWithdrawHistories)
 
 	// SECTION: payment order
-	paymentOrderHandler := handlers.NewPaymentOrderHandler(paymentOrderUCase, config)
+	paymentOrderHandler := handlers.NewPaymentOrderHandler(paymentOrderUCase)
 	appRouter.POST("/payment-orders", middleware.ValidateVendorID(), paymentOrderHandler.CreateOrders)
 	appRouter.GET("/payment-orders", middleware.ValidateVendorID(), paymentOrderHandler.GetPaymentOrders)
 	appRouter.GET("/payment-order/:request_id", paymentOrderHandler.GetPaymentOrderByRequestID)

@@ -27,7 +27,6 @@ type paymentOrderUCase struct {
 	blockStateRepo              interfaces.BlockStateRepository        // Repository to fetch the latest block state
 	paymentStatisticsRepository interfaces.PaymentStatisticsRepository // Repository to interact with payment statistics
 	cacheRepo                   infrainterfaces.CacheRepository        // Cache repository to retrieve and store block information
-	config                      *conf.Configuration
 }
 
 // NewPaymentOrderUCase constructs a new paymentOrderUCase with the provided dependencies.
@@ -38,7 +37,6 @@ func NewPaymentOrderUCase(
 	blockStateRepo interfaces.BlockStateRepository,
 	paymentStatisticsRepository interfaces.PaymentStatisticsRepository,
 	cacheRepo infrainterfaces.CacheRepository,
-	config *conf.Configuration,
 ) interfaces.PaymentOrderUCase {
 	return &paymentOrderUCase{
 		db:                          db,
@@ -47,7 +45,6 @@ func NewPaymentOrderUCase(
 		blockStateRepo:              blockStateRepo,
 		paymentStatisticsRepository: paymentStatisticsRepository,
 		cacheRepo:                   cacheRepo,
-		config:                      config,
 	}
 }
 
@@ -200,10 +197,11 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 		orderDTO.Expired = uint64(order.ExpiredTime.Unix())
 
 		// Get private key from wallet id
+		walletConfig := conf.GetWalletConfiguration()
 		_, privateKey, err := crypto.GenerateAccount(
-			u.config.Wallet.Mnemonic,
-			u.config.Wallet.Passphrase,
-			u.config.Wallet.Salt,
+			walletConfig.Mnemonic,
+			walletConfig.Passphrase,
+			walletConfig.Salt,
 			constants.PaymentWallet,
 			order.Wallet.ID,
 		)

@@ -17,14 +17,12 @@ import (
 )
 
 type paymentOrderRepository struct {
-	db     *gorm.DB
-	config *conf.Configuration
+	db *gorm.DB
 }
 
-func NewPaymentOrderRepository(db *gorm.DB, config *conf.Configuration) interfaces.PaymentOrderRepository {
+func NewPaymentOrderRepository(db *gorm.DB) interfaces.PaymentOrderRepository {
 	return &paymentOrderRepository{
-		db:     db,
-		config: config,
+		db: db,
 	}
 }
 
@@ -233,7 +231,7 @@ func (r *paymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Contex
 func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
 	var orders []entities.PaymentOrder
 
-	orderCutoffTime := r.config.GetOrderCutoffTime()
+	orderCutoffTime := conf.GetOrderCutoffTime()
 
 	// Calculate the time range for the past day
 	now := time.Now().UTC()
@@ -256,7 +254,7 @@ func (r *paymentOrderRepository) GetExpiredPaymentOrders(ctx context.Context, ne
 // UpdateExpiredOrdersToFailed updates all expired orders to "Failed" and sets their associated wallets' "in_use" status to false.
 // It returns the IDs of the updated orders.
 func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error) {
-	orderCutoffTime := r.config.GetOrderCutoffTime()
+	orderCutoffTime := conf.GetOrderCutoffTime()
 	cutoffTime := time.Now().UTC().Add(-orderCutoffTime)
 
 	var allUpdatedIDs []uint64
@@ -317,7 +315,7 @@ func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 
 // UpdateActiveOrdersToExpired updates all active orders to "Expired" and returns their IDs.
 func (r *paymentOrderRepository) UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error) {
-	orderCutoffTime := r.config.GetOrderCutoffTime()
+	orderCutoffTime := conf.GetOrderCutoffTime()
 
 	currentTime := time.Now().UTC()
 	cutoffTime := currentTime.Add(-orderCutoffTime)

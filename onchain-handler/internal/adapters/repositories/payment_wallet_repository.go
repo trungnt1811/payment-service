@@ -19,14 +19,12 @@ import (
 )
 
 type paymentWalletRepository struct {
-	db     *gorm.DB
-	config *conf.Configuration
+	db *gorm.DB
 }
 
-func NewPaymentWalletRepository(db *gorm.DB, config *conf.Configuration) interfaces.PaymentWalletRepository {
+func NewPaymentWalletRepository(db *gorm.DB) interfaces.PaymentWalletRepository {
 	return &paymentWalletRepository{
-		db:     db,
-		config: config,
+		db: db,
 	}
 }
 
@@ -98,10 +96,11 @@ func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*ent
 	// The placeholderWallet.ID now contains the auto-incremented ID from the DB.
 
 	// Generate the real wallet account using the assigned ID.
+	walletConfig := conf.GetWalletConfiguration()
 	account, _, genErr := crypto.GenerateAccount(
-		r.config.Wallet.Mnemonic,
-		r.config.Wallet.Passphrase,
-		r.config.Wallet.Salt,
+		walletConfig.Mnemonic,
+		walletConfig.Passphrase,
+		walletConfig.Salt,
 		constants.PaymentWallet,
 		placeholderWallet.ID,
 	)

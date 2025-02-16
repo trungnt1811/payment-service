@@ -3,7 +3,6 @@ package wire
 import (
 	"gorm.io/gorm"
 
-	"github.com/genefriendway/onchain-handler/conf"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -24,15 +23,15 @@ type repos struct {
 }
 
 // Initialize repositories (only using cache where needed)
-func initializeRepos(db *gorm.DB, config *conf.Configuration, cacheRepo infrainterfaces.CacheRepository) *repos {
+func initializeRepos(db *gorm.DB, cacheRepo infrainterfaces.CacheRepository) *repos {
 	// Return all repositories
 	return &repos{
 		BlockStateRepo:           repositories.NewBlockstateRepository(db),
-		PaymentOrderRepo:         repositories.NewPaymentOrderCacheRepository(repositories.NewPaymentOrderRepository(db, config), cacheRepo, config),
-		PaymentWalletRepo:        repositories.NewPaymentWalletRepository(db, config),
+		PaymentOrderRepo:         repositories.NewPaymentOrderCacheRepository(repositories.NewPaymentOrderRepository(db), cacheRepo),
+		PaymentWalletRepo:        repositories.NewPaymentWalletRepository(db),
 		PaymentWalletBalanceRepo: repositories.NewPaymentWalletBalanceRepository(db),
 		TokenTransferRepo:        repositories.NewTokenTransferRepository(db),
-		PaymentEventHistoryRepo:  repositories.NewPaymentEventHistoryCacheRepository(repositories.NewPaymentEventHistoryRepository(db), cacheRepo, config),
+		PaymentEventHistoryRepo:  repositories.NewPaymentEventHistoryCacheRepository(repositories.NewPaymentEventHistoryRepository(db), cacheRepo),
 		UserWalletRepo:           repositories.NewUserWalletRepository(db),
 		NetworkMetadataRepo:      repositories.NewNetworkMetadataCacheRepository(repositories.NewNetworkMetadataRepository(db), cacheRepo),
 		PaymentStatisticsRepo:    repositories.NewPaymentStatisticsRepository(db),
@@ -52,16 +51,16 @@ type UseCases struct {
 }
 
 // Initialize use cases
-func InitializeUseCases(db *gorm.DB, config *conf.Configuration, cacheRepo infrainterfaces.CacheRepository) *UseCases {
-	repos := initializeRepos(db, config, cacheRepo)
+func InitializeUseCases(db *gorm.DB, cacheRepo infrainterfaces.CacheRepository) *UseCases {
+	repos := initializeRepos(db, cacheRepo)
 
 	// Return all use cases
 	return &UseCases{
 		BlockStateUCase:          ucases.NewBlockStateUCase(repos.BlockStateRepo),
-		PaymentOrderUCase:        ucases.NewPaymentOrderUCase(db, repos.PaymentOrderRepo, repos.PaymentWalletRepo, repos.BlockStateRepo, repos.PaymentStatisticsRepo, cacheRepo, config),
-		TokenTransferUCase:       ucases.NewTokenTransferUCase(repos.TokenTransferRepo, config),
+		PaymentOrderUCase:        ucases.NewPaymentOrderUCase(db, repos.PaymentOrderRepo, repos.PaymentWalletRepo, repos.BlockStateRepo, repos.PaymentStatisticsRepo, cacheRepo),
+		TokenTransferUCase:       ucases.NewTokenTransferUCase(repos.TokenTransferRepo),
 		PaymentEventHistoryUCase: ucases.NewPaymentEventHistoryUCase(repos.PaymentEventHistoryRepo),
-		PaymentWalletUCase:       ucases.NewPaymentWalletUCase(db, repos.PaymentWalletRepo, repos.PaymentWalletBalanceRepo, config),
+		PaymentWalletUCase:       ucases.NewPaymentWalletUCase(db, repos.PaymentWalletRepo, repos.PaymentWalletBalanceRepo),
 		UserWalletUCase:          ucases.NewUserWalletUCase(repos.UserWalletRepo),
 		NetworkMetadataUCase:     ucases.NewNetworkMetadataUCase(repos.NetworkMetadataRepo),
 		PaymentStatisticsUCase:   ucases.NewPaymentStatisticsCase(repos.PaymentStatisticsRepo),

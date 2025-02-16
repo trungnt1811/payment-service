@@ -105,7 +105,6 @@ func RunWorkers(
 	// Start AVAX event listeners
 	startEventListeners(
 		ctx,
-		config,
 		ethClientAvax,
 		constants.AvaxCChain,
 		config.Blockchain.AvaxNetwork.AvaxStartBlockListener,
@@ -122,7 +121,6 @@ func RunWorkers(
 	// Start BSC event listeners
 	startEventListeners(
 		ctx,
-		config,
 		ethClientBsc,
 		constants.Bsc,
 		config.Blockchain.BscNetwork.BscStartBlockListener,
@@ -189,7 +187,6 @@ func startWorkers(
 	go latestBlockWorker.Start(ctx)
 
 	expiredOrderCatchupWorker := workers.NewExpiredOrderCatchupWorker(
-		config,
 		paymentOrderUCase,
 		paymentEventHistoryUCase,
 		paymentStatisticsUCase,
@@ -215,7 +212,7 @@ func startWorkers(
 		config.Wallet.Mnemonic,
 		config.Wallet.Passphrase,
 		config.Wallet.Salt,
-		config.GetGasBufferMultiplier(),
+		conf.GetGasBufferMultiplier(),
 		config.PaymentGateway.WithdrawWorkerInterval,
 	)
 	go paymentWalletWithdrawWorker.Start(ctx)
@@ -224,7 +221,6 @@ func startWorkers(
 // startEventListeners starts the event listeners for the given network
 func startEventListeners(
 	ctx context.Context,
-	config *conf.Configuration,
 	ethClient pkginterfaces.Client,
 	network constants.NetworkType,
 	startBlockListener uint64,
@@ -247,7 +243,6 @@ func startEventListeners(
 
 	tokenTransferListener, err := listeners.NewTokenTransferListener(
 		ctx,
-		config,
 		cacheRepository,
 		baseEventListener,
 		paymentOrderUCase,

@@ -42,7 +42,7 @@ func main() {
 	cacheRepository := providers.ProvideCacheRepository(ctx)
 
 	// Initialize use cases
-	ucases := wire.InitializeUseCases(db, config, cacheRepository)
+	ucases := wire.InitializeUseCases(db, cacheRepository)
 
 	if config.WorkerEnabled {
 		// Run the application workers

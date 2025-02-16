@@ -21,20 +21,17 @@ type paymentWalletUCase struct {
 	db                             *gorm.DB
 	paymentWalletRepository        interfaces.PaymentWalletRepository
 	paymentWalletBalanceRepository interfaces.PaymentWalletBalanceRepository
-	config                         *conf.Configuration
 }
 
 func NewPaymentWalletUCase(
 	db *gorm.DB,
 	paymentWalletRepository interfaces.PaymentWalletRepository,
 	paymentWalletBalanceRepository interfaces.PaymentWalletBalanceRepository,
-	config *conf.Configuration,
 ) interfaces.PaymentWalletUCase {
 	return &paymentWalletUCase{
 		db:                             db,
 		paymentWalletRepository:        paymentWalletRepository,
 		paymentWalletBalanceRepository: paymentWalletBalanceRepository,
-		config:                         config,
 	}
 }
 
@@ -273,7 +270,7 @@ func (u *paymentWalletUCase) SyncWalletBalance(ctx context.Context, walletAddres
 	}
 
 	// Get USDT contract address by network
-	usdtContractAddress, err := u.config.GetTokenAddress(constants.USDT, network.String())
+	usdtContractAddress, err := conf.GetTokenAddress(constants.USDT, network.String())
 	if err != nil {
 		return "", fmt.Errorf("failed to get USDT contract address: %w", err)
 	}
