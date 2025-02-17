@@ -12,22 +12,26 @@ import (
 )
 
 type queue[T comparable] struct {
-	ctx     context.Context
-	mu      sync.Mutex
-	items   []T
-	itemSet map[T]struct{}
-	limit   int
-	loader  func(ctx context.Context, limit, offset int) ([]T, error)
+	ctx         context.Context
+	mu          sync.Mutex
+	items       []T
+	keyIndexMap map[string]int
+	limit       int
+	loader      func(ctx context.Context, limit, offset int) ([]T, error)
+	keyFunc     func(T) string
 }
 
 // NewQueue creates a new queue with an initial load of items.
-func NewQueue[T comparable](ctx context.Context, limit int, loader func(ctx context.Context, limit, offset int) ([]T, error)) (interfaces.Queue[T], error) {
+func NewQueue[T comparable](
+	ctx context.Context, limit int, keyFunc func(T) string, loader func(ctx context.Context, limit, offset int) ([]T, error),
+) (interfaces.Queue[T], error) {
 	q := queue[T]{
-		ctx:     ctx,
-		items:   make([]T, 0, limit),
-		itemSet: make(map[T]struct{}),
-		limit:   limit,
-		loader:  loader,
+		ctx:         ctx,
+		items:       make([]T, 0, limit),
+		keyIndexMap: make(map[string]int),
+		limit:       limit,
+		loader:      loader,
+		keyFunc:     keyFunc,
 	}
 
 	if err := q.loadInitialItems(); err != nil {
@@ -46,9 +50,10 @@ func (q *queue[T]) loadInitialItems() error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	for _, item := range items {
+	for index, item := range items {
+		key := q.keyFunc(item)
 		q.items = append(q.items, item)
-		q.itemSet[item] = struct{}{}
+		q.keyIndexMap[key] = index
 	}
 	return nil
 }
@@ -58,7 +63,8 @@ func (q *queue[T]) Enqueue(item T) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	if _, exists := q.itemSet[item]; exists {
+	key := q.keyFunc(item)
+	if _, exists := q.keyIndexMap[key]; exists {
 		return fmt.Errorf("item %v already exists in the queue", item)
 	}
 
@@ -72,7 +78,7 @@ func (q *queue[T]) Enqueue(item T) error {
 	}
 
 	q.items = append(q.items, item)
-	q.itemSet[item] = struct{}{}
+	q.keyIndexMap[key] = len(q.items) - 1
 	return nil
 }
 
@@ -91,10 +97,19 @@ func (q *queue[T]) Dequeue(condition func(T) bool) error {
 	for i, item := range q.items {
 		if condition(item) {
 			logger.GetLogger().Infof("Dequeueing item: %v", item)
+
 			// Fast removal, maintaining order
 			copy(q.items[i:], q.items[i+1:])
 			q.items = q.items[:len(q.items)-1]
-			delete(q.itemSet, item)
+
+			// Remove from map
+			key := q.keyFunc(item)
+			delete(q.keyIndexMap, key)
+
+			// Update indexes
+			for j := i; j < len(q.items); j++ {
+				q.keyIndexMap[q.keyFunc(q.items[j])] = j
+			}
 
 			// Check if shrinking is necessary
 			if q.limit > constants.MinQueueLimit {
@@ -104,6 +119,15 @@ func (q *queue[T]) Dequeue(condition func(T) bool) error {
 		}
 	}
 	return fmt.Errorf("item not found")
+}
+
+// GetIndex retrieves the index of an item by its key.
+func (q *queue[T]) GetIndex(key string) (int, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	index, exists := q.keyIndexMap[key]
+	return index, exists
 }
 
 // FillQueue loads more items to fill up to the limit.
@@ -139,9 +163,10 @@ func (q *queue[T]) FillQueue() error {
 
 	// Add unique new items
 	for _, item := range newItems {
-		if _, exists := q.itemSet[item]; !exists {
+		key := q.keyFunc(item)
+		if _, exists := q.keyIndexMap[key]; !exists {
 			q.items = append(q.items, item)
-			q.itemSet[item] = struct{}{}
+			q.keyIndexMap[key] = len(q.items) - 1
 		}
 	}
 	return nil
@@ -203,11 +228,30 @@ func (q *queue[T]) ReplaceItemAtIndex(index int, newItem T) error {
 
 	// Replace the item
 	oldItem := q.items[index]
+	oldKey := q.keyFunc(oldItem)
+	newKey := q.keyFunc(newItem)
+
 	q.items[index] = newItem
 
 	// Update itemSet
-	delete(q.itemSet, oldItem)
-	q.itemSet[newItem] = struct{}{}
+	delete(q.keyIndexMap, oldKey)
+	q.keyIndexMap[newKey] = index
 
 	return nil
+}
+
+// GetItemAtIndex retrieves a copy of an item at a specific index.
+func (q *queue[T]) GetItemAtIndex(index int) (T, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	// Check for index bounds
+	if index < 0 || index >= len(q.items) {
+		var zeroValue T // Return zero-value of type T
+		return zeroValue, fmt.Errorf("index out of bounds")
+	}
+
+	// Return a copy of the item to avoid external modifications
+	itemCopy := q.items[index]
+	return itemCopy, nil
 }

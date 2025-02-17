@@ -135,12 +135,18 @@ func RunWorkers(
 	)
 }
 
-// initializePaymentWallets initializes the payment wallets
+// initializePaymentOrderQueue initializes the payment order queue with a unique key function.
 func initializePaymentOrderQueue(
 	ctx context.Context,
 	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
 ) infrainterfaces.Queue[dto.PaymentOrderDTO] {
-	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, loader)
+	// Key function to uniquely identify each PaymentOrderDTO
+	keyFunc := func(order dto.PaymentOrderDTO) string {
+		return order.PaymentAddress + "_" + order.Symbol
+	}
+
+	// Create the queue with key-based indexing
+	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, keyFunc, loader)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Create payment order queue error: %v", err)
 	}
