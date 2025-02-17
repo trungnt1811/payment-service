@@ -325,8 +325,22 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		return nil
 	}
 
+	// Withdraw the minimum of the wallet balance and the token amount
+	withdrawAmount := tokenAmount
+	if walletInfo.TokenAmount.Cmp(tokenAmount) < 0 {
+		withdrawAmount = walletInfo.TokenAmount
+	}
+
+	// Enforce 10 USDT minimum withdrawal threshold
+	minThreshold := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil) // 10^decimals
+	minThreshold.Mul(minThreshold, big.NewInt(10))                                     // Multiply by 10 to get 10 USDT
+	if withdrawAmount.Cmp(minThreshold) < 0 {
+		logger.GetLogger().Infof("Withdrawal amount for wallet %s on network %s is below 1 USDT. Skipping withdrawal.", address, w.network)
+		return nil
+	}
+
 	// Step 3: Calculate required gas
-	requiredGas, err := w.calculateRequiredGas(ctx, address, receivingWalletAddress, tokenAmount)
+	requiredGas, err := w.calculateRequiredGas(ctx, address, receivingWalletAddress, withdrawAmount)
 	if err != nil {
 		return fmt.Errorf("failed to calculate required gas for wallet %s on network %s: %w", address, w.network, err)
 	}
@@ -341,7 +355,10 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		}
 
 		fee := utils.CalculateFee(gasUsed, gasPrice)
-		nativeAmount, _ := utils.ConvertSmallestUnitToFloatToken(requiredGas.String(), constants.NativeTokenDecimalPlaces)
+		nativeAmount, err := utils.ConvertSmallestUnitToFloatToken(requiredGas.String(), constants.NativeTokenDecimalPlaces)
+		if err != nil {
+			return fmt.Errorf("failed to convert token amount for USDT transfer on network %s: %v", w.network, err)
+		}
 
 		payloads = append(payloads, dto.TokenTransferHistoryDTO{
 			Network:         w.network.String(),
@@ -360,20 +377,20 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 
 	// Step 5: Transfer USDT to the receiving wallet
 	txHash, gasUsed, gasPrice, err := w.ethClient.TransferToken(
-		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, tokenAmount,
+		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, withdrawAmount,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to transfer USDT from %s to receiving wallet on network %s: %w", address, w.network, err)
 	}
 
 	fee := utils.CalculateFee(gasUsed, gasPrice)
-	tokenAmountStr, err := utils.ConvertSmallestUnitToFloatToken(tokenAmount.String(), decimals)
+	withdrawAmountStr, err := utils.ConvertSmallestUnitToFloatToken(withdrawAmount.String(), decimals)
 	if err != nil {
-		logger.GetLogger().Errorf("Failed to convert token amount for transfer USDT on network %s: %v", w.network, tokenAmount)
+		logger.GetLogger().Errorf("Failed to convert token amount for transfer USDT on network %s: %v", w.network, withdrawAmount)
 	}
 
 	// Update payment wallet balance
-	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, tokenAmountStr, w.network, constants.USDT); err != nil {
+	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, withdrawAmountStr, w.network, constants.USDT); err != nil {
 		logger.GetLogger().Errorf("Failed to subtract payment wallet balance on network %s: %v", w.network, err)
 		return err
 	}
@@ -383,7 +400,7 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		TransactionHash: txHash.Hex(),
 		FromAddress:     address,
 		ToAddress:       receivingWalletAddress,
-		TokenAmount:     tokenAmountStr,
+		TokenAmount:     withdrawAmountStr,
 		Status:          true,
 		Symbol:          constants.USDT,
 		ErrorMessage:    "",
