@@ -157,10 +157,28 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Upsert balance safely using `ON CONFLICT`
-		err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{"balance": newBalance}),
+		// Lock row to prevent race conditions
+		var exists int
+		err := tx.Raw(`
+			SELECT 1 FROM payment_wallet_balance 
+			WHERE wallet_id = ? AND network = ? AND symbol = ? 
+			FOR UPDATE
+		`, walletID, network, symbol).Scan(&exists).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("failed to lock balance row: %w", err)
+		}
+
+		// Use `ON CONFLICT` to safely insert or update the balance
+		err = tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "wallet_id"},
+				{Name: "network"},
+				{Name: "symbol"},
+			},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"balance": newBalance, // Directly updates balance if the record exists
+			}),
 		}).Create(&entities.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
