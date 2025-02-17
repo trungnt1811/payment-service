@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -156,20 +157,11 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Lock row to prevent race conditions
-		var exists int
-		err := tx.Raw(`
-			SELECT 1 FROM payment_wallet_balance 
-			WHERE wallet_id = ? AND network = ? AND symbol = ? 
-			FOR UPDATE
-		`, walletID, network, symbol).Scan(&exists).Error
-
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("failed to lock balance row: %w", err)
-		}
-
-		// Upsert balance safely using `Save()`
-		err = tx.Save(&entities.PaymentWalletBalance{
+		// Upsert balance safely using `ON CONFLICT`
+		err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{"balance": newBalance}),
+		}).Create(&entities.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,
