@@ -16,7 +16,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/database/postgresql"
-	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -42,9 +42,9 @@ func NewPaymentOrderHandler(
 // @Param Vendor-Id header string true "Vendor ID for authentication"
 // @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC)."
 // @Success 201 {object} map[string]interface{} "Success created: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}"
-// @Failure 400 {object} response.GeneralError "Invalid payload"
-// @Failure 412 {object} response.GeneralError "Duplicate key value"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid payload"
+// @Failure 412 {object} http.GeneralError "Duplicate key value"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders [post]
 func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 	var req []dto.PaymentOrderPayloadDTO
@@ -111,8 +111,8 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 // @Param end_time query int false "End time in UNIX timestamp format to filter (e.g., 1706745600)"
 // @Param time_filter_field query string false "Field to filter time (e.g., created_at or succeeded_at)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of payment order histories"
-// @Failure 400 {object} response.GeneralError "Invalid parameters"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid parameters"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-orders [get]
 func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	// Get the Vendor-Id from the header
@@ -233,9 +233,9 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 // @Produce json
 // @Param request_id path string true "Payment order request ID"
 // @Success 200 {object} dto.PaymentOrderDTOResponse "Successful retrieval of payment order"
-// @Failure 400 {object} response.GeneralError "Invalid request ID"
-// @Failure 404 {object} response.GeneralError "Payment order not found"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid request ID"
+// @Failure 404 {object} http.GeneralError "Payment order not found"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-order/{request_id} [get]
 func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 	// Extract request ID directly as a string
@@ -272,9 +272,9 @@ func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 // @Produce json
 // @Param payload body dto.PaymentOrderNetworkPayloadDTO true "Payment order ID and network (AVAX C-Chain or BSC)."
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true}"
-// @Failure 400 {object} response.GeneralError "Invalid payload"
-// @Failure 400 {object} response.GeneralError "Unsupported network"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid payload"
+// @Failure 400 {object} http.GeneralError "Unsupported network"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-order/network [put]
 func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
 	var req dto.PaymentOrderNetworkPayloadDTO

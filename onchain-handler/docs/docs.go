@@ -41,7 +41,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -82,13 +82,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Unsupported network",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -126,19 +126,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request ID",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "404": {
                         "description": "Payment order not found",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -240,13 +240,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -295,19 +295,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "412": {
                         "description": "Duplicate key value",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -369,13 +369,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -413,13 +413,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid address",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -460,13 +460,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request payload or token symbol",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -518,13 +518,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid network",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -553,7 +553,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -626,13 +626,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -685,13 +685,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -733,13 +733,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -806,13 +806,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid parameters",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.GeneralError"
+                            "$ref": "#/definitions/http.GeneralError"
                         }
                     }
                 }
@@ -1065,7 +1065,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.GeneralError": {
+        "http.GeneralError": {
             "type": "object",
             "properties": {
                 "code": {

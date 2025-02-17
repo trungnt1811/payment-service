@@ -7,7 +7,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -33,8 +33,8 @@ func NewPaymentStatisticsHandler(ucase interfaces.PaymentStatisticsUCase) *payme
 // @Param start_time query int true "Start time in UNIX timestamp format"
 // @Param end_time query int true "End time in UNIX timestamp format"
 // @Success 200 {object} []dto.PaymentStatistics "Payment statistics retrieved successfully"
-// @Failure 400 {object} response.GeneralError "Invalid parameters"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid parameters"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-statistics [get]
 func (h *paymentStatisticsHandler) GetPaymentStatistics(ctx *gin.Context) {
 	// Get the Vendor-Id from the header

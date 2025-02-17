@@ -8,7 +8,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -46,8 +46,8 @@ func NewTokenTransferHandler(
 // @Param to_address query string false "Filter by recipient address"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of token transfer histories"
-// @Failure 400 {object} response.GeneralError "Invalid parameters"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid parameters"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/token-transfers [get]
 func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 	// Parse pagination parameters
@@ -127,8 +127,8 @@ func (h *tokenTransferHandler) GetTokenTransferHistories(ctx *gin.Context) {
 // @Param to_address query string false "Filter by recipient address"
 // @Param sort query string false "Sorting parameter in the format `field_direction` (e.g., id_asc, created_at_desc)"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of withdraw histories"
-// @Failure 400 {object} response.GeneralError "Invalid parameters"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid parameters"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/withdraws [get]
 func (h *tokenTransferHandler) GetWithdrawHistories(ctx *gin.Context) {
 	// Parse pagination parameters

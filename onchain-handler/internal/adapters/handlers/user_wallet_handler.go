@@ -13,7 +13,7 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
-	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -40,8 +40,8 @@ func NewUserWalletHandler(
 // @Produce json
 // @Param user_ids body []string true "List of user IDs"
 // @Success 201 {object} map[string]interface{} "Success created: {\"success\": true, \"data\": []dto.UserWalletPayloadDTO}"
-// @Failure 400 {object} response.GeneralError "Invalid payload"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid payload"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/user-wallets [post]
 func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 	var userIDs []string
@@ -116,8 +116,8 @@ func (h *userWalletHandler) CreateUserWallets(ctx *gin.Context) {
 // @Param size query int false "Page size, default is 10"
 // @Param user_ids query []string false "List of user IDs to filter"
 // @Success 200 {object} dto.PaginationDTOResponse "Successful retrieval of user wallets"
-// @Failure 400 {object} response.GeneralError "Invalid parameters"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid parameters"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/user-wallets [get]
 func (h *userWalletHandler) GetUserWallets(ctx *gin.Context) {
 	// Parse pagination parameters

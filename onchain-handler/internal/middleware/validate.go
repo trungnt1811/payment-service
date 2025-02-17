@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 

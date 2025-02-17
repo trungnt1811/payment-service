@@ -1,6 +1,8 @@
-package response
+package http
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func JSON(c *gin.Context, status int, payload interface{}, isCached ...bool) {
 	var res Response

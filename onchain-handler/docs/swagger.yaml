@@ -160,7 +160,7 @@ definitions:
       symbol:
         type: string
     type: object
-  response.GeneralError:
+  http.GeneralError:
     properties:
       code:
         type: integer
@@ -191,7 +191,7 @@ paths:
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieves all networks metadata.
       tags:
       - metadata
@@ -217,15 +217,15 @@ paths:
         "400":
           description: Invalid request ID
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "404":
           description: Payment order not found
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieve payment order by request ID
       tags:
       - payment-order
@@ -252,11 +252,11 @@ paths:
         "400":
           description: Unsupported network
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Update payment order network
       tags:
       - payment-order
@@ -327,11 +327,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieve payment orders
       tags:
       - payment-order
@@ -365,15 +365,15 @@ paths:
         "400":
           description: Invalid payload
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "412":
           description: Duplicate key value
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Create payment orders
       tags:
       - payment-order
@@ -416,11 +416,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieve payment statistics
       tags:
       - payment-statistics
@@ -445,11 +445,11 @@ paths:
         "400":
           description: Invalid address
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieves a payment wallet by its address.
       tags:
       - payment-wallet
@@ -478,11 +478,11 @@ paths:
         "400":
           description: Invalid request payload or token symbol
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Syncs a payment wallet balance.
       tags:
       - payment-wallet
@@ -517,11 +517,11 @@ paths:
         "400":
           description: Invalid network
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieves all payment wallets with balances.
       tags:
       - payment-wallet
@@ -541,7 +541,7 @@ paths:
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieves the receiving wallet address.
       tags:
       - payment-wallet
@@ -591,11 +591,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Get list of token transfer histories
       tags:
       - token-transfer
@@ -630,11 +630,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Retrieve user wallets
       tags:
       - user-wallet
@@ -662,11 +662,11 @@ paths:
         "400":
           description: Invalid payload
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Create wallets for users
       tags:
       - user-wallet
@@ -712,11 +712,11 @@ paths:
         "400":
           description: Invalid parameters
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.GeneralError'
+            $ref: '#/definitions/http.GeneralError'
       summary: Get list of withdraw histories
       tags:
       - withdraw

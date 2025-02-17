@@ -10,7 +10,7 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	httpresponse "github.com/genefriendway/onchain-handler/pkg/http/response"
+	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -35,8 +35,8 @@ func NewPaymentWalletHandler(ucase interfaces.PaymentWalletUCase, config *conf.C
 // @Produce json
 // @Param address path string true "Address"
 // @Success 200 {object} dto.PaymentWalletBalanceDTO
-// @Failure 400 {object} response.GeneralError "Invalid address"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid address"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallet/{address} [get]
 func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 	address := ctx.Param("address")
@@ -64,8 +64,8 @@ func (h *paymentWalletHandler) GetPaymentWalletByAddress(ctx *gin.Context) {
 // @Param size query int false "Page size, default is 10"
 // @Param network query string false "Filter by network (e.g., BSC, AVAX C-Chain)"
 // @Success 200 {array} dto.PaginationDTOResponse
-// @Failure 400 {object} response.GeneralError "Invalid network"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid network"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/balances [get]
 func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 	// Parse pagination parameters
@@ -109,7 +109,7 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {string} string "Receiving wallet address"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/receiving-address [get]
 func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
 	address, err := h.ucase.GetReceivingWalletAddress(
@@ -131,8 +131,8 @@ func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
 // @Produce json
 // @Param payload body dto.SyncWalletBalancePayload true "Sync wallet balance payload"
 // @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"wallet_address\": \"0x123\", \"usdt_amount\": 100.00}"
-// @Failure 400 {object} response.GeneralError "Invalid request payload or token symbol"
-// @Failure 500 {object} response.GeneralError "Internal server error"
+// @Failure 400 {object} http.GeneralError "Invalid request payload or token symbol"
+// @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/balance/sync [put]
 func (h *paymentWalletHandler) SyncPaymentWalletBalance(ctx *gin.Context) {
 	var payload dto.SyncWalletBalancePayload
