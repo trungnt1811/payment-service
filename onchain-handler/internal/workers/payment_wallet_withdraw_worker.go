@@ -331,11 +331,16 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		withdrawAmount = walletInfo.TokenAmount
 	}
 
-	// Enforce 10 USDT minimum withdrawal threshold
+	// Enforce minimum withdrawal threshold in USDT
 	minThreshold := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil) // 10^decimals
-	minThreshold.Mul(minThreshold, big.NewInt(10))                                     // Multiply by 10 to get 10 USDT
+	minThreshold.Mul(minThreshold, big.NewInt(constants.MinimumWithdrawThreshold))
 	if withdrawAmount.Cmp(minThreshold) < 0 {
-		logger.GetLogger().Infof("Withdrawal amount for wallet %s on network %s is below 1 USDT. Skipping withdrawal.", address, w.network)
+		logger.GetLogger().Infof(
+			"Withdrawal amount for wallet %s on network %s is below %d USDT. Skipping withdrawal.",
+			address,
+			w.network,
+			constants.MinimumWithdrawThreshold,
+		)
 		return nil
 	}
 

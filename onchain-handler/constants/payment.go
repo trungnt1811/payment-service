@@ -35,3 +35,5 @@ const (
 	Withdraw         = "WITHDRAW"
 	Deposit          = "DEPOSIT"
 )
+
+const MinimumWithdrawThreshold = 10 // Minimum withdraw threshold in USD
