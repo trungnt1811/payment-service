@@ -7,7 +7,6 @@ import (
 	"math/big"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
@@ -31,10 +30,10 @@ func (r *paymentWalletBalanceRepository) AddPaymentWalletBalance(
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Lock the existing balance row
-		var existingBalance string
+		// Lock the existing balance row, default balance to "0"
+		existingBalance := "0"
 		err := tx.Raw(`
-			SELECT balance 
+			SELECT COALESCE(balance, '0') 
 			FROM payment_wallet_balance 
 			WHERE wallet_id = ? AND network = ? AND symbol = ? 
 			FOR UPDATE
@@ -44,27 +43,49 @@ func (r *paymentWalletBalanceRepository) AddPaymentWalletBalance(
 			return fmt.Errorf("failed to lock balance row: %w", err)
 		}
 
-		// Convert existing balance and amount to add
-		existingBalanceFloat, _ := new(big.Float).SetString(existingBalance)
-		newBalanceFloat, _ := new(big.Float).SetString(amountToAdd)
+		// Safely initialize big.Float values
+		existingBalanceFloat := new(big.Float)
+		if existingBalance != "" {
+			if _, ok := existingBalanceFloat.SetString(existingBalance); !ok {
+				return fmt.Errorf("invalid existing balance format: %s", existingBalance)
+			}
+		}
+
+		newBalanceFloat := new(big.Float)
+		if amountToAdd != "" {
+			if _, ok := newBalanceFloat.SetString(amountToAdd); !ok {
+				return fmt.Errorf("invalid amountToAdd format: %s", amountToAdd)
+			}
+		}
 
 		// Calculate updated balance
 		updatedBalance := new(big.Float).Add(existingBalanceFloat, newBalanceFloat)
 
-		// Use ON CONFLICT to handle insert/update logic safely
-		err = tx.Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance": updatedBalance.String(),
-			}),
-		}).Create(&entities.PaymentWalletBalance{
-			WalletID: walletID,
-			Network:  network,
-			Symbol:   symbol,
-			Balance:  updatedBalance.String(),
-		}).Error
+		// Check if the balance row exists
+		var count int64
+		err = tx.Model(&entities.PaymentWalletBalance{}).
+			Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
+			Count(&count).Error
 		if err != nil {
-			return fmt.Errorf("failed to add wallet balance: %w", err)
+			return fmt.Errorf("failed to check existing balance: %w", err)
+		}
+
+		// If record exists, update it; otherwise, insert a new one
+		if count > 0 {
+			err = tx.Model(&entities.PaymentWalletBalance{}).
+				Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
+				Update("balance", updatedBalance.String()).Error
+		} else {
+			err = tx.Create(&entities.PaymentWalletBalance{
+				WalletID: walletID,
+				Network:  network,
+				Symbol:   symbol,
+				Balance:  updatedBalance.String(),
+			}).Error
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to update wallet balance: %w", err)
 		}
 
 		return nil
@@ -79,10 +100,10 @@ func (r *paymentWalletBalanceRepository) SubtractPaymentWalletBalance(
 	symbol string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Lock the existing balance row
-		var existingBalance string
+		// Lock the existing balance row, default balance to "0"
+		existingBalance := "0"
 		err := tx.Raw(`
-			SELECT balance 
+			SELECT COALESCE(balance, '0') 
 			FROM payment_wallet_balance 
 			WHERE wallet_id = ? AND network = ? AND symbol = ? 
 			FOR UPDATE
@@ -92,28 +113,33 @@ func (r *paymentWalletBalanceRepository) SubtractPaymentWalletBalance(
 			return fmt.Errorf("failed to lock balance row: %w", err)
 		}
 
-		// Convert existing balance and amount to subtract
-		existingBalanceFloat, _ := new(big.Float).SetString(existingBalance)
-		amountToSubtractFloat, _ := new(big.Float).SetString(amountToSubtract)
-
-		// Calculate new balance (ensuring it does not go negative)
-		newBalance := new(big.Float).Sub(existingBalanceFloat, amountToSubtractFloat)
-		if newBalance.Cmp(big.NewFloat(0)) < 0 {
-			newBalance.SetFloat64(0)
+		// Safely initialize big.Float values
+		existingBalanceFloat := new(big.Float)
+		if existingBalance != "" {
+			existingBalanceFloat.SetString(existingBalance)
+		} else {
+			existingBalanceFloat.SetFloat64(0) // Default to 0
 		}
 
-		// Use ON CONFLICT to handle insert/update logic safely
-		err = tx.Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance": newBalance.String(),
-			}),
-		}).Create(&entities.PaymentWalletBalance{
-			WalletID: walletID,
-			Network:  network,
-			Symbol:   symbol,
-			Balance:  newBalance.String(),
-		}).Error
+		amountToSubtractFloat := new(big.Float)
+		if amountToSubtract != "" {
+			amountToSubtractFloat.SetString(amountToSubtract)
+		} else {
+			return fmt.Errorf("invalid amountToSubtract: %s", amountToSubtract)
+		}
+
+		// Ensure sufficient funds before subtracting
+		if existingBalanceFloat.Cmp(amountToSubtractFloat) < 0 {
+			return fmt.Errorf("insufficient funds in wallet %d (%s %s)", walletID, network, symbol)
+		}
+
+		// Calculate new balance
+		newBalance := new(big.Float).Sub(existingBalanceFloat, amountToSubtractFloat)
+
+		// Update the balance in the database
+		err = tx.Model(&entities.PaymentWalletBalance{}).
+			Where("wallet_id = ? AND network = ? AND symbol = ?", walletID, network, symbol).
+			Update("balance", newBalance.String()).Error
 		if err != nil {
 			return fmt.Errorf("failed to subtract wallet balance: %w", err)
 		}
@@ -131,23 +157,19 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Lock row to prevent race conditions
-		err := tx.Exec(`
+		var exists int
+		err := tx.Raw(`
 			SELECT 1 FROM payment_wallet_balance 
 			WHERE wallet_id = ? AND network = ? AND symbol = ? 
 			FOR UPDATE
-		`, walletID, network, symbol).Error
+		`, walletID, network, symbol).Scan(&exists).Error
 
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("failed to lock balance row: %w", err)
 		}
 
-		// Overwrite balance using `ON CONFLICT`
-		err = tx.Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "wallet_id"}, {Name: "network"}, {Name: "symbol"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"balance": newBalance, // Directly overwrites balance
-			}),
-		}).Create(&entities.PaymentWalletBalance{
+		// Upsert balance safely using `Save()`
+		err = tx.Save(&entities.PaymentWalletBalance{
 			WalletID: walletID,
 			Network:  network,
 			Symbol:   symbol,
