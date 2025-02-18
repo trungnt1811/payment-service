@@ -8,7 +8,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/infra/queue"
+	"github.com/genefriendway/onchain-handler/infra/set"
 	"github.com/genefriendway/onchain-handler/internal/domain/dto"
 	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/internal/listeners"
@@ -31,8 +31,8 @@ func RunWorkers(
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 ) {
-	// Initialize payment order queue
-	paymentOrderQueue := initializePaymentOrderQueue(ctx, paymentOrderUCase.GetActivePaymentOrders)
+	// Initialize payment order set
+	paymentOrderSet := initializePaymentOrderSet(ctx, paymentOrderUCase.GetActivePaymentOrders)
 
 	// Initialize AVAX C-Chain client
 	avaxRpcUrls, err := conf.GetRpcUrls(constants.AvaxCChain)
@@ -115,7 +115,7 @@ func RunWorkers(
 		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
 		paymentWalletUCase,
-		paymentOrderQueue,
+		paymentOrderSet,
 	)
 
 	// Start BSC event listeners
@@ -131,26 +131,26 @@ func RunWorkers(
 		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
 		paymentWalletUCase,
-		paymentOrderQueue,
+		paymentOrderSet,
 	)
 }
 
-// initializePaymentOrderQueue initializes the payment order queue with a unique key function.
-func initializePaymentOrderQueue(
+// initializePaymentOrderSet initializes the payment order set with a unique key function.
+func initializePaymentOrderSet(
 	ctx context.Context,
 	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
-) infrainterfaces.Queue[dto.PaymentOrderDTO] {
+) infrainterfaces.Set[dto.PaymentOrderDTO] {
 	// Key function to uniquely identify each PaymentOrderDTO
 	keyFunc := func(order dto.PaymentOrderDTO) string {
 		return order.PaymentAddress + "_" + order.Symbol
 	}
 
-	// Create the queue with key-based indexing
-	paymentOrderQueue, err := queue.NewQueue(ctx, constants.MinQueueLimit, keyFunc, loader)
+	// Create the order set
+	paymentOrderSet, err := set.NewSet(ctx, keyFunc, loader)
 	if err != nil {
-		pkglogger.GetLogger().Fatalf("Create payment order queue error: %v", err)
+		pkglogger.GetLogger().Fatalf("Create payment order set error: %v", err)
 	}
-	return paymentOrderQueue
+	return paymentOrderSet
 }
 
 // persistTokenDecimalsToCache fetches token decimals from the blockchain and persists them to the cache
@@ -237,7 +237,7 @@ func startEventListeners(
 	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
 	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
 	paymentWalletUCase interfaces.PaymentWalletUCase,
-	paymentOrderQueue infrainterfaces.Queue[dto.PaymentOrderDTO],
+	paymentOrderSet infrainterfaces.Set[dto.PaymentOrderDTO],
 ) {
 	baseEventListener := listeners.NewBaseEventListener(
 		ethClient,
@@ -257,7 +257,7 @@ func startEventListeners(
 		paymentWalletUCase,
 		network,
 		usdtContractAddress,
-		paymentOrderQueue,
+		paymentOrderSet,
 	)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize tokenTransferListener: %v", err)

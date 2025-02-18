@@ -28,14 +28,10 @@ const (
 	RetryDelay = 3 * time.Second // Delay between retries
 )
 
-// Queue config
+// Order set config
 const (
-	DequeueInterval = 5 * time.Second
-	MaxQueueLimit   = 10000 // Upper bound for queue size
-	MinQueueLimit   = 100   // Minimum size to avoid shrinking too much
-	ShrinkThreshold = 0.5   // Shrink when less than 50% of the queue is used
-	ScaleFactor     = 1.5   // Factor to scale up the queue when needed
-	ShrinkFactor    = 0.75  // Factor to scale down the queue when shrinking
+	CleanSetInterval    = 5 * time.Second // Interval to clean up the set
+	DefaultFillSetLimit = 100             // Default limit to fill the set
 )
 
 // Cache config

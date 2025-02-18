@@ -22,7 +22,7 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
-// tokenTransferListener listens for token transfers and processes them using a queue of payment orders.
+// tokenTransferListener listens for token transfers and processes them using a set of payment orders.
 type tokenTransferListener struct {
 	ctx                      context.Context
 	cacheRepo                infrainterfaces.CacheRepository
@@ -35,11 +35,11 @@ type tokenTransferListener struct {
 	tokenContractAddress     string
 	tokenDecimals            uint8
 	parsedABI                abi.ABI
-	queue                    infrainterfaces.Queue[dto.PaymentOrderDTO]
+	orderSet                 infrainterfaces.Set[dto.PaymentOrderDTO]
 	mu                       sync.Mutex // Mutex for ticker synchronization
 }
 
-// NewTokenTransferListener creates a new tokenTransferListener with a payment order queue.
+// NewTokenTransferListener creates a new tokenTransferListener with a payment order set.
 func NewTokenTransferListener(
 	ctx context.Context,
 	cacheRepo infrainterfaces.CacheRepository,
@@ -50,7 +50,7 @@ func NewTokenTransferListener(
 	paymentWalletUCase interfaces.PaymentWalletUCase,
 	network constants.NetworkType,
 	tokenContractAddress string,
-	orderQueue infrainterfaces.Queue[dto.PaymentOrderDTO],
+	orderSet infrainterfaces.Set[dto.PaymentOrderDTO],
 ) (interfaces.EventListener, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
@@ -73,53 +73,56 @@ func NewTokenTransferListener(
 		network:                  network,
 		tokenContractAddress:     tokenContractAddress,
 		tokenDecimals:            decimals,
-		queue:                    orderQueue,
+		orderSet:                 orderSet,
 		parsedABI:                parsedABI,
 	}
 
-	go listener.startDequeueTicker(constants.DequeueInterval)
+	// Init the order set
+	if err := listener.orderSet.Fill(constants.DefaultFillSetLimit); err != nil {
+		logger.GetLogger().Errorf("Failed to init the order set %s: %v", listener.network.String(), err)
+	}
+
+	go listener.startCleanSetTicker(constants.CleanSetInterval)
 
 	return listener, nil
 }
 
-// startDequeueTicker starts a ticker that triggers dequeueing expired or successful orders at a specified interval.
-func (listener *tokenTransferListener) startDequeueTicker(interval time.Duration) {
+// startCleanSetTicker starts a ticker that triggers cleaning expired or successful orders at a specified interval.
+func (listener *tokenTransferListener) startCleanSetTicker(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			// Try to lock before dequeueing, ensuring no overlap
+			// Try to lock before cleaning, ensuring no overlap
 			listener.mu.Lock()
-			logger.GetLogger().Debug("Starting dequeue operation...")
-			listener.dequeueOrders()
-			// Refill the queue to ensure it has the required number of items
-			if err := listener.queue.FillQueue(); err != nil {
-				logger.GetLogger().Errorf("Failed to refill the %s queue: %v", listener.network.String(), err)
+			logger.GetLogger().Debug("Starting cleaning operation...")
+			listener.removeOrders()
+			// Refill the set to ensure it has the required number of items
+			if err := listener.orderSet.Fill(constants.DefaultFillSetLimit); err != nil {
+				logger.GetLogger().Errorf("Failed to refill the order set %s: %v", listener.network.String(), err)
 			}
-			logger.GetLogger().Debug("Dequeue operation finished.")
+			logger.GetLogger().Debug("Clean set operation finished.")
 			listener.mu.Unlock()
 		case <-listener.ctx.Done():
-			logger.GetLogger().Debugf("Stopping dequeue ticker: %v", listener.ctx.Err())
+			logger.GetLogger().Debugf("Stopping clean set ticker: %v", listener.ctx.Err())
 			return
 		}
 	}
 }
 
-func (listener *tokenTransferListener) fetchOrderDetailsFromQueue(transferEvent blockchain.TransferEvent, tokenSymbol string) (*dto.PaymentOrderDTO, error) {
-	key := transferEvent.To.Hex() + "_" + tokenSymbol
-	index, exists := listener.queue.GetIndex(key)
+func (listener *tokenTransferListener) fetchOrderDetailsFromSet(
+	key string, transferEvent blockchain.TransferEvent, tokenSymbol string,
+) (*dto.PaymentOrderDTO, error) {
+	// Fetch order from the set
+	order, exists := listener.orderSet.GetItem(key)
 	if !exists {
-		return nil, nil // No matching order
+		logger.GetLogger().Infof("No matching order found in set for address %s and token %s", transferEvent.To.Hex(), tokenSymbol)
+		return nil, nil // Return nil instead of an error if no order is found
 	}
 
-	order, err := listener.queue.GetItemAtIndex(index)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to retrieve order from queue at index %d: %v", index, err)
-		return nil, err
-	}
-
+	// Fetch the most up-to-date order details from DB
 	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to fetch order ID %d from DB: %v", order.ID, err)
@@ -128,6 +131,7 @@ func (listener *tokenTransferListener) fetchOrderDetailsFromQueue(transferEvent 
 
 	// Ensure order matches the correct network
 	if orderDTO.Network != listener.network.String() {
+		logger.GetLogger().Infof("Skipping order ID %d as it belongs to a different network: %s", order.ID, orderDTO.Network)
 		return nil, nil
 	}
 
@@ -147,8 +151,11 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", listener.network.String(), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
-	// Fetch the order details from the queue
-	order, err := listener.fetchOrderDetailsFromQueue(transferEvent, tokenSymbol)
+	// Create a unique key for the order
+	key := transferEvent.To.Hex() + "_" + tokenSymbol
+
+	// Fetch the order details from the set
+	order, err := listener.fetchOrderDetailsFromSet(key, transferEvent, tokenSymbol)
 	if err != nil || order == nil {
 		return nil, err
 	}
@@ -163,29 +170,22 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	}
 	logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, listener.network.String())
 
-	// Recheck index before updating the queue
-	key := transferEvent.To.Hex() + "_" + tokenSymbol
-	newIndex, stillExists := listener.queue.GetIndex(key)
-	if !stillExists {
-		logger.GetLogger().Warnf("Order ID %d was removed from the queue before it could be updated", order.ID)
-		return nil, fmt.Errorf("order no longer exists in the queue")
-	}
-
-	// Update the order status in the queue
+	// Update the order status in the set
 	order.Status = status
 	order.UpcomingBlockHeight = upcomingBlockHeight
-	if err := listener.queue.ReplaceItemAtIndex(newIndex, *order); err != nil {
-		logger.GetLogger().Errorf("Failed to update order in queue: %v", err)
+
+	if err := listener.orderSet.UpdateItem(key, *order); err != nil {
+		logger.GetLogger().Errorf("Failed to update order in set: %v", err)
 		return nil, err
 	}
 
 	return transferEvent, nil
 }
 
-// parseAndProcessConfirmedTransferEvent parses and processes a confirmed transfer event, checking if it matches any payment order in the queue.
+// parseAndProcessConfirmedTransferEvent parses and processes a confirmed transfer event, checking if it matches any payment order in the set.
 func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLog types.Log) (interface{}, error) {
 	// Handle expired and successful orders before processing the event
-	listener.dequeueOrders()
+	listener.removeOrders()
 
 	// Retrieve the token symbol for the event's contract address
 	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
@@ -199,8 +199,11 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", listener.network.String(), vLog.Address.Hex(), vLog.BlockNumber, err)
 	}
 
-	// Fetch the order details from the queue
-	order, err := listener.fetchOrderDetailsFromQueue(transferEvent, tokenSymbol)
+	// Create a unique key for the order
+	key := transferEvent.To.Hex() + "_" + tokenSymbol
+
+	// Fetch the order details from the set
+	order, err := listener.fetchOrderDetailsFromSet(key, transferEvent, tokenSymbol)
 	if err != nil || order == nil {
 		return nil, err
 	}
@@ -354,16 +357,10 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	order.Transferred = transferredAmountInEth
 	order.Status = status
 
-	// Ensure order still exists before updating the queue
-	newIndex, stillExists := listener.queue.GetIndex(order.PaymentAddress + "_" + order.Symbol)
-	if !stillExists {
-		logger.GetLogger().Warnf("Order ID %d was removed from the queue before it could be updated", order.ID)
-		return fmt.Errorf("order no longer exists in the queue")
-	}
-
-	// Update item in queue
-	if err := listener.queue.ReplaceItemAtIndex(newIndex, order); err != nil {
-		return fmt.Errorf("failed to update order in queue: %w", err)
+	// Update item in set
+	key := order.PaymentAddress + "_" + order.Symbol
+	if err := listener.orderSet.UpdateItem(key, order); err != nil {
+		return fmt.Errorf("failed to update order in set: %w", err)
 	}
 
 	// Update the payment order in database
@@ -386,61 +383,62 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	return nil
 }
 
-// dequeueOrders removes expired or successful orders from the queue.
-func (listener *tokenTransferListener) dequeueOrders() {
-	// Retrieve all current orders in the queue
-	orders := listener.queue.GetItems()
+// removeOrders removes expired or successful orders from the set.
+func (listener *tokenTransferListener) removeOrders() {
+	// Retrieve all current orders in the set
+	orders := listener.orderSet.GetAll()
 
-	var dequeueExpiredOrders []dto.PaymentOrderDTO
-	// Iterate over current orders in the queue
+	var cleanedExpiredOrders []dto.PaymentOrderDTO
+	// Iterate over current orders in the set
 	for index, order := range orders {
-		// Double-check the order network before dequeuing
+		// Double-check the order network
 		if order.Network != listener.network.String() {
 			continue
 		}
-		// Check if the order needs to be dequeued
-		if listener.shouldDequeueOrder(order) {
+		// Check if the order needs to be cleaned
+		if listener.shouldCleanOrder(order) {
 			// Update the order status to 'Expired' if it has expired
 			if order.Status != constants.Success {
 				orders[index].Status = constants.Expired
-				dequeueExpiredOrders = append(dequeueExpiredOrders, orders[index])
+				cleanedExpiredOrders = append(cleanedExpiredOrders, orders[index])
 			}
 
-			// Remove the order from the queue
-			if err := listener.queue.Dequeue(func(o dto.PaymentOrderDTO) bool {
+			// Remove the order from the set
+			if !listener.orderSet.Remove(func(o dto.PaymentOrderDTO) bool {
 				return o.ID == order.ID
-			}); err != nil {
-				logger.GetLogger().Errorf("Failed to dequeue order ID: %d, error: %v", order.ID, err)
+			}) {
+				logger.GetLogger().Errorf("Failed to remove order ID from the order set: %d", order.ID)
 				return
 			}
+
 		}
 	}
 
-	// Update the statuses of dequeued expired orders
-	if len(dequeueExpiredOrders) > 0 {
+	// Update the statuses of cleaned expired orders
+	if len(cleanedExpiredOrders) > 0 {
 		// Send webhooks for expired orders
-		listener.sendWebhookForOrders(dequeueExpiredOrders, constants.Expired)
+		listener.sendWebhookForOrders(cleanedExpiredOrders, constants.Expired)
 
 		// Collect order IDs
 		var orderIDs []uint64
-		for _, order := range dequeueExpiredOrders {
+		for _, order := range cleanedExpiredOrders {
 			orderIDs = append(orderIDs, order.ID)
 		}
 
-		// Update the statuses of the dequeued expired orders
+		// Update the statuses of the cleaned expired orders
 		err := listener.paymentOrderUCase.BatchUpdateOrdersToExpired(listener.ctx, orderIDs)
 		// Log the result of the batch update
 		if err != nil {
 			// Log all failed order IDs in case of an error
 			var failedOrderIDs []uint64
-			for _, order := range dequeueExpiredOrders {
+			for _, order := range cleanedExpiredOrders {
 				failedOrderIDs = append(failedOrderIDs, order.ID)
 			}
 			logger.GetLogger().Errorf("Failed to update expired orders with IDs: %v, error: %v", failedOrderIDs, err)
 		} else {
 			// Log all successful order IDs
 			var successfulOrderIDs []uint64
-			for _, order := range dequeueExpiredOrders {
+			for _, order := range cleanedExpiredOrders {
 				successfulOrderIDs = append(successfulOrderIDs, order.ID)
 			}
 			logger.GetLogger().Infof("Successfully updated orders with IDs: %v to expired status", successfulOrderIDs)
@@ -448,8 +446,8 @@ func (listener *tokenTransferListener) dequeueOrders() {
 	}
 }
 
-// shouldDequeueOrder checks if an order is expired or succeeded.
-func (listener *tokenTransferListener) shouldDequeueOrder(order dto.PaymentOrderDTO) bool {
+// shouldCleanOrder checks if an order is expired or succeeded.
+func (listener *tokenTransferListener) shouldCleanOrder(order dto.PaymentOrderDTO) bool {
 	if order.Status == constants.Processing {
 		return false
 	}
