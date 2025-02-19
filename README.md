@@ -1,5 +1,5 @@
-# Onchain Handler
-Onchain Handler is a comprehensive service designed to facilitate seamless interaction with blockchain networks such as Binance Smart Chain (BSC) and Avalanche (AVAX). This service supports various functionalities, including managing payment wallets, processing token transfers, handling USDT balances, and tracking blockchain events efficiently. It is tailored to provide robust support for on-chain operations with scalability and reliability in mind.
+# Payment Service
+Payment Service is a comprehensive service designed to facilitate seamless interaction with blockchain networks such as Binance Smart Chain (BSC) and Avalanche (AVAX). This service supports various functionalities, including managing payment wallets, processing token transfers, handling USDT balances, and tracking blockchain events efficiently. It is tailored to provide robust support for on-chain operations with scalability and reliability in mind.
 
 ## Features
 

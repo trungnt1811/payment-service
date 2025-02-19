@@ -7,29 +7,30 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
 	"github.com/genefriendway/onchain-handler/infra/set"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/internal/listeners"
 	"github.com/genefriendway/onchain-handler/internal/workers"
 	pkgblockchain "github.com/genefriendway/onchain-handler/pkg/blockchain"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
-	"github.com/genefriendway/onchain-handler/pkg/providers"
+	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 func RunWorkers(
 	ctx context.Context,
 	db *gorm.DB,
 	config *conf.Configuration,
-	cacheRepository infrainterfaces.CacheRepository,
-	blockstateUcase interfaces.BlockStateUCase,
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	tokenTransferUCase interfaces.TokenTransferUCase,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
-	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
+	cacheRepository cachetypes.CacheRepository,
+	blockstateUcase ucasetypes.BlockStateUCase,
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	tokenTransferUCase ucasetypes.TokenTransferUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
+	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 ) {
 	// Initialize payment order set
 	paymentOrderSet := initializePaymentOrderSet(ctx, paymentOrderUCase.GetActivePaymentOrders)
@@ -139,7 +140,7 @@ func RunWorkers(
 func initializePaymentOrderSet(
 	ctx context.Context,
 	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
-) infrainterfaces.Set[dto.PaymentOrderDTO] {
+) settypes.Set[dto.PaymentOrderDTO] {
 	// Key function to uniquely identify each PaymentOrderDTO
 	keyFunc := func(order dto.PaymentOrderDTO) string {
 		return order.PaymentAddress + "_" + order.Symbol
@@ -156,10 +157,10 @@ func initializePaymentOrderSet(
 // persistTokenDecimalsToCache fetches token decimals from the blockchain and persists them to the cache
 func persistTokenDecimalsToCache(
 	ctx context.Context,
-	ethClient pkginterfaces.Client,
+	ethClient clienttypes.Client,
 	tokenContractAddress string,
 	network constants.NetworkType,
-	cacheRepo infrainterfaces.CacheRepository,
+	cacheRepo cachetypes.CacheRepository,
 ) {
 	_, err := pkgblockchain.FetchTokenDecimals(
 		ctx,
@@ -177,17 +178,17 @@ func persistTokenDecimalsToCache(
 func startWorkers(
 	ctx context.Context,
 	config *conf.Configuration,
-	cacheRepository infrainterfaces.CacheRepository,
-	ethClient pkginterfaces.Client,
+	cacheRepository cachetypes.CacheRepository,
+	ethClient clienttypes.Client,
 	network constants.NetworkType,
 	chainID uint64,
 	usdtContractAddress string,
-	blockstateUcase interfaces.BlockStateUCase,
-	tokenTransferUCase interfaces.TokenTransferUCase,
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
-	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
+	blockstateUcase ucasetypes.BlockStateUCase,
+	tokenTransferUCase ucasetypes.TokenTransferUCase,
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
+	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
 ) {
 	latestBlockWorker := workers.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient, network)
 	go latestBlockWorker.Start(ctx)
@@ -227,17 +228,17 @@ func startWorkers(
 // startEventListeners starts the event listeners for the given network
 func startEventListeners(
 	ctx context.Context,
-	ethClient pkginterfaces.Client,
+	ethClient clienttypes.Client,
 	network constants.NetworkType,
 	startBlockListener uint64,
 	usdtContractAddress string,
-	cacheRepository infrainterfaces.CacheRepository,
-	blockstateUcase interfaces.BlockStateUCase,
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
-	paymentOrderSet infrainterfaces.Set[dto.PaymentOrderDTO],
+	cacheRepository cachetypes.CacheRepository,
+	blockstateUcase ucasetypes.BlockStateUCase,
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
+	paymentOrderSet settypes.Set[dto.PaymentOrderDTO],
 ) {
 	baseEventListener := listeners.NewBaseEventListener(
 		ethClient,

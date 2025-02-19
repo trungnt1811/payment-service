@@ -13,9 +13,11 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	listenertypes "github.com/genefriendway/onchain-handler/internal/listeners/types"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
@@ -25,33 +27,33 @@ import (
 // tokenTransferListener listens for token transfers and processes them using a set of payment orders.
 type tokenTransferListener struct {
 	ctx                      context.Context
-	cacheRepo                infrainterfaces.CacheRepository
-	baseEventListener        interfaces.BaseEventListener
-	paymentOrderUCase        interfaces.PaymentOrderUCase
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
-	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
-	paymentWalletUCase       interfaces.PaymentWalletUCase
+	cacheRepo                cachetypes.CacheRepository
+	baseEventListener        listenertypes.BaseEventListener
+	paymentOrderUCase        ucasetypes.PaymentOrderUCase
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase
+	paymentStatisticsUCase   ucasetypes.PaymentStatisticsUCase
+	paymentWalletUCase       ucasetypes.PaymentWalletUCase
 	network                  constants.NetworkType
 	tokenContractAddress     string
 	tokenDecimals            uint8
 	parsedABI                abi.ABI
-	orderSet                 infrainterfaces.Set[dto.PaymentOrderDTO]
+	orderSet                 settypes.Set[dto.PaymentOrderDTO]
 	mu                       sync.Mutex // Mutex for ticker synchronization
 }
 
 // NewTokenTransferListener creates a new tokenTransferListener with a payment order set.
 func NewTokenTransferListener(
 	ctx context.Context,
-	cacheRepo infrainterfaces.CacheRepository,
-	baseEventListener interfaces.BaseEventListener,
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
+	cacheRepo cachetypes.CacheRepository,
+	baseEventListener listenertypes.BaseEventListener,
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
+	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	network constants.NetworkType,
 	tokenContractAddress string,
-	orderSet infrainterfaces.Set[dto.PaymentOrderDTO],
-) (interfaces.EventListener, error) {
+	orderSet settypes.Set[dto.PaymentOrderDTO],
+) (listenertypes.EventListener, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)

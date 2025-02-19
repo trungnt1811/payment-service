@@ -12,12 +12,10 @@ import (
 	app "github.com/genefriendway/onchain-handler/cmd/app"
 	"github.com/genefriendway/onchain-handler/conf"
 	_ "github.com/genefriendway/onchain-handler/docs"
-	"github.com/genefriendway/onchain-handler/infra/database"
-	"github.com/genefriendway/onchain-handler/migrations"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
-	"github.com/genefriendway/onchain-handler/pkg/providers"
+	loggertypes "github.com/genefriendway/onchain-handler/pkg/logger/types"
 	"github.com/genefriendway/onchain-handler/wire"
+	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 func main() {
@@ -29,11 +27,7 @@ func main() {
 	config := conf.GetConfiguration()
 
 	// Initialize database connection
-	pgsqlClient := database.NewPostgreSQLClient(&config.Database)
-	db := pgsqlClient.Connect()
-	if err := migrations.RunMigrations(db); err != nil {
-		pkglogger.GetLogger().Fatalf("Failed to migrate database: %v", err)
-	}
+	db := providers.ProvideDBConnection()
 
 	// Initialize the logger and set the application mode
 	initializeLoggerAndMode(config)
@@ -61,7 +55,6 @@ func main() {
 	app.RunServer(
 		ctx, db, config, cacheRepository,
 		ucases.PaymentWalletUCase,
-		ucases.UserWalletUCase,
 		ucases.PaymentOrderUCase,
 		ucases.TokenTransferUCase,
 		ucases.NetworkMetadataUCase,
@@ -80,17 +73,17 @@ func initializeLoggerAndMode(config *conf.Configuration) {
 	}
 
 	// Determine the log level from the configuration
-	var logLevel pkginterfaces.Level
+	var logLevel loggertypes.Level
 	switch strings.ToLower(config.LogLevel) {
 	case "debug":
-		logLevel = pkginterfaces.DebugLevel
+		logLevel = loggertypes.DebugLevel
 		gin.SetMode(gin.DebugMode) // Development mode
 	case "info":
-		logLevel = pkginterfaces.InfoLevel
+		logLevel = loggertypes.InfoLevel
 		gin.SetMode(gin.ReleaseMode) // Production mode
 	default:
 		// Default to info level if unspecified or invalid
-		logLevel = pkginterfaces.InfoLevel
+		logLevel = loggertypes.InfoLevel
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -104,7 +97,7 @@ func initializeLoggerAndMode(config *conf.Configuration) {
 	appLogger.Infof("Application '%s' started with log level '%s' in '%s' mode", config.AppName, logLevel, config.Env)
 
 	// Log additional details for debugging
-	if logLevel == pkginterfaces.DebugLevel {
+	if logLevel == loggertypes.DebugLevel {
 		appLogger.Debug("Debugging mode enabled. Verbose logging is active.")
 	}
 }

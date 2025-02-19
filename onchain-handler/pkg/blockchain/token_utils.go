@@ -6,9 +6,8 @@ import (
 	"math/big"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -16,11 +15,11 @@ import (
 // If the cache is empty, it saves the token decimals to the cache after retrieving them from the blockchain.
 func FetchTokenDecimals(
 	ctx context.Context,
-	ethClient pkginterfaces.Client,
+	ethClient clienttypes.Client,
 	tokenContractAddress, network string,
-	cacheRepo infrainterfaces.CacheRepository,
+	cacheRepo cachetypes.CacheRepository,
 ) (uint8, error) {
-	cacheKey := &caching.Keyer{Raw: constants.TokenDecimals + network + tokenContractAddress}
+	cacheKey := &cachetypes.Keyer{Raw: constants.TokenDecimals + network + tokenContractAddress}
 
 	var cachedDecimals uint8
 	err := cacheRepo.RetrieveItem(cacheKey, &cachedDecimals)
@@ -69,9 +68,9 @@ func FetchTokenDecimals(
 
 func GetTokenDecimalsFromCache(
 	tokenContractAddress, network string,
-	cacheRepo infrainterfaces.CacheRepository,
+	cacheRepo cachetypes.CacheRepository,
 ) (uint8, error) {
-	cacheKey := &caching.Keyer{Raw: constants.TokenDecimals + network + tokenContractAddress}
+	cacheKey := &cachetypes.Keyer{Raw: constants.TokenDecimals + network + tokenContractAddress}
 
 	var cachedDecimals uint8
 	err := cacheRepo.RetrieveItem(cacheKey, &cachedDecimals)
@@ -103,9 +102,9 @@ func GetNativeTokenSymbol(network constants.NetworkType) (string, error) {
 // FetchTokenBalance retrieves the token balance for the given wallet address and token contract address either from the cache or directly from the blockchain.
 func FetchTokenBalance(
 	ctx context.Context,
-	ethClient pkginterfaces.Client,
+	ethClient clienttypes.Client,
 	tokenContractAddress, walletAddress, network string,
-	cacheRepo infrainterfaces.CacheRepository,
+	cacheRepo cachetypes.CacheRepository,
 ) (*big.Float, error) {
 	// Step 1: Retrieve the raw token balance from the blockchain
 	rawBalance, err := ethClient.GetTokenBalance(ctx, tokenContractAddress, walletAddress)

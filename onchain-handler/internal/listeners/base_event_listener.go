@@ -9,35 +9,36 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	listenertypes "github.com/genefriendway/onchain-handler/internal/listeners/types"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 // baseEventListener represents the shared behavior of any blockchain event listener.
 type baseEventListener struct {
-	ethClient              pkginterfaces.Client
+	ethClient              clienttypes.Client
 	network                constants.NetworkType
 	eventChan              chan interface{}
-	blockStateUCase        interfaces.BlockStateUCase
+	blockStateUCase        ucasetypes.BlockStateUCase
 	currentBlock           uint64
-	cacheRepo              infrainterfaces.CacheRepository
-	confirmedEventHandlers map[common.Address]interfaces.EventHandler
-	realtimeEventHandlers  map[common.Address]interfaces.EventHandler
+	cacheRepo              cachetypes.CacheRepository
+	confirmedEventHandlers map[common.Address]listenertypes.EventHandler
+	realtimeEventHandlers  map[common.Address]listenertypes.EventHandler
 }
 
 // NewBaseEventListener initializes a base listener.
 func NewBaseEventListener(
-	client pkginterfaces.Client,
+	client clienttypes.Client,
 	network constants.NetworkType,
-	cacheRepo infrainterfaces.CacheRepository,
-	blockStateUCase interfaces.BlockStateUCase,
+	cacheRepo cachetypes.CacheRepository,
+	blockStateUCase ucasetypes.BlockStateUCase,
 	startBlockListener *uint64,
-) interfaces.BaseEventListener {
+) listenertypes.BaseEventListener {
 	eventChan := make(chan interface{}, constants.DefaultEventChannelBufferSize)
 
 	// Fetch the last processed block from the repository
@@ -62,19 +63,19 @@ func NewBaseEventListener(
 		eventChan:              eventChan,
 		blockStateUCase:        blockStateUCase,
 		currentBlock:           currentBlock, // Store the final determined current block
-		confirmedEventHandlers: make(map[common.Address]interfaces.EventHandler),
-		realtimeEventHandlers:  make(map[common.Address]interfaces.EventHandler),
+		confirmedEventHandlers: make(map[common.Address]listenertypes.EventHandler),
+		realtimeEventHandlers:  make(map[common.Address]listenertypes.EventHandler),
 	}
 }
 
 // RegisterConfirmedEventListener registers a confirmed event listener for a specific contract
-func (listener *baseEventListener) RegisterConfirmedEventListener(contractAddress string, handler interfaces.EventHandler) {
+func (listener *baseEventListener) RegisterConfirmedEventListener(contractAddress string, handler listenertypes.EventHandler) {
 	address := common.HexToAddress(contractAddress)
 	listener.confirmedEventHandlers[address] = handler
 }
 
 // RegisterRealtimeEventListener registers a realtime event listener for a specific contract
-func (listener *baseEventListener) RegisterRealtimeEventListener(contractAddress string, handler interfaces.EventHandler) {
+func (listener *baseEventListener) RegisterRealtimeEventListener(contractAddress string, handler listenertypes.EventHandler) {
 	address := common.HexToAddress(contractAddress)
 	listener.realtimeEventHandlers[address] = handler
 }

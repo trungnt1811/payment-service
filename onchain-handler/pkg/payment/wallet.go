@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -18,7 +18,7 @@ func InitPaymentWallets(
 	ctx context.Context,
 	mnemonic, passphrase, salt string,
 	totalWallets uint,
-	walletUCase interfaces.PaymentWalletUCase,
+	walletUCase ucasetypes.PaymentWalletUCase,
 ) error {
 	// Check if wallets already exist
 	isExist, err := walletUCase.IsRowExist(ctx)

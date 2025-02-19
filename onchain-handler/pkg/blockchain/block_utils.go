@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -15,10 +14,10 @@ import (
 func GetLatestBlockFromCacheOrBlockchain(
 	ctx context.Context,
 	network string,
-	cacheRepo infrainterfaces.CacheRepository,
-	ethClient pkginterfaces.Client,
+	cacheRepo cachetypes.CacheRepository,
+	ethClient clienttypes.Client,
 ) (uint64, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network}
+	cacheKey := &cachetypes.Keyer{Raw: constants.LatestBlockCacheKey + network}
 
 	var cachedLatestBlock uint64
 	err := cacheRepo.RetrieveItem(cacheKey, &cachedLatestBlock)
@@ -41,9 +40,9 @@ func GetLatestBlockFromCacheOrBlockchain(
 func GetLatestBlockFromCache(
 	ctx context.Context,
 	network string,
-	cacheRepo infrainterfaces.CacheRepository,
+	cacheRepo cachetypes.CacheRepository,
 ) (uint64, error) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + network}
+	cacheKey := &cachetypes.Keyer{Raw: constants.LatestBlockCacheKey + network}
 
 	var cachedLatestBlock uint64
 	err := cacheRepo.RetrieveItem(cacheKey, &cachedLatestBlock)

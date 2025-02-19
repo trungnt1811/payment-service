@@ -11,10 +11,9 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -24,14 +23,14 @@ const (
 )
 
 type paymentOrderCache struct {
-	paymentOrderRepository interfaces.PaymentOrderRepository
-	cache                  infrainterfaces.CacheRepository
+	paymentOrderRepository repotypes.PaymentOrderRepository
+	cache                  cachetypes.CacheRepository
 }
 
 func NewPaymentOrderCacheRepository(
-	repo interfaces.PaymentOrderRepository,
-	cache infrainterfaces.CacheRepository,
-) interfaces.PaymentOrderRepository {
+	repo repotypes.PaymentOrderRepository,
+	cache cachetypes.CacheRepository,
+) repotypes.PaymentOrderRepository {
 	return &paymentOrderCache{
 		paymentOrderRepository: repo,
 		cache:                  cache,
@@ -63,7 +62,7 @@ func (c *paymentOrderCache) CreatePaymentOrders(
 	// Cache the created orders
 	var cacheErrors []error
 	for _, order := range createdOrders {
-		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
+		cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
 		if err := c.cache.SaveItem(cacheKey, order, conf.GetExpiredOrderTime()); err != nil {
 			logger.GetLogger().Warnf("Failed to cache payment order ID %d: %v", order.ID, err)
 			cacheErrors = append(cacheErrors, err)
@@ -86,7 +85,7 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, o
 	}
 
 	// Generate a consistent cache key
-	key := &caching.Keyer{
+	key := &cachetypes.Keyer{
 		Raw: fmt.Sprintf("%sGetActivePaymentOrders_network:%s_limit:%d_offset:%d",
 			keyPrefixPaymentOrder, networkStr, limit, offset),
 	}
@@ -117,7 +116,7 @@ func (c *paymentOrderCache) UpdatePaymentOrder(
 	order *entities.PaymentOrder,
 ) error {
 	// Construct the cache key for the payment order
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
 	var cachedOrder entities.PaymentOrder
@@ -188,7 +187,7 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	}
 
 	// Construct the cache key for the payment order
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
 	var cachedOrder entities.PaymentOrder
@@ -217,7 +216,7 @@ func (c *paymentOrderCache) BatchUpdateOrdersToExpired(
 	// Iterate over the order IDs and new statuses
 	for _, orderID := range orderIDs {
 		// Construct the cache key
-		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+		cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 		// Attempt to retrieve the order from the cache
 		var cachedOrder entities.PaymentOrder
@@ -255,7 +254,7 @@ func (c *paymentOrderCache) BatchUpdateOrderBlockHeights(ctx context.Context, or
 	// Iterate over the orderIDs and blockheights
 	for i, orderID := range orderIDs {
 		// Construct the cache key
-		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+		cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 		// Attempt to retrieve the order from the cache
 		var cachedOrder entities.PaymentOrder
@@ -286,7 +285,7 @@ func (c *paymentOrderCache) BatchUpdateOrderBlockHeights(ctx context.Context, or
 
 func (c *paymentOrderCache) GetExpiredPaymentOrders(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
 	// Generate a consistent cache key
-	key := &caching.Keyer{Raw: fmt.Sprintf("%sGetExpiredPaymentOrders_network:%s", keyPrefixPaymentOrder, network)}
+	key := &cachetypes.Keyer{Raw: fmt.Sprintf("%sGetExpiredPaymentOrders_network:%s", keyPrefixPaymentOrder, network)}
 
 	// Attempt to retrieve data from cache
 	var paymentOrders []entities.PaymentOrder
@@ -319,7 +318,7 @@ func (c *paymentOrderCache) UpdateExpiredOrdersToFailed(ctx context.Context) ([]
 	// Update the cache for the affected orders
 	for _, id := range updatedIDs {
 		// Construct the cache key for each order
-		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
+		cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
 
 		// Attempt to retrieve the cached order
 		var cachedOrder entities.PaymentOrder
@@ -350,7 +349,7 @@ func (c *paymentOrderCache) UpdateActiveOrdersToExpired(ctx context.Context) ([]
 	// Update the cache for the affected orders
 	for _, id := range updatedIDs {
 		// Construct the cache key for each order
-		cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
+		cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
 
 		// Attempt to retrieve the cached order
 		var cachedOrder entities.PaymentOrder
@@ -383,7 +382,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 ) ([]entities.PaymentOrder, error) {
 	// Generate a unique cache key based on input parameters
 	requestIDsKey := strings.Join(requestIDs, ",")
-	cacheKey := &caching.Keyer{
+	cacheKey := &cachetypes.Keyer{
 		Raw: fmt.Sprintf("%sGetPaymentOrders_vendorID:%s_limit:%d_offset:%d_requestIDs:%s_status:%v_orderBy:%v_fromAddress:%v_network:%v_orderDirection:%v_startTime:%v_endTime:%v_timeFilterField:%v",
 			keyPrefixPaymentOrder, vendorID, limit, offset, requestIDsKey, status, orderBy, fromAddress, network, orderDirection, startTime, endTime, timeFilterField),
 	}
@@ -413,7 +412,7 @@ func (c *paymentOrderCache) GetPaymentOrders(
 
 func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) (*entities.PaymentOrder, error) {
 	// Construct the cache key using the order ID
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(id, 10)}
 
 	// Attempt to retrieve the payment order from the cache
 	var cachedOrder entities.PaymentOrder
@@ -441,7 +440,7 @@ func (c *paymentOrderCache) GetPaymentOrderByID(ctx context.Context, id uint64) 
 
 func (c *paymentOrderCache) GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]entities.PaymentOrder, error) {
 	// Construct the cache key using the order IDs
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + fmt.Sprint(ids)}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + fmt.Sprint(ids)}
 
 	// Attempt to retrieve the payment orders from the cache
 	var cachedOrders []entities.PaymentOrder
@@ -475,7 +474,7 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 	}
 
 	// Construct the cache key using the order ID
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
 	// Attempt to retrieve the payment order from the cache
 	var cachedOrder entities.PaymentOrder
@@ -503,7 +502,7 @@ func (c *paymentOrderCache) GetPaymentOrderByRequestID(ctx context.Context, requ
 
 func (c *paymentOrderCache) GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error) {
 	// Construct the cache key using the request ID
-	cacheKey := &caching.Keyer{Raw: keyPrefixPaymentOrder + requestID}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + requestID}
 
 	// Attempt to retrieve the payment order ID from the cache
 	var cachedOrderID uint64

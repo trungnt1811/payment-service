@@ -11,10 +11,10 @@ import (
 	ginswagger "github.com/swaggo/gin-swagger"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/middleware"
-	routev1 "github.com/genefriendway/onchain-handler/internal/route"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/http/middleware"
+	routev1 "github.com/genefriendway/onchain-handler/internal/delivery/http/route"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 )
@@ -23,13 +23,12 @@ func RunServer(
 	ctx context.Context,
 	db *gorm.DB,
 	config *conf.Configuration,
-	cacheRepository infrainterfaces.CacheRepository,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
-	userWalletUCase interfaces.UserWalletUCase,
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	tokenTransferUCase interfaces.TokenTransferUCase,
-	networkMetadataUCase interfaces.NetworkMetadataUCase,
-	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
+	cacheRepository cachetypes.CacheRepository,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	tokenTransferUCase ucasetypes.TokenTransferUCase,
+	networkMetadataUCase ucasetypes.NetworkMetadataUCase,
+	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 ) {
 	// Initialize Gin router with middleware
 	r := initializeRouter()
@@ -45,7 +44,6 @@ func RunServer(
 		db,
 		tokenTransferUCase,
 		paymentOrderUCase,
-		userWalletUCase,
 		paymentWalletUCase,
 		networkMetadataUCase,
 		paymentStatisticsUCase,
@@ -67,7 +65,7 @@ func initializeRouter() *gin.Engine {
 func initializePaymentWallets(
 	ctx context.Context,
 	config *conf.Configuration,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 ) {
 	err := payment.InitPaymentWallets(
 		ctx,

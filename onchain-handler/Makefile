@@ -6,6 +6,9 @@ onchain-handler:
 clean:
 	rm -i -f onchain-handler
 
+migrate:
+	go run cmd/migration/main.go	
+
 run-test:
 	go test -v ./internal/infra/caching/test
 	go test -v ./internal/util/test

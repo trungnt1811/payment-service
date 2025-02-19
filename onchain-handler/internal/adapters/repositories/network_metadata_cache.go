@@ -3,10 +3,9 @@ package repositories
 import (
 	"context"
 
-	"github.com/genefriendway/onchain-handler/infra/caching"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -15,14 +14,14 @@ const (
 )
 
 type networkMetadataCache struct {
-	networkMetadataRepository interfaces.NetworkMetadataRepository
-	cache                     infrainterfaces.CacheRepository
+	networkMetadataRepository repotypes.NetworkMetadataRepository
+	cache                     cachetypes.CacheRepository
 }
 
 func NewNetworkMetadataCacheRepository(
-	repo interfaces.NetworkMetadataRepository,
-	cache infrainterfaces.CacheRepository,
-) interfaces.NetworkMetadataRepository {
+	repo repotypes.NetworkMetadataRepository,
+	cache cachetypes.CacheRepository,
+) repotypes.NetworkMetadataRepository {
 	return &networkMetadataCache{
 		networkMetadataRepository: repo,
 		cache:                     cache,
@@ -30,7 +29,7 @@ func NewNetworkMetadataCacheRepository(
 }
 
 func (c *networkMetadataCache) GetNetworksMetadata(ctx context.Context) ([]entities.NetworkMetadata, error) {
-	key := &caching.Keyer{Raw: keyPrefixNetworkMetadata + "GetNetworksMetadata"}
+	key := &cachetypes.Keyer{Raw: keyPrefixNetworkMetadata + "GetNetworksMetadata"}
 	var networkMetadatas []entities.NetworkMetadata
 
 	// Try to retrieve data from cache

@@ -16,6 +16,9 @@ abigen --abi=./contracts/abis/ERC20Token.abi.json --pkg=erc20token --out=./contr
 - `make swagger`
 - http://localhost:8080/swagger/index.html
 
+### How to run migration
+- `make migrate`
+
 ### How to run linter
 - `make lint`
 

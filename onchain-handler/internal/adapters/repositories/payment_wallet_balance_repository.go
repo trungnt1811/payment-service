@@ -9,15 +9,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
 type paymentWalletBalanceRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentWalletBalanceRepository(db *gorm.DB) interfaces.PaymentWalletBalanceRepository {
+func NewPaymentWalletBalanceRepository(db *gorm.DB) repotypes.PaymentWalletBalanceRepository {
 	return &paymentWalletBalanceRepository{
 		db: db,
 	}

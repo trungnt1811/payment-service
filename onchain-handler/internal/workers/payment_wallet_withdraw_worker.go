@@ -10,12 +10,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
@@ -28,12 +29,12 @@ type walletInfo struct {
 
 type paymentWalletWithdrawWorker struct {
 	ctx                  context.Context
-	ethClient            pkginterfaces.Client
+	ethClient            clienttypes.Client
 	network              constants.NetworkType
 	chainID              uint64
-	cacheRepo            infrainterfaces.CacheRepository
-	tokenTransferUCase   interfaces.TokenTransferUCase
-	paymentWalletUCase   interfaces.PaymentWalletUCase
+	cacheRepo            cachetypes.CacheRepository
+	tokenTransferUCase   ucasetypes.TokenTransferUCase
+	paymentWalletUCase   ucasetypes.PaymentWalletUCase
 	tokenContractAddress string
 	masterWalletAddress  string
 	mnemonic             string
@@ -47,18 +48,18 @@ type paymentWalletWithdrawWorker struct {
 
 func NewPaymentWalletWithdrawWorker(
 	ctx context.Context,
-	ethClient pkginterfaces.Client,
+	ethClient clienttypes.Client,
 	network constants.NetworkType,
 	chainID uint64,
-	cacheRepo infrainterfaces.CacheRepository,
-	tokenTransferUCase interfaces.TokenTransferUCase,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
+	cacheRepo cachetypes.CacheRepository,
+	tokenTransferUCase ucasetypes.TokenTransferUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	tokenContractAddress string,
 	masterWalletAddress string,
 	mnemonic, passphrase, salt string,
 	gasBufferMultiplier float64,
 	withdrawInterval string,
-) interfaces.Worker {
+) workertypes.Worker {
 	return &paymentWalletWithdrawWorker{
 		ctx:                  ctx,
 		ethClient:            ethClient,
@@ -224,8 +225,20 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 		return nil
 	}
 
+	// Enforce minimum withdrawal threshold in USDT
+	minThreshold := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil) // 10^decimals
+	minThreshold.Mul(minThreshold, big.NewInt(constants.MinimumWithdrawThreshold))
+	if usdtBalance.Cmp(minThreshold) < 0 {
+		logger.GetLogger().Infof(
+			"Withdrawal amount from receiving wallet to master wallet on network %s is below %d USDT. Skipping withdrawal.",
+			w.network,
+			constants.MinimumWithdrawThreshold,
+		)
+		return nil
+	}
+
 	// Step 3: Perform the transfer to the master wallet
-	txHash, gasUsed, gasPrice, err := w.ethClient.TransferToken(
+	txHash, gasUsed, gasPrice, receiptStatus, err := w.ethClient.TransferToken(
 		ctx,
 		w.chainID,
 		w.tokenContractAddress,
@@ -234,7 +247,11 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 		usdtBalance,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to transfer USDT to master wallet on network %s: %w", w.network, err)
+		return fmt.Errorf(
+			"failed to transfer USDT from receiving wallet to master wallet on network %s: %w",
+			w.network,
+			err,
+		)
 	}
 
 	// Step 4: Calculate fee and create the payload
@@ -245,15 +262,23 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 		return err
 	}
 
+	status := true
+	errorMessage := ""
+
+	if receiptStatus != 1 {
+		status = false
+		errorMessage = "execution reverted"
+	}
+
 	payload := dto.TokenTransferHistoryDTO{
 		Network:         w.network.String(),
 		TransactionHash: txHash.Hex(),
 		FromAddress:     receivingWalletAddress,
 		ToAddress:       w.masterWalletAddress,
 		TokenAmount:     tokenAmount,
-		Status:          true,
+		Status:          status,
 		Symbol:          constants.USDT,
-		ErrorMessage:    "",
+		ErrorMessage:    errorMessage,
 		Fee:             fee,
 		Type:            constants.Withdraw,
 	}
@@ -266,10 +291,17 @@ func (w *paymentWalletWithdrawWorker) transferFromReceivingToMasterWallet(
 	}
 
 	// Step 6: Log successful transfer
-	logger.GetLogger().Infof(
-		"Transferred %s USDT from receiving wallet to master wallet  on network %s. Transaction hash: %s. Fee: %s",
-		usdtBalance.String(), w.network, txHash.Hex(), fee,
-	)
+	if receiptStatus == 1 {
+		logger.GetLogger().Infof(
+			"Transferred %s USDT from receiving wallet to master wallet  on network %s. Transaction hash: %s. Fee: %s",
+			usdtBalance.String(), w.network, txHash.Hex(), fee,
+		)
+	} else {
+		logger.GetLogger().Errorf(
+			"USDT transfer failed from receiving wallet to master wallet on network %s. Transaction hash: %s",
+			w.network, txHash.Hex(),
+		)
+	}
 
 	return nil
 }
@@ -354,7 +386,9 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 
 	// Step 4: Transfer native token for gas if required
 	if requiredGas.Cmp(big.NewInt(0)) > 0 {
-		txHash, gasUsed, gasPrice, err := w.ethClient.TransferNativeToken(ctx, w.chainID, receivingWalletPrivateKey, address, requiredGas)
+		txHash, gasUsed, gasPrice, err := w.ethClient.TransferNativeToken(
+			ctx, w.chainID, receivingWalletPrivateKey, address, requiredGas,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to transfer native token to %s on network %s: %w", address, w.network, err)
 		}
@@ -381,11 +415,20 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 	}
 
 	// Step 5: Transfer USDT to the receiving wallet
-	txHash, gasUsed, gasPrice, err := w.ethClient.TransferToken(
-		ctx, w.chainID, w.tokenContractAddress, privateKeyHex, receivingWalletAddress, withdrawAmount,
+	txHash, gasUsed, gasPrice, receiptStatus, err := w.ethClient.TransferToken(
+		ctx, w.chainID,
+		w.tokenContractAddress,
+		privateKeyHex,
+		receivingWalletAddress,
+		withdrawAmount,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to transfer USDT from %s to receiving wallet on network %s: %w", address, w.network, err)
+		return fmt.Errorf(
+			"failed to transfer USDT from payment wallet %s to receiving wallet on network %s: %w",
+			address,
+			w.network,
+			err,
+		)
 	}
 
 	fee := utils.CalculateFee(gasUsed, gasPrice)
@@ -394,10 +437,17 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		logger.GetLogger().Errorf("Failed to convert token amount for transfer USDT on network %s: %v", w.network, withdrawAmount)
 	}
 
-	// Update payment wallet balance
-	if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, withdrawAmountStr, w.network, constants.USDT); err != nil {
-		logger.GetLogger().Errorf("Failed to subtract payment wallet balance on network %s: %v", w.network, err)
-		return err
+	status := true
+	errorMessage := ""
+	if receiptStatus == 1 {
+		// Update payment wallet balance
+		if err = w.paymentWalletUCase.SubtractPaymentWalletBalance(ctx, walletInfo.ID, withdrawAmountStr, w.network, constants.USDT); err != nil {
+			logger.GetLogger().Errorf("Failed to subtract payment wallet balance on network %s: %v", w.network, err)
+			return err
+		}
+	} else {
+		status = false
+		errorMessage = "execution reverted"
 	}
 
 	payloads = append(payloads, dto.TokenTransferHistoryDTO{
@@ -406,9 +456,9 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 		FromAddress:     address,
 		ToAddress:       receivingWalletAddress,
 		TokenAmount:     withdrawAmountStr,
-		Status:          true,
+		Status:          status,
 		Symbol:          constants.USDT,
-		ErrorMessage:    "",
+		ErrorMessage:    errorMessage,
 		Fee:             fee,
 		Type:            constants.InternalTransfer,
 	})

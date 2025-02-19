@@ -14,11 +14,12 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
@@ -26,15 +27,15 @@ import (
 
 // expiredOrderCatchupWorker is a worker that processes expired orders.
 type expiredOrderCatchupWorker struct {
-	paymentOrderUCase        interfaces.PaymentOrderUCase
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase
-	paymentStatisticsUCase   interfaces.PaymentStatisticsUCase
-	paymentWalletUCase       interfaces.PaymentWalletUCase
-	cacheRepo                infrainterfaces.CacheRepository
+	paymentOrderUCase        ucasetypes.PaymentOrderUCase
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase
+	paymentStatisticsUCase   ucasetypes.PaymentStatisticsUCase
+	paymentWalletUCase       ucasetypes.PaymentWalletUCase
+	cacheRepo                cachetypes.CacheRepository
 	tokenContractAddress     string
 	tokenDecimals            uint8
 	parsedABI                abi.ABI
-	ethClient                pkginterfaces.Client
+	ethClient                clienttypes.Client
 	network                  constants.NetworkType
 	processedOrderIDs        map[uint64]struct{}
 	isRunning                bool       // Tracks if catchup is running
@@ -42,15 +43,15 @@ type expiredOrderCatchupWorker struct {
 }
 
 func NewExpiredOrderCatchupWorker(
-	paymentOrderUCase interfaces.PaymentOrderUCase,
-	paymentEventHistoryUCase interfaces.PaymentEventHistoryUCase,
-	paymentStatisticsUCase interfaces.PaymentStatisticsUCase,
-	paymentWalletUCase interfaces.PaymentWalletUCase,
-	cacheRepo infrainterfaces.CacheRepository,
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
+	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
+	paymentWalletUCase ucasetypes.PaymentWalletUCase,
+	cacheRepo cachetypes.CacheRepository,
 	tokenContractAddress string,
-	ethClient pkginterfaces.Client,
+	ethClient clienttypes.Client,
 	network constants.NetworkType,
-) interfaces.Worker {
+) workertypes.Worker {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
 	if err != nil {
 		logger.GetLogger().Infof("failed to parse ERC20 ABI: %v", err)

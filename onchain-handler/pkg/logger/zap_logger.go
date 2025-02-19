@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/genefriendway/onchain-handler/pkg/interfaces"
+	"github.com/genefriendway/onchain-handler/pkg/logger/types"
 )
 
 type zapLogger struct {
@@ -21,19 +21,19 @@ var (
 )
 
 // mapLogLevel maps interfaces.Level to zapcore.Level.
-func mapLogLevel(level interfaces.Level) zapcore.Level {
+func mapLogLevel(level types.Level) zapcore.Level {
 	switch level {
-	case interfaces.DebugLevel:
+	case types.DebugLevel:
 		return zapcore.DebugLevel
-	case interfaces.InfoLevel:
+	case types.InfoLevel:
 		return zapcore.InfoLevel
-	case interfaces.WarnLevel:
+	case types.WarnLevel:
 		return zapcore.WarnLevel
-	case interfaces.ErrorLevel:
+	case types.ErrorLevel:
 		return zapcore.ErrorLevel
-	case interfaces.FatalLevel:
+	case types.FatalLevel:
 		return zapcore.FatalLevel
-	case interfaces.PanicLevel:
+	case types.PanicLevel:
 		return zapcore.PanicLevel
 	default:
 		return zapcore.InfoLevel
@@ -54,7 +54,7 @@ func customLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) 
 }
 
 // newZapLogger initializes a new zap-based logger instance.
-func newZapLogger(level interfaces.Level) *zapLogger {
+func newZapLogger(level types.Level) *zapLogger {
 	atomicLevel := zap.NewAtomicLevelAt(mapLogLevel(level))
 
 	encoderConfig := zapcore.EncoderConfig{
@@ -82,32 +82,32 @@ func newZapLogger(level interfaces.Level) *zapLogger {
 }
 
 // GetLogger returns the singleton logger instance.
-func GetLogger() interfaces.Logger {
+func GetLogger() types.Logger {
 	once.Do(func() {
-		instance = newZapLogger(interfaces.InfoLevel)
+		instance = newZapLogger(types.InfoLevel)
 	})
 	return instance
 }
 
 // SetLogger replaces the singleton logger instance.
-func SetLogger(customLogger interfaces.Logger) {
+func SetLogger(customLogger types.Logger) {
 	instance = customLogger.(*zapLogger)
 }
 
 // SetLogLevel sets the log level dynamically.
-func SetLogLevel(level interfaces.Level) {
+func SetLogLevel(level types.Level) {
 	if instance != nil {
 		instance.currentLevel.SetLevel(mapLogLevel(level))
 	}
 }
 
 // Logger Interface Implementation
-func (z *zapLogger) SetLogLevel(level interfaces.Level) {
+func (z *zapLogger) SetLogLevel(level types.Level) {
 	SetLogLevel(level)
 }
 
-func (z *zapLogger) GetLogLevel() interfaces.Level {
-	return interfaces.Level(z.currentLevel.String())
+func (z *zapLogger) GetLogLevel() types.Level {
+	return types.Level(z.currentLevel.String())
 }
 
 // Individual Log Methods
@@ -138,7 +138,7 @@ func (z *zapLogger) Panicf(format string, values ...interface{}) {
 }
 
 // WithFields creates a new logger instance with additional fields.
-func (z *zapLogger) WithFields(fields map[string]interface{}) interfaces.Logger {
+func (z *zapLogger) WithFields(fields map[string]interface{}) types.Logger {
 	return &zapLogger{
 		sugaredLogger: z.sugaredLogger.With(fields),
 		currentLevel:  z.currentLevel,

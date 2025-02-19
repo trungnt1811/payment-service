@@ -11,8 +11,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -20,7 +20,7 @@ type paymentOrderRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentOrderRepository(db *gorm.DB) interfaces.PaymentOrderRepository {
+func NewPaymentOrderRepository(db *gorm.DB) repotypes.PaymentOrderRepository {
 	return &paymentOrderRepository{
 		db: db,
 	}

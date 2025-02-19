@@ -3,7 +3,7 @@ package entities
 import (
 	"time"
 
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 )
 
 type TokenTransferHistory struct {

@@ -13,8 +13,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 )
 
@@ -22,7 +22,7 @@ type paymentWalletRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentWalletRepository(db *gorm.DB) interfaces.PaymentWalletRepository {
+func NewPaymentWalletRepository(db *gorm.DB) repotypes.PaymentWalletRepository {
 	return &paymentWalletRepository{
 		db: db,
 	}

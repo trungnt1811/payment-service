@@ -6,28 +6,28 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching"
-	infrainterfaces "github.com/genefriendway/onchain-handler/infra/interfaces"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
-	pkginterfaces "github.com/genefriendway/onchain-handler/pkg/interfaces"
+	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
+	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
 type latestBlockWorker struct {
-	cacheRepo       infrainterfaces.CacheRepository
-	blockStateUCase interfaces.BlockStateUCase
-	ethClient       pkginterfaces.Client
+	cacheRepo       cachetypes.CacheRepository
+	blockStateUCase ucasetypes.BlockStateUCase
+	ethClient       clienttypes.Client
 	network         constants.NetworkType
 	isRunning       bool       // Tracks if catchup is running
 	mu              sync.Mutex // Mutex to protect the isRunning flag
 }
 
 func NewLatestBlockWorker(
-	cacheRepo infrainterfaces.CacheRepository,
-	blockStateUCase interfaces.BlockStateUCase,
-	ethClient pkginterfaces.Client,
+	cacheRepo cachetypes.CacheRepository,
+	blockStateUCase ucasetypes.BlockStateUCase,
+	ethClient clienttypes.Client,
 	network constants.NetworkType,
-) interfaces.Worker {
+) workertypes.Worker {
 	return &latestBlockWorker{
 		cacheRepo:       cacheRepo,
 		blockStateUCase: blockStateUCase,
@@ -75,7 +75,7 @@ func (w *latestBlockWorker) run(ctx context.Context) {
 
 // fetchAndStoreLatestBlock fetches the latest block and stores it in cache and DB
 func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
-	cacheKey := &caching.Keyer{Raw: constants.LatestBlockCacheKey + w.network.String()}
+	cacheKey := &cachetypes.Keyer{Raw: constants.LatestBlockCacheKey + w.network.String()}
 
 	// Try to retrieve the latest block from cache
 	var latestBlock uint64

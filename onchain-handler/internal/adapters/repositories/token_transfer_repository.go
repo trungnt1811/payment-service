@@ -8,15 +8,15 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
 type tokenTransferRepository struct {
 	db *gorm.DB
 }
 
-func NewTokenTransferRepository(db *gorm.DB) interfaces.TokenTransferRepository {
+func NewTokenTransferRepository(db *gorm.DB) repotypes.TokenTransferRepository {
 	return &tokenTransferRepository{
 		db: db,
 	}

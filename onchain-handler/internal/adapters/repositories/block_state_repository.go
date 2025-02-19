@@ -6,8 +6,8 @@ import (
 
 	"gorm.io/gorm"
 
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
 type blockstateRepository struct {
@@ -15,7 +15,7 @@ type blockstateRepository struct {
 }
 
 // NewBlockstateRepository creates a new BlockStateRepository
-func NewBlockstateRepository(db *gorm.DB) interfaces.BlockStateRepository {
+func NewBlockstateRepository(db *gorm.DB) repotypes.BlockStateRepository {
 	return &blockstateRepository{
 		db: db,
 	}

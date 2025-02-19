@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // ERC-20 transfer event ABI
@@ -67,16 +66,6 @@ func (t *NetworkType) UnmarshalJSON(data []byte) error {
 	*t = normalized
 	return nil
 }
-
-// Eth client cooldown
-const (
-	EthClientCooldown = 5 * time.Minute
-)
-
-// Network delay
-const (
-	DefaultNetworkDelay = 10 * time.Second
-)
 
 // Token decimals
 const (

@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/infra/database/types"
 )
 
 // postgreSQL implements SQLDBConnection interface
@@ -18,7 +18,7 @@ type postgreSQL struct {
 }
 
 // NewPostgreSQLClient creates a new sql client instance
-func NewPostgreSQLClient(config *conf.DatabaseConfiguration) interfaces.SQLClient {
+func NewPostgreSQLClient(config *conf.DatabaseConfiguration) types.SQLClient {
 	return &postgreSQL{
 		config: config,
 	}

@@ -6,19 +6,20 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/internal/domain/dto"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
 
 type orderCleanWorker struct {
-	paymentOrderUCase interfaces.PaymentOrderUCase
+	paymentOrderUCase ucasetypes.PaymentOrderUCase
 	isRunning         bool
 	mu                sync.Mutex
 }
 
-func NewOrderCleanWorker(paymentOrderUCase interfaces.PaymentOrderUCase) interfaces.Worker {
+func NewOrderCleanWorker(paymentOrderUCase ucasetypes.PaymentOrderUCase) workertypes.Worker {
 	return &orderCleanWorker{
 		paymentOrderUCase: paymentOrderUCase,
 	}

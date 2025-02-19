@@ -65,3 +65,13 @@ const (
 	WithdrawIntervalDaily  = "daily"
 	WithdrawIntervalHourly = "hourly"
 )
+
+// Eth client cooldown
+const (
+	EthClientCooldown = 15 * time.Second
+)
+
+// Network delay
+const (
+	DefaultNetworkDelay = 10 * time.Second
+)

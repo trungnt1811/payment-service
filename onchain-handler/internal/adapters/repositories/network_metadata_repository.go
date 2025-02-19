@@ -5,8 +5,8 @@ import (
 
 	"gorm.io/gorm"
 
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
-	"github.com/genefriendway/onchain-handler/internal/interfaces"
 )
 
 type networkMetadataRepository struct {
@@ -14,7 +14,7 @@ type networkMetadataRepository struct {
 }
 
 // NewNetworkMetadataRepository creates a new NetworkMetadataRepository
-func NewNetworkMetadataRepository(db *gorm.DB) interfaces.NetworkMetadataRepository {
+func NewNetworkMetadataRepository(db *gorm.DB) repotypes.NetworkMetadataRepository {
 	return &networkMetadataRepository{
 		db: db,
 	}

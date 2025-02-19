@@ -6,22 +6,23 @@ import (
 
 	"gorm.io/gorm"
 
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 )
 
-type PaymentEventHistoryRepository struct {
+type paymentEventHistoryRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentEventHistoryRepository(db *gorm.DB) *PaymentEventHistoryRepository {
-	return &PaymentEventHistoryRepository{
+func NewPaymentEventHistoryRepository(db *gorm.DB) repotypes.PaymentEventHistoryRepository {
+	return &paymentEventHistoryRepository{
 		db: db,
 	}
 }
 
 // CreatePaymentEventHistory inserts multiple payment event history records in a single transaction
 // and returns the created records.
-func (r *PaymentEventHistoryRepository) CreatePaymentEventHistory(
+func (r *paymentEventHistoryRepository) CreatePaymentEventHistory(
 	ctx context.Context,
 	paymentEvents []entities.PaymentEventHistory,
 ) ([]entities.PaymentEventHistory, error) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/genefriendway/onchain-handler/infra/interfaces"
+	"github.com/genefriendway/onchain-handler/infra/set/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -17,10 +17,10 @@ type set[T comparable] struct {
 	keyFunc func(T) string
 }
 
-// NewSet creates a new set without internal restrictions.
+// NewSet creates a new set.
 func NewSet[T comparable](
 	ctx context.Context, keyFunc func(T) string, loader func(ctx context.Context, limit, offset int) ([]T, error),
-) (interfaces.Set[T], error) {
+) (types.Set[T], error) {
 	return &set[T]{
 		ctx:     ctx,
 		items:   make(map[string]T),
@@ -71,7 +71,7 @@ func (s *set[T]) Add(item T) error {
 	return nil
 }
 
-// Remove deletes an item from the set **based on a condition**.
+// Remove deletes an item from the set based on a condition.
 func (s *set[T]) Remove(condition func(T) bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -100,7 +100,7 @@ func (s *set[T]) UpdateItem(key string, newItem T) error {
 
 // Fill loads additional items into the set using the loader's limit.
 func (s *set[T]) Fill(limit int) error {
-	newItems, err := s.loader(s.ctx, limit, len(s.items)) // Loader still gets a limit
+	newItems, err := s.loader(s.ctx, limit, len(s.items))
 	if err != nil {
 		logger.GetLogger().Errorf("Error loading items: %v", err)
 		return fmt.Errorf("failed to load more items: %w", err)
@@ -111,7 +111,6 @@ func (s *set[T]) Fill(limit int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// No internal limit—adds as many as the loader provides
 	for _, item := range newItems {
 		s.items[s.keyFunc(item)] = item
 	}
