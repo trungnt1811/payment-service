@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/infra/mocks"
 )
 
@@ -18,16 +19,23 @@ func TestSaveItem(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockCacheClient := mocks.NewMockCacheClient(ctrl)
+		mockStringer := mocks.NewMockStringer(ctrl)
+
 		ctx := context.Background()
+		config := &conf.Configuration{AppName: "onchain-handler"} // Ensure config consistency
 		repo := NewCachingRepository(ctx, mockCacheClient)
 
-		key := mocks.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
+		// Define mock key expectations properly
+		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
+
+		prefixedKey := config.AppName + "_testKey"
 		value := "testValue"
 		expire := 5 * time.Minute
 
-		mockCacheClient.EXPECT().Set(ctx, key.String(), value, expire).Return(nil)
+		// Expectation on mocked cache client
+		mockCacheClient.EXPECT().Set(ctx, prefixedKey, value, expire).Return(nil)
 
-		err := repo.SaveItem(key, value, expire)
+		err := repo.SaveItem(mockStringer, value, expire)
 		require.NoError(t, err)
 	})
 }
@@ -38,15 +46,20 @@ func TestRetrieveItem(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockClient := mocks.NewMockCacheClient(ctrl)
+		mockStringer := mocks.NewMockStringer(ctrl)
+
 		ctx := context.Background()
+		config := &conf.Configuration{AppName: "onchain-handler"} // Ensure consistent config usage
 		repo := NewCachingRepository(ctx, mockClient)
 
-		key := mocks.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
+		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
+
+		prefixedKey := config.AppName + "_testKey"
 		var value string
 
-		mockClient.EXPECT().Get(ctx, key.String(), &value).Return(nil)
+		mockClient.EXPECT().Get(ctx, prefixedKey, &value).Return(nil)
 
-		err := repo.RetrieveItem(key, &value)
+		err := repo.RetrieveItem(mockStringer, &value)
 		require.NoError(t, err)
 	})
 }
@@ -57,14 +70,19 @@ func TestRemoveItem(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockClient := mocks.NewMockCacheClient(ctrl)
+		mockStringer := mocks.NewMockStringer(ctrl)
+
 		ctx := context.Background()
+		config := &conf.Configuration{AppName: "onchain-handler"} // Ensure consistent config usage
 		repo := NewCachingRepository(ctx, mockClient)
 
-		key := mocks.NewMockStringer(ctrl).EXPECT().String().Return("testKey").AnyTimes()
+		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
 
-		mockClient.EXPECT().Del(ctx, key.String()).Return(nil)
+		prefixedKey := config.AppName + "_testKey"
 
-		err := repo.RemoveItem(key)
+		mockClient.EXPECT().Del(ctx, prefixedKey).Return(nil)
+
+		err := repo.RemoveItem(mockStringer)
 		require.NoError(t, err)
 	})
 }

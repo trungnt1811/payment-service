@@ -39,6 +39,10 @@ func GetConfiguration() *Configuration {
 	return &configuration
 }
 
+func GetAppName() string {
+	return configuration.AppName
+}
+
 func GetRedisConfiguration() *RedisConfiguration {
 	return &configuration.Redis
 }
