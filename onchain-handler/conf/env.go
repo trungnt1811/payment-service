@@ -77,6 +77,7 @@ var defaultConfigurations = map[string]any{
 	"REDIS_ADDRESS":              "localhost:6379",
 	"REDIS_TTL":                  "60m",
 	"APP_PORT":                   "8080",
+	"APP_NAME":                   "onchain-handler",
 	"ENV_FILE":                   ".env",
 	"ENV":                        "DEV",
 	"LOG_LEVEL":                  "debug",
