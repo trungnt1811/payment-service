@@ -80,10 +80,9 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx con
 
 func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*entities.PaymentWallet, error) {
 	var placeholderWallet entities.PaymentWallet
-	maxRetries := 5
 
 	// Step 1: Create a new wallet with a unique temp address
-	for i := 0; i < maxRetries; i++ {
+	for i := 0; i < constants.MaxRetries; i++ {
 		tempAddress := payment.GenerateTempAddress()
 
 		placeholderWallet = entities.PaymentWallet{
@@ -104,7 +103,7 @@ func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*ent
 
 	// If all retries fail, return an error
 	if placeholderWallet.Address == "" {
-		return nil, fmt.Errorf("failed to generate a unique temporary address after %d attempts", maxRetries)
+		return nil, fmt.Errorf("failed to generate a unique temporary address after %d attempts", constants.MaxRetries)
 	}
 
 	// Step 2: Generate the real wallet account using the assigned ID

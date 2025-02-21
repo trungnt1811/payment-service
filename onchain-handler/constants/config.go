@@ -24,7 +24,7 @@ const (
 
 // Retry config
 const (
-	MaxRetries = 3               // Maximum number of retries when polling fails
+	MaxRetries = 3               // Maximum number of retries
 	RetryDelay = 3 * time.Second // Delay between retries
 )
 
