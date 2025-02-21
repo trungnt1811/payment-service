@@ -8,7 +8,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
 	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
@@ -17,7 +16,6 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
-	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -194,18 +192,18 @@ func (u *paymentOrderUCase) processOrderPayloads(
 		}
 	}
 
-	// Step 5: Map order IDs and sign payloads
-	responseWithSignature, err := u.mapOrderIDsAndSignPayloads(createdOrders)
+	// Step 5: Map order IDs
+	responseWithIDs, err := u.mapOrderIDs(createdOrders)
 	if err != nil {
 		return fmt.Errorf("failed to map order IDs and sign payloads: %w", err)
 	}
 
-	*response = append(*response, responseWithSignature...)
+	*response = append(*response, responseWithIDs...)
 	return nil
 }
 
-// mapOrderIDsAndSignPayloads maps order IDs and signs payloads.
-func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
+// mapOrderIDs maps order IDs.
+func (u *paymentOrderUCase) mapOrderIDs(
 	orders []entities.PaymentOrder,
 ) ([]dto.CreatedPaymentOrderDTO, error) {
 	var response []dto.CreatedPaymentOrderDTO
@@ -214,26 +212,6 @@ func (u *paymentOrderUCase) mapOrderIDsAndSignPayloads(
 		orderDTO := order.ToCreatedPaymentOrderDTO()
 		orderDTO.PaymentAddress = order.Wallet.Address
 		orderDTO.Expired = uint64(order.ExpiredTime.Unix())
-
-		// Get private key from wallet id
-		walletConfig := conf.GetWalletConfiguration()
-		_, privateKey, err := crypto.GenerateAccount(
-			walletConfig.Mnemonic,
-			walletConfig.Passphrase,
-			walletConfig.Salt,
-			constants.PaymentWallet,
-			order.Wallet.ID,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("error get payment wallet private key: %w", err)
-		}
-
-		signature, err := crypto.SignMessage(privateKey, []byte(orderDTO.RequestID+orderDTO.Amount+orderDTO.Symbol))
-		if err != nil {
-			return nil, fmt.Errorf("error signing message: %w", err)
-		}
-
-		orderDTO.Signature = signature
 		response = append(response, orderDTO)
 	}
 	return response, nil
