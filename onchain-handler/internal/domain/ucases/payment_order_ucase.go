@@ -17,7 +17,9 @@ import (
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
+	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
+	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 type paymentOrderUCase struct {
@@ -130,14 +132,18 @@ func (u *paymentOrderUCase) processOrderPayloads(
 	expiredOrderTime time.Duration,
 	response *[]dto.CreatedPaymentOrderDTO,
 ) error {
+	// Retrieve the payment order set
+	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
+
 	var claimedWalletIDs []uint64
+	var createdOrders []entities.PaymentOrder
 
 	// Begin transaction
-	return u.db.Transaction(func(tx *gorm.DB) error {
+	err := u.db.Transaction(func(tx *gorm.DB) error {
 		var orders []entities.PaymentOrder
 
 		for _, payload := range payloads {
-			// Claim an available wallet
+			// Step 1: Claim an available wallet inside the transaction
 			wallet, err := u.paymentWalletRepository.ClaimFirstAvailableWallet(tx, ctx)
 			if err != nil {
 				return fmt.Errorf("failed to claim available wallet: %w", err)
@@ -146,7 +152,7 @@ func (u *paymentOrderUCase) processOrderPayloads(
 			// Track claimed wallet IDs
 			claimedWalletIDs = append(claimedWalletIDs, wallet.ID)
 
-			// Create a new payment order
+			// Step 2: Create a new payment order
 			order := entities.PaymentOrder{
 				Amount:      payload.Amount,
 				WalletID:    wallet.ID,
@@ -163,26 +169,39 @@ func (u *paymentOrderUCase) processOrderPayloads(
 			orders = append(orders, order)
 		}
 
-		// Save orders to the database
-		createdOrders, err := u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders, vendorID)
+		// Step 3: Save orders within the transaction
+		var err error
+		createdOrders, err = u.paymentOrderRepository.CreatePaymentOrders(tx, ctx, orders, vendorID)
 		if err != nil {
-			// Rollback claimed wallets if order creation fails
-			rollbackErr := u.paymentWalletRepository.ReleaseWalletsByIDs(ctx, claimedWalletIDs)
-			if rollbackErr != nil {
+			// Rollback claimed wallets inside the transaction
+			if rollbackErr := u.paymentWalletRepository.ReleaseWalletsByIDs(tx, claimedWalletIDs); rollbackErr != nil {
 				return fmt.Errorf("failed to rollback wallets: %w", rollbackErr)
 			}
 			return fmt.Errorf("failed to create payment orders: %w", err)
 		}
 
-		// Map order IDs and sign payloads
-		responseWithSignature, err := u.mapOrderIDsAndSignPayloads(createdOrders)
-		if err != nil {
-			return fmt.Errorf("failed to map order IDs and sign payloads: %w", err)
-		}
-
-		*response = append(*response, responseWithSignature...)
-		return nil
+		return nil // Commit transaction
 	})
+	if err != nil {
+		return err // Return error if transaction fails
+	}
+
+	// Step 4: Add orders to the payment order set (AFTER transaction commit)
+	for _, order := range createdOrders {
+		if addErr := paymentOrderSet.Add(order.ToDto()); addErr != nil {
+			// Log error instead of failing the whole process
+			logger.GetLogger().Errorf("Failed to add order to payment order set: %v", addErr)
+		}
+	}
+
+	// Step 5: Map order IDs and sign payloads
+	responseWithSignature, err := u.mapOrderIDsAndSignPayloads(createdOrders)
+	if err != nil {
+		return fmt.Errorf("failed to map order IDs and sign payloads: %w", err)
+	}
+
+	*response = append(*response, responseWithSignature...)
+	return nil
 }
 
 // mapOrderIDsAndSignPayloads maps order IDs and signs payloads.
@@ -292,13 +311,16 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 }
 
 func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error {
-	// Retrieve the payment order ID by request ID
+	// Retrieve the payment order set
+	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
+
+	// Step 1: Retrieve the payment order ID by request ID
 	orderID, err := u.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve payment order id with request id %s: %w", requestID, err)
 	}
 
-	// Retrieve the payment order by ID
+	// Step 2: Retrieve the payment order by ID
 	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
@@ -307,13 +329,34 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID st
 		return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
 	}
 
-	// Fetch the latest block height for the given network
+	// Step 3: Fetch the latest block height for the given network
 	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network.String(), u.cacheRepo)
 	if err != nil {
 		return fmt.Errorf("failed to get latest block from cache: %w", err)
 	}
 
-	return u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, network.String(), latestBlock)
+	// Step 4: Update the order in the database
+	err = u.paymentOrderRepository.UpdateOrderNetwork(ctx, requestID, network.String(), latestBlock)
+	if err != nil {
+		return fmt.Errorf("failed to update order network: %w", err)
+	}
+
+	// Step 5: Retrieve the updated order
+	updatedOrder, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve updated payment order with id %d: %w", orderID, err)
+	}
+
+	// Step 6: Update the payment order set
+	orderDTO := updatedOrder.ToDto()
+	key := orderDTO.PaymentAddress + "_" + orderDTO.Symbol
+	err = paymentOrderSet.UpdateItem(key, orderDTO)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to update payment order in set: %v", err)
+		return fmt.Errorf("failed to update payment order in memory: %w", err)
+	}
+
+	return nil
 }
 
 func (u *paymentOrderUCase) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
@@ -332,17 +375,17 @@ func (u *paymentOrderUCase) BatchUpdateOrderBlockHeights(ctx context.Context, or
 	return u.paymentOrderRepository.BatchUpdateOrderBlockHeights(ctx, orderIDs, blockHeights)
 }
 
-func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error) {
-	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, nil)
+func (u *paymentOrderUCase) GetActivePaymentOrders(ctx context.Context) ([]dto.PaymentOrderDTO, error) {
+	orders, err := u.paymentOrderRepository.GetActivePaymentOrders(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	var orderDtos []dto.PaymentOrderDTO
+	var orderDTOs []dto.PaymentOrderDTO
 	for _, order := range orders {
-		orderDto := order.ToDto()
-		orderDtos = append(orderDtos, orderDto)
+		orderDTO := order.ToDto()
+		orderDTOs = append(orderDTOs, orderDTO)
 	}
-	return orderDtos, nil
+	return orderDTOs, nil
 }
 
 func (u *paymentOrderUCase) GetPaymentOrders(

@@ -253,17 +253,17 @@ func (r *paymentWalletRepository) GetTotalBalancePerNetwork(ctx context.Context,
 	return totalBalanceMap, nil
 }
 
-func (r *paymentWalletRepository) ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error {
+func (r *paymentWalletRepository) ReleaseWalletsByIDs(tx *gorm.DB, walletIDs []uint64) error {
 	if len(walletIDs) == 0 {
 		return nil // No IDs provided, nothing to release
 	}
 
-	err := r.db.WithContext(ctx).Model(&entities.PaymentWallet{}).
+	err := tx.Model(&entities.PaymentWallet{}).
 		Where("id IN ?", walletIDs).
 		Update("in_use", false).
 		Error
 	if err != nil {
-		return fmt.Errorf("failed to release wallets: %w", err)
+		return fmt.Errorf("failed to release wallets within transaction: %w", err)
 	}
 	return nil
 }

@@ -23,6 +23,6 @@ type PaymentWalletRepository interface {
 		ctx context.Context, address *string,
 	) (entities.PaymentWallet, error)
 	GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error)
-	ReleaseWalletsByIDs(ctx context.Context, walletIDs []uint64) error
+	ReleaseWalletsByIDs(tx *gorm.DB, walletIDs []uint64) error
 	GetWalletIDByAddress(ctx context.Context, address string) (uint64, error)
 }

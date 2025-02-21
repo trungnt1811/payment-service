@@ -77,7 +77,7 @@ func (c *paymentOrderCache) CreatePaymentOrders(
 	return createdOrders, nil
 }
 
-func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]entities.PaymentOrder, error) {
+func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, network *string) ([]entities.PaymentOrder, error) {
 	// Handle nil network gracefully in the cache key
 	networkStr := "nil"
 	if network != nil {
@@ -86,8 +86,8 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, o
 
 	// Generate a consistent cache key
 	key := &cachetypes.Keyer{
-		Raw: fmt.Sprintf("%sGetActivePaymentOrders_network:%s_limit:%d_offset:%d",
-			keyPrefixPaymentOrder, networkStr, limit, offset),
+		Raw: fmt.Sprintf("%sGetActivePaymentOrders_network:%s",
+			keyPrefixPaymentOrder, networkStr),
 	}
 
 	// Attempt to retrieve data from cache
@@ -98,7 +98,7 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, limit, o
 	}
 
 	// Cache miss: fetch from repository
-	paymentOrders, err := c.paymentOrderRepository.GetActivePaymentOrders(ctx, limit, offset, network)
+	paymentOrders, err := c.paymentOrderRepository.GetActivePaymentOrders(ctx, network)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch active payment orders: %w", err)
 	}

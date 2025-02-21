@@ -8,7 +8,6 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
-	"github.com/genefriendway/onchain-handler/infra/set"
 	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
@@ -31,10 +30,8 @@ func RunWorkers(
 	tokenTransferUCase ucasetypes.TokenTransferUCase,
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
+	paymentOrderSet settypes.Set[dto.PaymentOrderDTO],
 ) {
-	// Initialize payment order set
-	paymentOrderSet := initializePaymentOrderSet(ctx, paymentOrderUCase.GetActivePaymentOrders)
-
 	// Initialize AVAX C-Chain client
 	avaxRpcUrls, err := conf.GetRpcUrls(constants.AvaxCChain)
 	if err != nil {
@@ -134,24 +131,6 @@ func RunWorkers(
 		paymentWalletUCase,
 		paymentOrderSet,
 	)
-}
-
-// initializePaymentOrderSet initializes the payment order set with a unique key function.
-func initializePaymentOrderSet(
-	ctx context.Context,
-	loader func(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error),
-) settypes.Set[dto.PaymentOrderDTO] {
-	// Key function to uniquely identify each PaymentOrderDTO
-	keyFunc := func(order dto.PaymentOrderDTO) string {
-		return order.PaymentAddress + "_" + order.Symbol
-	}
-
-	// Create the order set
-	paymentOrderSet, err := set.NewSet(ctx, keyFunc, loader)
-	if err != nil {
-		pkglogger.GetLogger().Fatalf("Create payment order set error: %v", err)
-	}
-	return paymentOrderSet
 }
 
 // persistTokenDecimalsToCache fetches token decimals from the blockchain and persists them to the cache

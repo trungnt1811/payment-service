@@ -27,7 +27,7 @@ type PaymentOrderUCase interface {
 	UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error
-	GetActivePaymentOrders(ctx context.Context, limit, offset int) ([]dto.PaymentOrderDTO, error)
+	GetActivePaymentOrders(ctx context.Context) ([]dto.PaymentOrderDTO, error)
 	GetPaymentOrders(
 		ctx context.Context,
 		vendorID string,

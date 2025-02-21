@@ -30,8 +30,7 @@ const (
 
 // Order set config
 const (
-	CleanSetInterval    = 5 * time.Second // Interval to clean up the set
-	DefaultFillSetLimit = 100             // Default limit to fill the set
+	CleanSetInterval = 5 * time.Second // Interval to clean up the set
 )
 
 // Cache config

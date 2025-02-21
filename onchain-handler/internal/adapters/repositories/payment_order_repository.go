@@ -51,15 +51,13 @@ func (r *paymentOrderRepository) CreatePaymentOrders(
 }
 
 // GetActivePaymentOrders retrieves active orders that have not expired or are in "Processing" status.
-func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]entities.PaymentOrder, error) {
+func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, network *string) ([]entities.PaymentOrder, error) {
 	var orders []entities.PaymentOrder
 	currentTime := time.Now().UTC() // Get the current UTC time
 
 	query := r.db.WithContext(ctx).
-		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id"). // Join PaymentWallet with PaymentOrder.
-		Preload("Wallet").                                                           // Preload the associated Wallet
-		Limit(limit).
-		Offset(offset).
+		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id").                          // Join PaymentWallet with PaymentOrder.
+		Preload("Wallet").                                                                                    // Preload the associated Wallet
 		Where("(payment_order.status IN (?) AND payment_order.expired_time > ?) OR payment_order.status = ?", // Differentiate logic for `Processing`.
 			[]string{constants.Pending, constants.Partial}, // Non-expired statuses.
 			currentTime,

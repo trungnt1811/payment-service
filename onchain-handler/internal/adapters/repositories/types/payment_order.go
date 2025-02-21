@@ -16,7 +16,7 @@ type PaymentOrderRepository interface {
 		orders []entities.PaymentOrder,
 		vendorID string,
 	) ([]entities.PaymentOrder, error)
-	GetActivePaymentOrders(ctx context.Context, limit, offset int, network *string) ([]entities.PaymentOrder, error)
+	GetActivePaymentOrders(ctx context.Context, network *string) ([]entities.PaymentOrder, error)
 	UpdatePaymentOrder(ctx context.Context, order *entities.PaymentOrder) error
 	UpdateOrderNetwork(ctx context.Context, requestID, network string, blockHeight uint64) error
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error

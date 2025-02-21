@@ -45,6 +45,9 @@ func main() {
 	// Initialize the cache repository
 	cacheRepository := providers.ProvideCacheRepository(ctx)
 
+	// Initialize payment order set
+	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
+
 	// Initialize use cases
 	ucases := wire.InitializeUseCases(db, cacheRepository)
 
@@ -58,6 +61,7 @@ func main() {
 			ucases.TokenTransferUCase,
 			ucases.PaymentWalletUCase,
 			ucases.PaymentStatisticsUCase,
+			paymentOrderSet,
 		)
 	}
 

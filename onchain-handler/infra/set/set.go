@@ -13,18 +13,14 @@ type set[T comparable] struct {
 	ctx     context.Context
 	mu      sync.Mutex
 	items   map[string]T
-	loader  func(ctx context.Context, limit, offset int) ([]T, error)
 	keyFunc func(T) string
 }
 
 // NewSet creates a new set.
-func NewSet[T comparable](
-	ctx context.Context, keyFunc func(T) string, loader func(ctx context.Context, limit, offset int) ([]T, error),
-) (types.Set[T], error) {
+func NewSet[T comparable](ctx context.Context, keyFunc func(T) string) (types.Set[T], error) {
 	return &set[T]{
 		ctx:     ctx,
 		items:   make(map[string]T),
-		loader:  loader,
 		keyFunc: keyFunc,
 	}, nil
 }
@@ -98,9 +94,9 @@ func (s *set[T]) UpdateItem(key string, newItem T) error {
 	return nil
 }
 
-// Fill loads additional items into the set using the loader's limit.
-func (s *set[T]) Fill(limit int) error {
-	newItems, err := s.loader(s.ctx, limit, len(s.items))
+// Fill loads additional items into the set using a provided loader function.
+func (s *set[T]) Fill(loader func(ctx context.Context) ([]T, error)) error {
+	newItems, err := loader(s.ctx) // Use passed loader instead of struct's loader
 	if err != nil {
 		logger.GetLogger().Errorf("Error loading items: %v", err)
 		return fmt.Errorf("failed to load more items: %w", err)

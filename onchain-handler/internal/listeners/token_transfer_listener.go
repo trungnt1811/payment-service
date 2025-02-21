@@ -80,7 +80,9 @@ func NewTokenTransferListener(
 	}
 
 	// Init the order set
-	if err := listener.orderSet.Fill(constants.DefaultFillSetLimit); err != nil {
+	if err := listener.orderSet.Fill(
+		paymentOrderUCase.GetActivePaymentOrders,
+	); err != nil {
 		logger.GetLogger().Errorf("Failed to init the order set %s: %v", listener.network.String(), err)
 	}
 
@@ -101,10 +103,6 @@ func (listener *tokenTransferListener) startCleanSetTicker(interval time.Duratio
 			listener.mu.Lock()
 			logger.GetLogger().Debug("Starting cleaning operation...")
 			listener.removeOrders()
-			// Refill the set to ensure it has the required number of items
-			if err := listener.orderSet.Fill(constants.DefaultFillSetLimit); err != nil {
-				logger.GetLogger().Errorf("Failed to refill the order set %s: %v", listener.network.String(), err)
-			}
 			logger.GetLogger().Debug("Clean set operation finished.")
 			listener.mu.Unlock()
 		case <-listener.ctx.Done():
@@ -124,16 +122,9 @@ func (listener *tokenTransferListener) fetchOrderDetailsFromSet(
 		return nil, nil // Return nil instead of an error if no order is found
 	}
 
-	// Fetch the most up-to-date order details from DB
-	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to fetch order ID %d from DB: %v", order.ID, err)
-		return nil, err
-	}
-
 	// Ensure order matches the correct network
-	if orderDTO.Network != listener.network.String() {
-		logger.GetLogger().Infof("Skipping order ID %d as it belongs to a different network: %s", order.ID, orderDTO.Network)
+	if order.Network != listener.network.String() {
+		logger.GetLogger().Infof("Skipping order ID %d as it belongs to a different network: %s", order.ID, order.Network)
 		return nil, nil
 	}
 
@@ -282,6 +273,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 		return nil, nil
 	}
 
+	// Ready to send webhook for the processed order
 	return processedOrder, nil
 }
 
@@ -300,14 +292,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 		orderAmount, conf.GetPaymentCovering(), listener.tokenDecimals,
 	)
 
-	// Get newest order state in cache
-	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
-		return false, err
-	}
-
-	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(orderDTO.Transferred, listener.tokenDecimals)
+	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, listener.tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert transferred amount: %v", err)
 	}
@@ -321,7 +306,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if order is still 'Processing' or needs to be marked as 'Success'.
 		status := constants.Success
-		if blockHeight < orderDTO.UpcomingBlockHeight {
+		if blockHeight < order.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 
@@ -333,7 +318,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
-		if blockHeight < orderDTO.UpcomingBlockHeight {
+		if blockHeight < order.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 
@@ -359,12 +344,6 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	order.Transferred = transferredAmountInEth
 	order.Status = status
 
-	// Update item in set
-	key := order.PaymentAddress + "_" + order.Symbol
-	if err := listener.orderSet.UpdateItem(key, order); err != nil {
-		return fmt.Errorf("failed to update order in set: %w", err)
-	}
-
 	// Update the payment order in database
 	err = listener.paymentOrderUCase.UpdatePaymentOrder(
 		listener.ctx,
@@ -377,6 +356,12 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update payment order in DB: %w", err)
+	}
+
+	// Update item in set
+	key := order.PaymentAddress + "_" + order.Symbol
+	if err := listener.orderSet.UpdateItem(key, order); err != nil {
+		return fmt.Errorf("failed to update order in set: %w", err)
 	}
 
 	logger.GetLogger().Infof("Successfully updated order ID %d to status '%s' with transferred amount: %s on block %d",
