@@ -311,19 +311,15 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 }
 
 func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error {
-	// Step 1: Retrieve the payment order ID by request ID
-	orderID, err := u.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
+	// Step 1: Retrieve the payment order by request ID
+	order, err := u.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve payment order id with request id %s: %w", requestID, err)
+		return fmt.Errorf("failed to retrieve payment order with request id %s: %w", requestID, err)
 	}
 
-	// Step 2: Retrieve the payment order by ID
-	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
-	}
+	// Step 2: Check if the order is pending
 	if order.Status != constants.Pending {
-		return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
+		return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", order.ID)
 	}
 
 	// Step 3: Fetch the latest block height for the given network
