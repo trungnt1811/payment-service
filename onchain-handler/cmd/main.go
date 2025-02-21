@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	app "github.com/genefriendway/onchain-handler/cmd/app"
 	"github.com/genefriendway/onchain-handler/conf"
 	_ "github.com/genefriendway/onchain-handler/docs"
+	"github.com/genefriendway/onchain-handler/internal/adapters/postgres"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	loggertypes "github.com/genefriendway/onchain-handler/pkg/logger/types"
 	"github.com/genefriendway/onchain-handler/wire"
@@ -28,6 +30,14 @@ func main() {
 
 	// Initialize database connection
 	db := providers.ProvideDBConnection()
+
+	// TODO: remove this migate function later
+	basePath := "internal/adapters/postgres/scripts"
+	log.Printf("Running database migrations from: %s", basePath)
+	if err := postgres.RunMigrations(db, basePath); err != nil {
+		log.Panicf("Failed to migrate database: %v", err)
+	}
+	log.Println("Database migration completed successfully.")
 
 	// Initialize the logger and set the application mode
 	initializeLoggerAndMode(config)

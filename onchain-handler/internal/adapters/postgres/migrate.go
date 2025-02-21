@@ -41,6 +41,7 @@ func RunMigrations(db *gorm.DB, basePath string) error {
 		"11_addition_indexes_for_payment_order.sql",
 		"12_add_vendor_id_to_payment_order.sql",
 		"13_payment_statistics.sql",
+		"14_update_transfer_type.sql",
 	}
 
 	// Iterate over scripts and execute each
