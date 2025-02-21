@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-
-	"github.com/google/uuid"
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
+	"github.com/genefriendway/onchain-handler/pkg/payment"
 )
 
 type paymentWalletRepository struct {
@@ -49,15 +49,15 @@ func (r *paymentWalletRepository) IsRowExist(ctx context.Context) (bool, error) 
 func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx context.Context) (*entities.PaymentWallet, error) {
 	var wallet entities.PaymentWallet
 
-	// Attempt to find and lock the first available wallet
+	// Step 1: Try to claim an existing available wallet
 	err := tx.WithContext(ctx).
-		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Clauses(clause.Locking{Strength: "UPDATE"}). // Lock row to prevent race conditions
 		Where("in_use = ?", false).
 		Order("id").
 		First(&wallet).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// No available wallet found; create a new one
+			// Step 2: No wallet available, create a new one
 			inUse := true // New wallets are always in use
 			newWallet, createErr := r.CreateNewWallet(tx.WithContext(ctx), inUse)
 			if createErr != nil {
@@ -69,33 +69,45 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx con
 		return nil, fmt.Errorf("failed to find available wallet: %w", err)
 	}
 
-	// Mark the found wallet as in-use in a separate query
+	// Step 3: Mark the found wallet as in-use
 	if updateErr := tx.Model(&wallet).Update("in_use", true).Error; updateErr != nil {
 		return nil, fmt.Errorf("failed to mark wallet as in use: %w", updateErr)
 	}
 
-	// If we reach here, we have successfully locked and updated an existing wallet
+	// Successfully locked and updated an existing wallet
 	return &wallet, nil
 }
 
 func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*entities.PaymentWallet, error) {
-	// Generate a unique, temporary address
-	uuidPart := strings.ReplaceAll(uuid.New().String(), "-", "") // Remove dashes from UUID
-	tempAddress := "temp-" + uuidPart[:min(len(uuidPart), 37)]   // Ensure total length <= 42
+	var placeholderWallet entities.PaymentWallet
+	maxRetries := 5
 
-	// Insert a placeholder wallet with the unique temporary address
-	placeholderWallet := entities.PaymentWallet{
-		InUse:   inUse,
-		Address: tempAddress, // Unique temporary address within 42 characters
+	// Step 1: Create a new wallet with a unique temp address
+	for i := 0; i < maxRetries; i++ {
+		tempAddress := payment.GenerateTempAddress()
+
+		placeholderWallet = entities.PaymentWallet{
+			InUse:   inUse,
+			Address: tempAddress,
+		}
+
+		if err := tx.Create(&placeholderWallet).Error; err != nil {
+			// Retry if there's a duplicate address
+			if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+				log.Println("Duplicate temp address detected, retrying...")
+				continue
+			}
+			return nil, fmt.Errorf("failed to insert new wallet placeholder: %w", err)
+		}
+		break
 	}
 
-	if err := tx.Create(&placeholderWallet).Error; err != nil {
-		return nil, fmt.Errorf("failed to insert new wallet placeholder: %w", err)
+	// If all retries fail, return an error
+	if placeholderWallet.Address == "" {
+		return nil, fmt.Errorf("failed to generate a unique temporary address after %d attempts", maxRetries)
 	}
 
-	// The placeholderWallet.ID now contains the auto-incremented ID from the DB.
-
-	// Generate the real wallet account using the assigned ID.
+	// Step 2: Generate the real wallet account using the assigned ID
 	walletConfig := conf.GetWalletConfiguration()
 	account, _, genErr := crypto.GenerateAccount(
 		walletConfig.Mnemonic,
@@ -108,12 +120,11 @@ func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*ent
 		return nil, fmt.Errorf("failed to generate new wallet: %w", genErr)
 	}
 
-	// Update the wallet record with the real address
+	// Step 3: Update the wallet record with the real address
 	if err := tx.Model(&placeholderWallet).Update("address", account.Address.Hex()).Error; err != nil {
 		return nil, fmt.Errorf("failed to update wallet address: %w", err)
 	}
 
-	// Return the wallet with its final state
 	placeholderWallet.Address = account.Address.Hex()
 	return &placeholderWallet, nil
 }

@@ -3,9 +3,12 @@ package payment
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/google/uuid"
 
 	"github.com/genefriendway/onchain-handler/constants"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
@@ -53,4 +56,10 @@ func GetReceivingWallet(mnemonic, passphrase, salt string) (*accounts.Account, *
 	}
 
 	return account, privateKey, nil
+}
+
+func GenerateTempAddress() string {
+	uuidPart := uuid.New().String()
+	hash := sha256.Sum256([]byte(uuidPart))           // Hash UUID for uniqueness
+	return "temp-" + hex.EncodeToString(hash[:])[:37] // Ensure length <= 42
 }
