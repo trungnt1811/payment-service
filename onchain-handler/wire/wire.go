@@ -4,8 +4,10 @@ import (
 	"gorm.io/gorm"
 
 	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/infra/set/types"
 	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
+	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	"github.com/genefriendway/onchain-handler/internal/domain/ucases"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 )
@@ -49,13 +51,23 @@ type UseCases struct {
 }
 
 // Initialize use cases
-func InitializeUseCases(db *gorm.DB, cacheRepo cachetypes.CacheRepository) *UseCases {
+func InitializeUseCases(
+	db *gorm.DB, cacheRepo cachetypes.CacheRepository, paymentOrderSet types.Set[dto.PaymentOrderDTO],
+) *UseCases {
 	repos := initializeRepos(db, cacheRepo)
 
 	// Return all use cases
 	return &UseCases{
-		BlockStateUCase:          ucases.NewBlockStateUCase(repos.BlockStateRepo),
-		PaymentOrderUCase:        ucases.NewPaymentOrderUCase(db, repos.PaymentOrderRepo, repos.PaymentWalletRepo, repos.BlockStateRepo, repos.PaymentStatisticsRepo, cacheRepo),
+		BlockStateUCase: ucases.NewBlockStateUCase(repos.BlockStateRepo),
+		PaymentOrderUCase: ucases.NewPaymentOrderUCase(
+			db,
+			repos.PaymentOrderRepo,
+			repos.PaymentWalletRepo,
+			repos.BlockStateRepo,
+			repos.PaymentStatisticsRepo,
+			cacheRepo,
+			paymentOrderSet,
+		),
 		TokenTransferUCase:       ucases.NewTokenTransferUCase(repos.TokenTransferRepo),
 		PaymentEventHistoryUCase: ucases.NewPaymentEventHistoryUCase(repos.PaymentEventHistoryRepo),
 		PaymentWalletUCase:       ucases.NewPaymentWalletUCase(db, repos.PaymentWalletRepo, repos.PaymentWalletBalanceRepo),

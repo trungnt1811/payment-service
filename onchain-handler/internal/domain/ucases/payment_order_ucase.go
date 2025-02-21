@@ -11,6 +11,7 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
 	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
@@ -19,7 +20,6 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
-	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 type paymentOrderUCase struct {
@@ -29,6 +29,7 @@ type paymentOrderUCase struct {
 	blockStateRepo              repotypes.BlockStateRepository        // Repository to fetch the latest block state
 	paymentStatisticsRepository repotypes.PaymentStatisticsRepository // Repository to interact with payment statistics
 	cacheRepo                   cachetypes.CacheRepository            // Cache repository to retrieve and store block information
+	paymentOrderSet             settypes.Set[dto.PaymentOrderDTO]     // Payment order set
 }
 
 // NewPaymentOrderUCase constructs a new paymentOrderUCase with the provided dependencies.
@@ -39,6 +40,7 @@ func NewPaymentOrderUCase(
 	blockStateRepo repotypes.BlockStateRepository,
 	paymentStatisticsRepository repotypes.PaymentStatisticsRepository,
 	cacheRepo cachetypes.CacheRepository,
+	paymentOrderSet settypes.Set[dto.PaymentOrderDTO],
 ) ucasetypes.PaymentOrderUCase {
 	return &paymentOrderUCase{
 		db:                          db,
@@ -47,6 +49,7 @@ func NewPaymentOrderUCase(
 		blockStateRepo:              blockStateRepo,
 		paymentStatisticsRepository: paymentStatisticsRepository,
 		cacheRepo:                   cacheRepo,
+		paymentOrderSet:             paymentOrderSet,
 	}
 }
 
@@ -132,9 +135,6 @@ func (u *paymentOrderUCase) processOrderPayloads(
 	expiredOrderTime time.Duration,
 	response *[]dto.CreatedPaymentOrderDTO,
 ) error {
-	// Retrieve the payment order set
-	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
-
 	var claimedWalletIDs []uint64
 	var createdOrders []entities.PaymentOrder
 
@@ -188,7 +188,7 @@ func (u *paymentOrderUCase) processOrderPayloads(
 
 	// Step 4: Add orders to the payment order set (AFTER transaction commit)
 	for _, order := range createdOrders {
-		if addErr := paymentOrderSet.Add(order.ToDto()); addErr != nil {
+		if addErr := u.paymentOrderSet.Add(order.ToDto()); addErr != nil {
 			// Log error instead of failing the whole process
 			logger.GetLogger().Errorf("Failed to add order to payment order set: %v", addErr)
 		}
@@ -311,9 +311,6 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 }
 
 func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error {
-	// Retrieve the payment order set
-	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
-
 	// Step 1: Retrieve the payment order ID by request ID
 	orderID, err := u.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
 	if err != nil {
@@ -341,16 +338,14 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID st
 		return fmt.Errorf("failed to update order network: %w", err)
 	}
 
-	// Step 5: Retrieve the updated order
-	updatedOrder, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve updated payment order with id %d: %w", orderID, err)
-	}
+	// Step 5: Update order fields
+	order.Network = network.String()
+	order.BlockHeight = latestBlock
 
 	// Step 6: Update the payment order set
-	orderDTO := updatedOrder.ToDto()
+	orderDTO := order.ToDto()
 	key := orderDTO.PaymentAddress + "_" + orderDTO.Symbol
-	err = paymentOrderSet.UpdateItem(key, orderDTO)
+	err = u.paymentOrderSet.UpdateItem(key, orderDTO)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to update payment order in set: %v", err)
 		return fmt.Errorf("failed to update payment order in memory: %w", err)

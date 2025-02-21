@@ -49,7 +49,7 @@ func main() {
 	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
 
 	// Initialize use cases
-	ucases := wire.InitializeUseCases(db, cacheRepository)
+	ucases := wire.InitializeUseCases(db, cacheRepository, paymentOrderSet)
 
 	if config.WorkerEnabled {
 		// Run the application workers
