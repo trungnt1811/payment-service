@@ -17,7 +17,7 @@ const (
 
 // Event listener config
 const (
-	DefaultEventChannelBufferSize = 100  // Buffer size for event channel
+	DefaultEventChannelBufferSize = 1000 // Buffer size for event channel
 	DefaultBlockOffset            = 10   // Default block offset if last processed block is missing
 	ApiMaxBlocksPerRequest        = 2048 // Maximum number of blocks to query at once
 )
@@ -41,10 +41,9 @@ const (
 
 // Worker config
 const (
-	LatestBlockFetchInterval          = 3 * time.Second
-	ExpiredOrderCatchupInterval       = 1 * time.Minute
-	OrderCleanInterval                = 5 * time.Second
-	PaymentWalletBalanceFetchInterval = 1 * time.Minute
+	LatestBlockFetchInterval    = 3 * time.Second
+	ExpiredOrderCatchupInterval = 1 * time.Minute
+	OrderCleanInterval          = 5 * time.Second
 )
 
 // Batch constants
