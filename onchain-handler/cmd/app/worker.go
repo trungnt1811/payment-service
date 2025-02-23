@@ -7,8 +7,8 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
-	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
+	settypes "github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/internal/listeners"

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
 	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"

@@ -1,4 +1,4 @@
-package caching
+package cache
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 )
 
 type cachingRepository struct {

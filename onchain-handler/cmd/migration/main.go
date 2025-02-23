@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/genefriendway/onchain-handler/internal/adapters/postgres"
+	"github.com/genefriendway/onchain-handler/internal/adapters/database/postgres"
 	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
@@ -13,7 +13,7 @@ func main() {
 	db := providers.ProvideDBConnection()
 
 	// Get migration scripts path (default or CLI argument)
-	basePath := "internal/adapters/postgres/scripts"
+	basePath := "internal/adapters/database/postgres/scripts"
 	if len(os.Args) > 1 {
 		basePath = os.Args[1] // Allow passing a migration path
 	}

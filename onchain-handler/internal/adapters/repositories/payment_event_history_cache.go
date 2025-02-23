@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	"github.com/genefriendway/onchain-handler/pkg/logger"

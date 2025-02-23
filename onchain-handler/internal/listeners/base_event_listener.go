@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	listenertypes "github.com/genefriendway/onchain-handler/internal/listeners/types"

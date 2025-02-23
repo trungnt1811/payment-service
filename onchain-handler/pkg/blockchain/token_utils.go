@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )

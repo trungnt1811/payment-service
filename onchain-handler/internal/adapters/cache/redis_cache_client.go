@@ -1,4 +1,4 @@
-package caching
+package cache
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 

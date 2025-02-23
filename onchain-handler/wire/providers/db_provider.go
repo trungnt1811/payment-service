@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/database"
+	"github.com/genefriendway/onchain-handler/internal/adapters/database/postgres"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -24,7 +24,7 @@ func ProvideDBConnection() *gorm.DB {
 		config := conf.GetConfiguration()
 
 		// Create a new PostgreSQL client
-		pgsqlClient := database.NewPostgreSQLClient(&config.Database)
+		pgsqlClient := postgres.NewPostgreSQLClient(&config.Database)
 
 		// Connect and store the database instance
 		dbInstance = pgsqlClient.Connect()

@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/database/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/database/types"
 )
 
 // postgreSQL implements SQLDBConnection interface

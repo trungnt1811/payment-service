@@ -3,8 +3,8 @@ package wire
 import (
 	"gorm.io/gorm"
 
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
-	"github.com/genefriendway/onchain-handler/infra/set/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
+	settypes "github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	"github.com/genefriendway/onchain-handler/internal/adapters/repositories"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
@@ -52,7 +52,7 @@ type UseCases struct {
 
 // Initialize use cases
 func InitializeUseCases(
-	db *gorm.DB, cacheRepo cachetypes.CacheRepository, paymentOrderSet types.Set[dto.PaymentOrderDTO],
+	db *gorm.DB, cacheRepo cachetypes.CacheRepository, paymentOrderSet settypes.Set[dto.PaymentOrderDTO],
 ) *UseCases {
 	repos := initializeRepos(db, cacheRepo)
 

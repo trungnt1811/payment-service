@@ -1,11 +1,11 @@
-package set
+package orderset
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"github.com/genefriendway/onchain-handler/infra/set/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 

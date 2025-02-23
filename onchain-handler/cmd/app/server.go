@@ -11,7 +11,7 @@ import (
 	ginswagger "github.com/swaggo/gin-swagger"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/http/middleware"
 	routev1 "github.com/genefriendway/onchain-handler/internal/delivery/http/route"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"

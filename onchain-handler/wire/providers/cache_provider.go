@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/caching"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/cache"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
@@ -23,13 +23,13 @@ func ProvideCacheRepository(ctx context.Context) cachetypes.CacheRepository {
 		case "redis":
 			// Using Redis cache
 			logger.GetLogger().Info("Using Redis cache")
-			cacheClient := caching.NewRedisCacheClient()
-			cacheRepo = caching.NewCachingRepository(ctx, cacheClient)
+			cacheClient := cache.NewRedisCacheClient()
+			cacheRepo = cache.NewCachingRepository(ctx, cacheClient)
 		default:
 			// Using in-memory cache (default)
 			logger.GetLogger().Info("Using in-memory cache (default)")
-			cacheClient := caching.NewGoCacheClient()
-			cacheRepo = caching.NewCachingRepository(ctx, cacheClient)
+			cacheClient := cache.NewGoCacheClient()
+			cacheRepo = cache.NewCachingRepository(ctx, cacheClient)
 		}
 	})
 	return cacheRepo

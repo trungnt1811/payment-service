@@ -64,6 +64,3 @@ coverage.json
 # Typechain
 typechain
 typechain-types
-
-# Hardhat files
-cache

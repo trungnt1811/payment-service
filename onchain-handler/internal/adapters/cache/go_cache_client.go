@@ -1,4 +1,4 @@
-package caching
+package cache
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/infra/caching/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 )
 
 type goCacheClient struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/genefriendway/onchain-handler/infra/set"
-	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
+	"github.com/genefriendway/onchain-handler/internal/adapters/orderset"
+	settypes "github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
@@ -24,7 +24,7 @@ func ProvidePaymentOrderSet(ctx context.Context) settypes.Set[dto.PaymentOrderDT
 
 		// Initialize the order set
 		var err error
-		paymentOrderSet, err = set.NewSet(ctx, keyFunc)
+		paymentOrderSet, err = orderset.NewSet(ctx, keyFunc)
 		if err != nil {
 			logger.GetLogger().Fatalf("Create payment order set error: %v", err)
 		}

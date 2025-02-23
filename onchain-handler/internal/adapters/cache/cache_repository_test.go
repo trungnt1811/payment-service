@@ -1,4 +1,4 @@
-package caching
+package cache
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/genefriendway/onchain-handler/conf"
-	"github.com/genefriendway/onchain-handler/infra/mocks"
+	"github.com/genefriendway/onchain-handler/internal/adapters/cache/mocks"
 )
 
 func TestSaveItem(t *testing.T) {
@@ -22,7 +22,7 @@ func TestSaveItem(t *testing.T) {
 		mockStringer := mocks.NewMockStringer(ctrl)
 
 		ctx := context.Background()
-		config := &conf.Configuration{AppName: "onchain-handler"} // Ensure config consistency
+		config := &conf.Configuration{AppName: conf.GetAppName()} // Ensure config consistency
 		repo := NewCachingRepository(ctx, mockCacheClient)
 
 		// Define mock key expectations properly
@@ -49,7 +49,7 @@ func TestRetrieveItem(t *testing.T) {
 		mockStringer := mocks.NewMockStringer(ctrl)
 
 		ctx := context.Background()
-		config := &conf.Configuration{AppName: "onchain-handler"} // Ensure consistent config usage
+		config := &conf.Configuration{AppName: conf.GetAppName()} // Ensure consistent config usage
 		repo := NewCachingRepository(ctx, mockClient)
 
 		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
@@ -73,7 +73,7 @@ func TestRemoveItem(t *testing.T) {
 		mockStringer := mocks.NewMockStringer(ctrl)
 
 		ctx := context.Background()
-		config := &conf.Configuration{AppName: "onchain-handler"} // Ensure consistent config usage
+		config := &conf.Configuration{AppName: conf.GetAppName()} // Ensure consistent config usage
 		repo := NewCachingRepository(ctx, mockClient)
 
 		mockStringer.EXPECT().String().Return("testKey").AnyTimes()

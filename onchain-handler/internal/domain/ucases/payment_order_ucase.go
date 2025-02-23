@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/infra/caching/types"
-	settypes "github.com/genefriendway/onchain-handler/infra/set/types"
+	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
+	settypes "github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
