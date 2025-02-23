@@ -43,7 +43,7 @@ const (
 const (
 	LatestBlockFetchInterval          = 3 * time.Second
 	ExpiredOrderCatchupInterval       = 1 * time.Minute
-	OrderCleanInterval                = 1 * time.Minute
+	OrderCleanInterval                = 5 * time.Second
 	PaymentWalletBalanceFetchInterval = 1 * time.Minute
 )
 
