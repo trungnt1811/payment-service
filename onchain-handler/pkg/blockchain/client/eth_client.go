@@ -18,10 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	"github.com/genefriendway/onchain-handler/contracts/abigen/bulksender"
 	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
 	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
-	pkgcrypto "github.com/genefriendway/onchain-handler/pkg/crypto"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -251,119 +249,6 @@ func (c *roundRobinClient) GetLatestBlockNumber(ctx context.Context) (*big.Int, 
 	return result.(*big.Int), nil
 }
 
-// BulkTransfer transfers tokens from the pool address to recipients using bulk transfer with round-robin retry logic.
-func (c *roundRobinClient) BulkTransfer(
-	ctx context.Context,
-	chainID uint64,
-	bulkSenderContractAddress, poolAddress, poolPrivateKey, tokenContractAddress string,
-	recipients []string,
-	amounts []*big.Int,
-) (*string, *string, *big.Float, error) {
-	var txHash, tokenSymbol string
-	var txFeeInEth *big.Float
-
-	// Use executeWithRetry for the bulk transfer operation
-	_, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
-		// Step 1: Instantiate ERC20 Token Contract
-		erc20Token, err := erc20token.NewErc20token(common.HexToAddress(tokenContractAddress), client)
-		if err != nil {
-			return nil, fmt.Errorf("failed to instantiate ERC20 contract for token contract address %s: %w", tokenContractAddress, err)
-		}
-
-		// Step 2: Parse Private Key
-		privateKeyECDSA, err := pkgcrypto.PrivateKeyFromHex(poolPrivateKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve pool private key: %w", err)
-		}
-
-		// Step 3: Get Nonce
-		nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(poolAddress))
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve nonce: %w", err)
-		}
-
-		// Step 4: Create Auth Object
-		auth, err := c.getAuth(ctx, privateKeyECDSA, new(big.Int).SetUint64(chainID), client)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create auth object for pool %s: %w", poolAddress, err)
-		}
-		auth.Nonce = new(big.Int).SetUint64(nonce) // Set the correct nonce
-
-		// Step 5: Instantiate BulkSender Contract
-		bulkSender, err := bulksender.NewBulksender(common.HexToAddress(bulkSenderContractAddress), client)
-		if err != nil {
-			return nil, fmt.Errorf("failed to instantiate bulk sender contract: %w", err)
-		}
-
-		// Step 6: Get Token Symbol
-		tokenSymbol, err = erc20Token.Symbol(nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve token symbol for token contract address %s: %w", tokenContractAddress, err)
-		}
-
-		// Step 7: Calculate Total Amount
-		totalAmount := big.NewInt(0)
-		for _, amount := range amounts {
-			totalAmount.Add(totalAmount, amount)
-		}
-
-		// Step 8: Check Pool Balance
-		poolBalance, err := erc20Token.BalanceOf(nil, common.HexToAddress(poolAddress))
-		if err != nil {
-			return nil, fmt.Errorf("failed to get pool balance: %w", err)
-		}
-
-		if poolBalance.Cmp(totalAmount) < 0 {
-			return nil, fmt.Errorf("insufficient pool balance: required %s %s, available %s %s", totalAmount.String(), tokenSymbol, poolBalance.String(), tokenSymbol)
-		}
-
-		// Step 9: Approve Bulk Transfer Contract
-		tx, err := erc20Token.Approve(auth, common.HexToAddress(bulkSenderContractAddress), totalAmount)
-		if err != nil {
-			return nil, fmt.Errorf("failed to approve bulk sender contract: %w", err)
-		}
-		txHash = tx.Hash().Hex() // Get the transaction hash
-
-		// Wait for Approval Transaction to Be Mined
-		receipt, err := bind.WaitMined(ctx, client, tx)
-		if err != nil || receipt.Status != 1 {
-			return nil, fmt.Errorf("approval transaction failed: %s", txHash)
-		}
-
-		// Increment Nonce for the Bulk Transfer
-		nonce++
-		auth.Nonce = new(big.Int).SetUint64(nonce)
-
-		// Step 10: Execute Bulk Transfer
-		tx, err = bulkSender.BulkTransfer(auth, utils.ConvertToCommonAddresses(recipients), amounts, common.HexToAddress(tokenContractAddress))
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
-		}
-		txHash = tx.Hash().Hex() // Update transaction hash for bulk transfer
-
-		// Wait for the Bulk Transfer Transaction to Be Mined
-		receipt, err = bind.WaitMined(ctx, client, tx)
-		if err != nil || receipt.Status != 1 {
-			return nil, fmt.Errorf("bulk transfer transaction failed: %s", txHash)
-		}
-
-		// Calculate Transaction Fee
-		gasUsed := receipt.GasUsed
-		gasPrice := auth.GasPrice
-		txFee := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), gasPrice)
-		weiInEth := big.NewFloat(constants.NativeTokenDecimalPlaces)
-		txFeeInEth = new(big.Float).Quo(new(big.Float).SetInt(txFee), weiInEth)
-
-		logger.GetLogger().Infof("Bulk transfer successful on endpoint: %s", c.endpoints[c.counter])
-		return nil, nil
-	})
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to execute bulk transfer: %w", err)
-	}
-
-	return &txHash, &tokenSymbol, txFeeInEth, nil
-}
-
 // GetTokenDecimals retrieves the decimal precision of an ERC20 token by its contract address using round-robin
 func (c *roundRobinClient) GetTokenDecimals(ctx context.Context, tokenContractAddress string) (uint8, error) {
 	// Use executeWithRetry to perform the operation
@@ -390,23 +275,24 @@ func (c *roundRobinClient) GetTokenDecimals(ctx context.Context, tokenContractAd
 	return result.(uint8), nil
 }
 
-// EstimateGasERC20 estimates the gas required for an ERC-20 token transfer using round-robin
-func (c *roundRobinClient) EstimateGasERC20(
-	tokenAddress common.Address,
+// EstimateGasGeneric estimates the gas required for a contract call with a custom ABI and method
+func (c *roundRobinClient) EstimateGasGeneric(
+	contractAddress common.Address,
 	fromAddress common.Address,
-	toAddress common.Address,
-	amount *big.Int,
+	abiDef string, // Raw ABI string
+	method string, // Method name (e.g., "transfer", "transferFrom")
+	args ...interface{}, // Variable arguments for the method
 ) (uint64, error) {
-	// Parse the ERC-20 ABI
-	parsedABI, err := abi.JSON(strings.NewReader(erc20token.Erc20tokenMetaData.ABI))
+	// Parse the provided ABI
+	parsedABI, err := abi.JSON(strings.NewReader(abiDef))
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse ERC-20 ABI: %w", err)
+		return 0, fmt.Errorf("failed to parse ABI: %w", err)
 	}
 
-	// Encode the 'transfer' function call with parameters
-	data, err := parsedABI.Pack("transfer", toAddress, amount)
+	// Encode the method call with the provided arguments
+	data, err := parsedABI.Pack(method, args...)
 	if err != nil {
-		return 0, fmt.Errorf("failed to pack transfer data: %w", err)
+		return 0, fmt.Errorf("failed to pack method data for %s: %w", method, err)
 	}
 
 	// Use executeWithRetry for gas estimation
@@ -414,9 +300,9 @@ func (c *roundRobinClient) EstimateGasERC20(
 		// Simulate the transaction to estimate gas
 		gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
 			From:  fromAddress,
-			To:    &tokenAddress,
-			Value: big.NewInt(0), // ERC-20 transfers don't send native tokens
-			Data:  data,          // Encoded transfer data
+			To:    &contractAddress,
+			Value: big.NewInt(0), // No native token transfer by default
+			Data:  data,          // Encoded method data
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas: %w", err)

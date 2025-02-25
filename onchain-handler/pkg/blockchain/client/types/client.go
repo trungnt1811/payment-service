@@ -16,19 +16,13 @@ type Client interface {
 		endBlock uint64,
 	) ([]types.Log, error)
 	GetLatestBlockNumber(ctx context.Context) (*big.Int, error)
-	BulkTransfer(
-		ctx context.Context,
-		chainID uint64,
-		bulkSenderContractAddress, poolAddress, poolPrivateKey, tokenContractAddress string,
-		recipients []string,
-		amounts []*big.Int,
-	) (*string, *string, *big.Float, error)
 	GetTokenDecimals(ctx context.Context, tokenContractAddress string) (uint8, error)
-	EstimateGasERC20(
-		tokenAddress common.Address,
+	EstimateGasGeneric(
+		contractAddress common.Address,
 		fromAddress common.Address,
-		toAddress common.Address,
-		amount *big.Int,
+		abiDef string,
+		method string,
+		args ...interface{},
 	) (uint64, error)
 	TransferToken(
 		ctx context.Context,

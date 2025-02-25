@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/genefriendway/onchain-handler/constants"
+	"github.com/genefriendway/onchain-handler/contracts/abigen/erc20token"
 	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
@@ -476,11 +477,13 @@ func (w *paymentWalletWithdrawWorker) processWallet(
 // calculateRequiredGas calculates the required gas for a wallet withdrawal.
 func (w *paymentWalletWithdrawWorker) calculateRequiredGas(ctx context.Context, address, receivingWalletAddress string, tokenAmount *big.Int) (*big.Int, error) {
 	// Step 1: Estimate the gas required for ERC20 token transfer
-	estimatedGas, err := w.ethClient.EstimateGasERC20(
-		common.HexToAddress(w.tokenContractAddress),
-		common.HexToAddress(address),
-		common.HexToAddress(receivingWalletAddress),
-		tokenAmount,
+	estimatedGas, err := w.ethClient.EstimateGasGeneric(
+		common.HexToAddress(w.tokenContractAddress), // Contract address
+		common.HexToAddress(address),                // From address
+		erc20token.Erc20tokenMetaData.ABI,           // ERC-20 ABI (adjust if using a different standard)
+		"transfer",                                  // Method name (e.g., "transfer" for ERC-20)
+		common.HexToAddress(receivingWalletAddress), // To address
+		tokenAmount, // Amount
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to estimate gas on network %s: %w", w.network, err)
