@@ -82,7 +82,7 @@ func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 		},
 	)
 	if len(errors) > 0 {
-		logger.GetLogger().Errorf("Failed to send webhooks for some orders: %v", errors)
+		logger.GetLogger().Errorf("Failed to send webhooks for orders %v: %v", orderIDs, errors)
 	} else {
 		logger.GetLogger().Info("All webhooks for failed orders sent successfully.")
 	}
@@ -114,7 +114,7 @@ func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
 		},
 	)
 	if len(errors) > 0 {
-		logger.GetLogger().Errorf("Failed to send webhooks for some orders: %v", errors)
+		logger.GetLogger().Errorf("Failed to send webhooks for orders %v: %v", orderIDs, errors)
 	} else {
 		logger.GetLogger().Info("All webhooks for expired orders sent successfully.")
 	}
