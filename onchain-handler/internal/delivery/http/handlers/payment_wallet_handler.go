@@ -108,7 +108,7 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 // @Tags payment-wallet
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"receiving_wallet_address\": \"0x123...abc\", \"native_balances\": {\"Bsc\": \"12.5\", \"AvaxCChain\": \"20.3\"}}"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"receiving_wallet_address\": \"0x123...abc\", \"native_balances\": {\"BSC\": \"12.5\", \"AVAX C-Chain\": \"20.3\"}}"
 // @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/receiving-address [get]
 func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {

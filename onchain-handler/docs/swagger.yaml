@@ -536,7 +536,7 @@ paths:
       responses:
         "200":
           description: 'Success response: {\"success\": true, \"receiving_wallet_address\":
-            \"0x123...abc\", \"native_balances\": {\"Bsc\": \"12.5\", \"AvaxCChain\":
+            \"0x123...abc\", \"native_balances\": {\"BSC\": \"12.5\", \"AVAX C-Chain\":
             \"20.3\"}}'
           schema:
             additionalProperties: true
