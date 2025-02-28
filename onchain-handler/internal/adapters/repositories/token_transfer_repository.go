@@ -57,9 +57,13 @@ func (r *tokenTransferRepository) GetTokenTransferHistories(
 		Offset(offset).
 		Order(fmt.Sprintf("%s %s", orderColumn, orderDir))
 
-	// Apply time range filter if both startTime and endTime are provided
+	// Apply time filters:
 	if startTime != nil && endTime != nil {
 		query = query.Where("created_at BETWEEN ? AND ?", startTime, endTime)
+	} else if startTime != nil {
+		query = query.Where("created_at >= ?", startTime)
+	} else if endTime != nil {
+		query = query.Where("created_at <= ?", endTime)
 	}
 
 	// Apply from_address filter if provided
