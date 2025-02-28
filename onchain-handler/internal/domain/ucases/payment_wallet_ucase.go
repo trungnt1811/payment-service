@@ -201,7 +201,7 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
 	}
 
 	// Prepare the result DTOs
-	var dtos []interface{}
+	var dtos []any
 
 	// Iterate through wallets and map them to DTOs
 	for i, wallet := range wallets {
@@ -253,14 +253,35 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
 	}, nil
 }
 
-func (u *paymentWalletUCase) GetReceivingWalletAddress(
+func (u *paymentWalletUCase) GetReceivingWalletAddressWithBalances(
 	ctx context.Context, mnemonic, passphrase, salt string,
-) (string, error) {
+) (string, map[constants.NetworkType]string, error) {
+	// Get the receiving wallet address
 	account, _, err := payment.GetReceivingWallet(mnemonic, passphrase, salt)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return account.Address.Hex(), nil
+	walletAddress := account.Address.Hex()
+
+	// Define supported networks
+	networks := conf.GetNetworks()
+
+	// Map to store balances per network
+	balances := make(map[constants.NetworkType]string)
+
+	// Fetch balance for each network
+	for _, network := range networks {
+		balance, err := u.getNativeBalanceOnchain(ctx, walletAddress, network)
+		if err != nil {
+			// Log the error but don't return it (continue with other networks)
+			logger.GetLogger().Errorf("Failed to fetch balance for %s: %v", network, err)
+			balances[network] = "error"
+		} else {
+			balances[network] = balance
+		}
+	}
+
+	return walletAddress, balances, nil
 }
 
 func (u *paymentWalletUCase) SyncWalletBalance(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
@@ -270,6 +291,24 @@ func (u *paymentWalletUCase) SyncWalletBalance(ctx context.Context, walletAddres
 		return "", fmt.Errorf("failed to get wallet ID by address: %w", err)
 	}
 
+	// Fetch the USDT balance from the blockchain
+	usdtAmount, err := u.getUSDTBalanceOnchain(ctx, walletAddress, network)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch on-chain balance: %w", err)
+	}
+
+	// Update the wallet balance
+	err = u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, usdtAmount, network.String(), constants.USDT)
+	if err != nil {
+		return "", fmt.Errorf("failed to upsert wallet balance: %w", err)
+	}
+
+	// Return the balance as a float string
+	return usdtAmount, nil
+}
+
+// getBalanceOnchain fetches and converts the on-chain USDT balance for a given wallet
+func (u *paymentWalletUCase) getUSDTBalanceOnchain(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
 	// Get USDT contract address by network
 	usdtContractAddress, err := conf.GetTokenAddress(constants.USDT, network.String())
 	if err != nil {
@@ -305,12 +344,33 @@ func (u *paymentWalletUCase) SyncWalletBalance(ctx context.Context, walletAddres
 		return "", fmt.Errorf("failed to convert USDT balance to float: %w", err)
 	}
 
-	// Update the wallet balance
-	err = u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, usdtAmount, network.String(), constants.USDT)
+	return usdtAmount, nil
+}
+
+// getNativeBalanceOnchain fetches and converts the on-chain native token balance for a given wallet
+func (u *paymentWalletUCase) getNativeBalanceOnchain(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
+	// Get RPC URLs and Ethereum Client based on network
+	rpcUrls, err := conf.GetRpcUrls(network)
 	if err != nil {
-		return "", fmt.Errorf("failed to upsert wallet balance: %w", err)
+		return "", fmt.Errorf("failed to get RPC URLs: %w", err)
 	}
 
-	// Return the balance as a float string
-	return usdtAmount, nil
+	ethClient, err := providers.ProvideEthClient(network, rpcUrls)
+	if err != nil {
+		return "", fmt.Errorf("failed to initialize Ethereum client: %w", err)
+	}
+
+	// Fetch native token balance (e.g., ETH, BNB, AVAX) from the blockchain
+	nativeBalance, err := ethClient.GetNativeTokenBalance(ctx, walletAddress)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch native token balance: %w", err)
+	}
+
+	// Convert balance from smallest unit (WEI, GWEI, etc.)
+	nativeAmount, err := utils.ConvertSmallestUnitToFloatToken(nativeBalance.String(), constants.NativeTokenDecimalPlaces)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert native token balance to float: %w", err)
+	}
+
+	return nativeAmount, nil
 }

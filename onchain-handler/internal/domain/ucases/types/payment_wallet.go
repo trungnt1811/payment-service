@@ -32,8 +32,8 @@ type PaymentWalletUCase interface {
 	GetPaymentWalletsWithBalancesPagination(
 		ctx context.Context, page, size int, network *constants.NetworkType,
 	) (dto.PaginationDTOResponse, error)
-	GetReceivingWalletAddress(
+	GetReceivingWalletAddressWithBalances(
 		ctx context.Context, mnemonic, passphrase, salt string,
-	) (string, error)
+	) (string, map[constants.NetworkType]string, error)
 	SyncWalletBalance(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error)
 }

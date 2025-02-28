@@ -102,17 +102,18 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, wallets)
 }
 
-// GetReceivingWalletAddress retrieves the receiving wallet address.
-// @Summary Retrieves the receiving wallet address.
-// @Description Retrieves the address of the wallet used for receiving tokens from payment wallets.
+// GetReceivingWalletAddress retrieves the receiving wallet address along with native balances across networks.
+// @Summary Retrieves the receiving wallet address and its native balances.
+// @Description Retrieves the address of the wallet used for receiving tokens from payment wallets and its native balances across different networks.
 // @Tags payment-wallet
 // @Accept json
 // @Produce json
-// @Success 200 {string} string "Receiving wallet address"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"receiving_wallet_address\": \"0x123...abc\", \"native_balances\": {\"Bsc\": \"12.5\", \"AvaxCChain\": \"20.3\"}}"
 // @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/receiving-address [get]
 func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
-	address, err := h.ucase.GetReceivingWalletAddress(
+	// Retrieve the receiving wallet address and balances
+	address, balances, err := h.ucase.GetReceivingWalletAddressWithBalances(
 		ctx, h.config.Wallet.Mnemonic, h.config.Wallet.Passphrase, h.config.Wallet.Salt,
 	)
 	if err != nil {
@@ -120,7 +121,12 @@ func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"receiving_wallet_address": address})
+	// Return JSON response with both address and balances
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":                  true,
+		"receiving_wallet_address": address,
+		"native_balances":          balances,
+	})
 }
 
 // SyncPaymentWalletBalance syncs the balance of a specific payment wallet.

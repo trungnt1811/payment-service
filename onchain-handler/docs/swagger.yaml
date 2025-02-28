@@ -530,19 +530,22 @@ paths:
       consumes:
       - application/json
       description: Retrieves the address of the wallet used for receiving tokens from
-        payment wallets.
+        payment wallets and its native balances across different networks.
       produces:
       - application/json
       responses:
         "200":
-          description: Receiving wallet address
+          description: 'Success response: {\"success\": true, \"receiving_wallet_address\":
+            \"0x123...abc\", \"native_balances\": {\"Bsc\": \"12.5\", \"AvaxCChain\":
+            \"20.3\"}}'
           schema:
-            type: string
+            additionalProperties: true
+            type: object
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/http.GeneralError'
-      summary: Retrieves the receiving wallet address.
+      summary: Retrieves the receiving wallet address and its native balances.
       tags:
       - payment-wallet
   /api/v1/token-transfers:

@@ -63,6 +63,13 @@ func GetOrderCutoffTime() time.Duration {
 	return time.Duration(configuration.PaymentGateway.OrderCutoffTime) * time.Minute
 }
 
+func GetNetworks() []constants.NetworkType {
+	return []constants.NetworkType{
+		constants.Bsc,
+		constants.AvaxCChain,
+	}
+}
+
 func GetPaymentCovering() float64 {
 	paymentCoveringStr := configuration.PaymentGateway.PaymentCovering
 	if paymentCoveringStr == "" {

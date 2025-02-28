@@ -181,7 +181,7 @@ func (h *tokenTransferHandler) GetWithdrawHistories(ctx *gin.Context) {
 	}
 
 	// Get the receiving wallet address
-	receivingAddress, err := h.paymentWalletUCase.GetReceivingWalletAddress(
+	receivingAddress, _, err := h.paymentWalletUCase.GetReceivingWalletAddressWithBalances(
 		ctx, h.config.Wallet.Mnemonic, h.config.Wallet.Passphrase, h.config.Wallet.Salt,
 	)
 	if err != nil {

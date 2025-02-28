@@ -521,7 +521,7 @@
         },
         "/api/v1/payment-wallets/receiving-address": {
             "get": {
-                "description": "Retrieves the address of the wallet used for receiving tokens from payment wallets.",
+                "description": "Retrieves the address of the wallet used for receiving tokens from payment wallets and its native balances across different networks.",
                 "consumes": [
                     "application/json"
                 ],
@@ -531,12 +531,13 @@
                 "tags": [
                     "payment-wallet"
                 ],
-                "summary": "Retrieves the receiving wallet address.",
+                "summary": "Retrieves the receiving wallet address and its native balances.",
                 "responses": {
                     "200": {
-                        "description": "Receiving wallet address",
+                        "description": "Success response: {\\\"success\\\": true, \\\"receiving_wallet_address\\\": \\\"0x123...abc\\\", \\\"native_balances\\\": {\\\"Bsc\\\": \\\"12.5\\\", \\\"AvaxCChain\\\": \\\"20.3\\\"}}",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "500": {
