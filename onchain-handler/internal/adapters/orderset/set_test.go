@@ -93,6 +93,14 @@ func TestGetItem(t *testing.T) {
 		item, exists := s.GetItem("1_Alice")
 		require.True(t, exists)
 		require.Equal(t, "Alice", item.Name)
+
+		// Modify the retrieved item
+		item.Name = "Modified"
+
+		// Retrieve it again to ensure the original value is unchanged
+		originalItem, exists := s.GetItem("1_Alice")
+		require.True(t, exists)
+		require.Equal(t, "Alice", originalItem.Name, "Original item should not be modified by reference")
 	})
 
 	t.Run("Fail to retrieve non-existent item", func(t *testing.T) {
