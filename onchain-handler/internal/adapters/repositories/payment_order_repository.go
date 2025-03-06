@@ -202,11 +202,11 @@ func (r *paymentOrderRepository) BatchUpdateOrderBlockHeights(ctx context.Contex
 	}
 
 	// Build the SQL CASE statement for updating different block heights based on order IDs
-	caseSQL := "CASE"
+	caseSQL := constants.SqlCase
 	for i, orderID := range orderIDs {
 		caseSQL += fmt.Sprintf(" WHEN id = %d THEN %d", orderID, blockHeights[i])
 	}
-	caseSQL += " END"
+	caseSQL += constants.SqlEnd
 
 	// Perform the batch update using a single query with CASE and IN
 	result := r.db.WithContext(ctx).
