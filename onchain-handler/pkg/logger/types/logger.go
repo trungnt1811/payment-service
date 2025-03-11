@@ -20,18 +20,18 @@ type Logger interface {
 
 	// Basic logging methods
 	Debug(message string)
-	Debugf(format string, values ...interface{})
+	Debugf(format string, values ...any)
 	Info(message string)
-	Infof(format string, values ...interface{})
+	Infof(format string, values ...any)
 	Warn(message string)
-	Warnf(format string, values ...interface{})
+	Warnf(format string, values ...any)
 	Error(message string)
-	Errorf(format string, values ...interface{})
+	Errorf(format string, values ...any)
 	Fatal(message string)
-	Fatalf(format string, values ...interface{})
+	Fatalf(format string, values ...any)
 	Panic(message string)
-	Panicf(format string, values ...interface{})
+	Panicf(format string, values ...any)
 
 	// Contextual logging
-	WithFields(fields map[string]interface{}) Logger
+	WithFields(fields map[string]any) Logger
 }

@@ -176,7 +176,7 @@ func (r *paymentWalletBalanceRepository) UpsertPaymentWalletBalance(
 				{Name: "network"},
 				{Name: "symbol"},
 			},
-			DoUpdates: clause.Assignments(map[string]interface{}{
+			DoUpdates: clause.Assignments(map[string]any{
 				"balance": newBalance, // Directly updates balance if the record exists
 			}),
 		}).Create(&entities.PaymentWalletBalance{

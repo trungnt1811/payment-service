@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func JSON(c *gin.Context, status int, payload interface{}, isCached ...bool) {
+func JSON(c *gin.Context, status int, payload any, isCached ...bool) {
 	var res Response
 	res.Status = status
 	res.Data = payload
@@ -30,7 +30,7 @@ func Error(c *gin.Context, status int, msg string, errors ...error) {
 	c.JSON(status, errResp)
 }
 
-func Errors(c *gin.Context, status int, payload interface{}) {
+func Errors(c *gin.Context, status int, payload any) {
 	var res ErrorResponse
 	res.Status = status
 	res.Errors = payload
@@ -38,9 +38,9 @@ func Errors(c *gin.Context, status int, payload interface{}) {
 	c.JSON(status, res)
 }
 
-func NewErrorMap(key string, err error) map[string]interface{} {
+func NewErrorMap(key string, err error) map[string]any {
 	res := ErrorMap{
-		Errors: make(map[string]interface{}),
+		Errors: make(map[string]any),
 	}
 	res.Errors[key] = err.Error()
 	return res.Errors

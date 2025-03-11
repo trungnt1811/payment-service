@@ -46,7 +46,7 @@ func (u *tokenTransferUCase) GetTokenTransferHistories(
 		return dto.PaginationDTOResponse{}, err
 	}
 
-	var listTokenTransfersDTO []interface{}
+	var listTokenTransfersDTO []any
 
 	// Convert the token transfer histories to DTO format
 	for i := range listTokenTransfers {

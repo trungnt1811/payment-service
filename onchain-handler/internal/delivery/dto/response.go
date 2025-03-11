@@ -9,7 +9,7 @@ type PaginationDTOResponse struct {
 	Total                  uint64            `json:"total,omitempty"`
 	TotalTokenAmount       float64           `json:"total_token_amount,omitempty"`
 	TotalBalancePerNetwork map[string]string `json:"total_balance_per_network,omitempty"`
-	Data                   []interface{}     `json:"data"`
+	Data                   []any             `json:"data"`
 }
 
 type TokenTransferResultDTOResponse struct {

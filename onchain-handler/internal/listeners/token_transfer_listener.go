@@ -131,7 +131,7 @@ func (listener *tokenTransferListener) fetchOrderDetailsFromSet(
 	return &order, nil
 }
 
-func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog types.Log) (interface{}, error) {
+func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog types.Log) (any, error) {
 	// Retrieve the token symbol for the event's contract address
 	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
@@ -141,7 +141,14 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	// Unpack the transfer event
 	transferEvent, err := blockchain.UnpackTransferEvent(vLog, listener.parsedABI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack realtime transfer event on network %s for address %s, block number %d: %w", listener.network.String(), vLog.Address.Hex(), vLog.BlockNumber, err)
+		return nil,
+			fmt.Errorf(
+				"failed to unpack realtime transfer event on network %s for address %s, block number %d: %w",
+				listener.network.String(),
+				vLog.Address.Hex(),
+				vLog.BlockNumber,
+				err,
+			)
 	}
 
 	// Create a unique key for the order
@@ -176,20 +183,28 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 }
 
 // parseAndProcessConfirmedTransferEvent parses and processes a confirmed transfer event, checking if it matches any payment order in the set.
-func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLog types.Log) (interface{}, error) {
+func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLog types.Log) (any, error) {
 	// Handle expired and successful orders before processing the event
 	listener.removeOrders()
 
 	// Retrieve the token symbol for the event's contract address
 	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
+		return nil,
+			fmt.Errorf("failed to get token symbol from token contract address %s: %w", vLog.Address.Hex(), err)
 	}
 
 	// Unpack the transfer event
 	transferEvent, err := blockchain.UnpackTransferEvent(vLog, listener.parsedABI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w", listener.network.String(), vLog.Address.Hex(), vLog.BlockNumber, err)
+		return nil,
+			fmt.Errorf(
+				"failed to unpack confirmed transfer event on network %s for address %s, block number %d: %w",
+				listener.network.String(),
+				vLog.Address.Hex(),
+				vLog.BlockNumber,
+				err,
+			)
 	}
 
 	// Create a unique key for the order
@@ -481,7 +496,7 @@ func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.Payment
 	errors := utils.SendWebhooks(
 		listener.ctx,
 		utils.ToInterfaceSlice(orderDTOs),
-		func(order interface{}) string {
+		func(order any) string {
 			return order.(dto.PaymentOrderDTOResponse).WebhookURL
 		},
 	)

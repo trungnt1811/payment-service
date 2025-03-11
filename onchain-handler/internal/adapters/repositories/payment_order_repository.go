@@ -80,7 +80,7 @@ func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, net
 func (r *paymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *entities.PaymentOrder) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Construct the updates map, excluding block_height and upcoming_block_height if they are 0
-		updates := map[string]interface{}{
+		updates := map[string]any{
 			"status":       order.Status,
 			"transferred":  order.Transferred,
 			"succeeded_at": order.SucceededAt,
@@ -144,7 +144,7 @@ func (r *paymentOrderRepository) UpdateOrderNetwork(
 	ctx context.Context, requestID, network string, blockHeight uint64,
 ) error {
 	// Prepare the update map
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"network":      network,
 		"block_height": blockHeight,
 	}
@@ -281,7 +281,7 @@ func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 			// Step 2: Update their status to "Failed"
 			if err := tx.Model(&entities.PaymentOrder{}).
 				Where("id IN ?", orderIDs).
-				Updates(map[string]interface{}{
+				Updates(map[string]any{
 					"status": constants.Failed,
 				}).Error; err != nil {
 				return fmt.Errorf("failed to update expired orders: %w", err)

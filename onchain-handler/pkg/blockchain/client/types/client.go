@@ -22,7 +22,7 @@ type Client interface {
 		fromAddress common.Address,
 		abiDef string,
 		method string,
-		args ...interface{},
+		args ...any,
 	) (uint64, error)
 	TransferToken(
 		ctx context.Context,

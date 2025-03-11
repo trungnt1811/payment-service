@@ -77,7 +77,7 @@ func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 	errors := utils.SendWebhooks(
 		ctx,
 		utils.ToInterfaceSlice(orderDTOs),
-		func(order interface{}) string {
+		func(order any) string {
 			return order.(dto.PaymentOrderDTOResponse).WebhookURL
 		},
 	)
@@ -109,7 +109,7 @@ func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
 	errors := utils.SendWebhooks(
 		ctx,
 		utils.ToInterfaceSlice(orderDTOs),
-		func(order interface{}) string {
+		func(order any) string {
 			return order.(dto.PaymentOrderDTOResponse).WebhookURL
 		},
 	)

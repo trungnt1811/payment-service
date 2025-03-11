@@ -32,7 +32,7 @@ func (r *paymentStatisticsRepository) IncrementStatistics(
 	symbol, vendorID string,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		updates := map[string]interface{}{}
+		updates := map[string]any{}
 		if amount != nil {
 			updates["total_orders"] = gorm.Expr("total_orders + 1")
 			updates["total_amount"] = gorm.Expr("total_amount::numeric + ?", *amount)

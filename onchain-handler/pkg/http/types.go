@@ -1,14 +1,14 @@
 package http
 
 type Response struct {
-	Status   int         `json:"status"`
-	Data     interface{} `json:"data"`
-	IsCached bool        `json:"is_cached,omitempty"`
+	Status   int  `json:"status"`
+	Data     any  `json:"data"`
+	IsCached bool `json:"is_cached,omitempty"`
 }
 
 type ErrorResponse struct {
-	Status int         `json:"status"`
-	Errors interface{} `json:"errors"`
+	Status int `json:"status"`
+	Errors any `json:"errors"`
 }
 
 type GeneralError struct {
@@ -18,5 +18,5 @@ type GeneralError struct {
 }
 
 type ErrorMap struct {
-	Errors map[string]interface{} `json:"errors"`
+	Errors map[string]any `json:"errors"`
 }

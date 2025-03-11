@@ -113,32 +113,32 @@ func (z *zapLogger) GetLogLevel() types.Level {
 // Individual Log Methods
 func (z *zapLogger) Debug(message string) { z.sugaredLogger.Debug(message) }
 
-func (z *zapLogger) Debugf(format string, values ...interface{}) {
+func (z *zapLogger) Debugf(format string, values ...any) {
 	z.sugaredLogger.Debugf(format, values...)
 }
 func (z *zapLogger) Info(message string) { z.sugaredLogger.Info(message) }
-func (z *zapLogger) Infof(format string, values ...interface{}) {
+func (z *zapLogger) Infof(format string, values ...any) {
 	z.sugaredLogger.Infof(format, values...)
 }
 func (z *zapLogger) Warn(message string) { z.sugaredLogger.Warn(message) }
-func (z *zapLogger) Warnf(format string, values ...interface{}) {
+func (z *zapLogger) Warnf(format string, values ...any) {
 	z.sugaredLogger.Warnf(format, values...)
 }
 func (z *zapLogger) Error(message string) { z.sugaredLogger.Error(message) }
-func (z *zapLogger) Errorf(format string, values ...interface{}) {
+func (z *zapLogger) Errorf(format string, values ...any) {
 	z.sugaredLogger.Errorf(format, values...)
 }
 func (z *zapLogger) Fatal(message string) { z.sugaredLogger.Fatal(message) }
-func (z *zapLogger) Fatalf(format string, values ...interface{}) {
+func (z *zapLogger) Fatalf(format string, values ...any) {
 	z.sugaredLogger.Fatalf(format, values...)
 }
 func (z *zapLogger) Panic(message string) { z.sugaredLogger.Panic(message) }
-func (z *zapLogger) Panicf(format string, values ...interface{}) {
+func (z *zapLogger) Panicf(format string, values ...any) {
 	z.sugaredLogger.Panicf(format, values...)
 }
 
 // WithFields creates a new logger instance with additional fields.
-func (z *zapLogger) WithFields(fields map[string]interface{}) types.Logger {
+func (z *zapLogger) WithFields(fields map[string]any) types.Logger {
 	return &zapLogger{
 		sugaredLogger: z.sugaredLogger.With(fields),
 		currentLevel:  z.currentLevel,

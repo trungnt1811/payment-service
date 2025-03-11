@@ -201,7 +201,7 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
 	}
 
 	// Prepare the result DTOs
-	var dtos []interface{}
+	var dtos []any
 
 	// Iterate through wallets and map them to DTOs
 	for i, wallet := range wallets {

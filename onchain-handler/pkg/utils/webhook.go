@@ -13,7 +13,7 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
-func SendWebhook(payload interface{}, webhookURL string) error {
+func SendWebhook(payload any, webhookURL string) error {
 	client := http.Client{Timeout: constants.WebhookTimeout}
 	parsedPayload, err := json.Marshal(payload)
 	if err != nil {
@@ -41,8 +41,8 @@ func SendWebhook(payload interface{}, webhookURL string) error {
 
 func SendWebhooks(
 	ctx context.Context,
-	payloads []interface{},
-	getWebhookURL func(payload interface{}) string,
+	payloads []any,
+	getWebhookURL func(payload any) string,
 ) []error {
 	if len(payloads) == 0 {
 		logger.GetLogger().Info("No payloads to send webhooks for.")
@@ -65,7 +65,7 @@ func SendWebhooks(
 		sem <- struct{}{} // Acquire a semaphore slot
 		wg.Add(1)
 
-		go func(payload interface{}, webhookURL string) {
+		go func(payload any, webhookURL string) {
 			defer func() {
 				<-sem // Release the slot
 				wg.Done()

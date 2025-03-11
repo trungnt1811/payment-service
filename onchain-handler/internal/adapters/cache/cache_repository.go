@@ -28,13 +28,13 @@ func (repo *cachingRepository) prependAppPrefix(key string) string {
 }
 
 // SaveItem saves an item to the cache with a specified expiration time
-func (repo *cachingRepository) SaveItem(key fmt.Stringer, val interface{}, expire time.Duration) error {
+func (repo *cachingRepository) SaveItem(key fmt.Stringer, val any, expire time.Duration) error {
 	prefixedKey := repo.prependAppPrefix(key.String())
 	return repo.client.Set(repo.ctx, prefixedKey, val, expire)
 }
 
 // RetrieveItem retrieves an item from the cache
-func (repo *cachingRepository) RetrieveItem(key fmt.Stringer, val interface{}) error {
+func (repo *cachingRepository) RetrieveItem(key fmt.Stringer, val any) error {
 	prefixedKey := repo.prependAppPrefix(key.String())
 	return repo.client.Get(repo.ctx, prefixedKey, val)
 }

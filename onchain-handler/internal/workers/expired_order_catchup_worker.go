@@ -201,10 +201,7 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 	// Process logs in chunks of DefaultBlockOffset
 	address := common.HexToAddress(w.tokenContractAddress)
 	for chunkStart := startBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
-		chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
-		if chunkEnd > endBlock {
-			chunkEnd = endBlock
-		}
+		chunkEnd := min(chunkStart+constants.DefaultBlockOffset-1, endBlock)
 
 		logger.GetLogger().Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, w.network.String())
 

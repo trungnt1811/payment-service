@@ -154,12 +154,12 @@ func (c *roundRobinClient) detectPendingTxs(
 
 // executeWithRetry executes a function and retries with the next client on failure
 func (r *roundRobinClient) executeWithRetry(
-	fn func(client *ethclient.Client) (interface{}, error),
-) (interface{}, error) {
+	fn func(client *ethclient.Client) (any, error),
+) (any, error) {
 	var lastErr error
 	baseDelay := constants.RetryDelay
 
-	for i := 0; i < len(r.clients); i++ {
+	for range r.clients {
 		client := r.getClient()
 		clientIndex := (r.counter - 1 + len(r.clients)) % len(r.clients) // Get the last used client index
 
@@ -218,7 +218,7 @@ func (c *roundRobinClient) PollForLogsFromBlock(
 		ToBlock:   big.NewInt(int64(endBlock)),
 	}
 
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		logs, err := client.FilterLogs(ctx, query)
 		if err != nil {
 			return nil, fmt.Errorf("failed to poll logs from block %d to %d: %w", fromBlock, endBlock, err)
@@ -234,7 +234,7 @@ func (c *roundRobinClient) PollForLogsFromBlock(
 // GetLatestBlockNumber retrieves the latest block number using round-robin
 func (c *roundRobinClient) GetLatestBlockNumber(ctx context.Context) (*big.Int, error) {
 	// Use executeWithRetry to perform the operation
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		header, err := client.HeaderByNumber(ctx, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch the latest block header: %w", err)
@@ -252,7 +252,7 @@ func (c *roundRobinClient) GetLatestBlockNumber(ctx context.Context) (*big.Int, 
 // GetTokenDecimals retrieves the decimal precision of an ERC20 token by its contract address using round-robin
 func (c *roundRobinClient) GetTokenDecimals(ctx context.Context, tokenContractAddress string) (uint8, error) {
 	// Use executeWithRetry to perform the operation
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		// Instantiate the ERC20 token contract
 		token, err := erc20token.NewErc20token(common.HexToAddress(tokenContractAddress), client)
 		if err != nil {
@@ -281,7 +281,7 @@ func (c *roundRobinClient) EstimateGasGeneric(
 	fromAddress common.Address,
 	abiDef string, // Raw ABI string
 	method string, // Method name (e.g., "transfer", "transferFrom")
-	args ...interface{}, // Variable arguments for the method
+	args ...any, // Variable arguments for the method
 ) (uint64, error) {
 	// Parse the provided ABI
 	parsedABI, err := abi.JSON(strings.NewReader(abiDef))
@@ -296,7 +296,7 @@ func (c *roundRobinClient) EstimateGasGeneric(
 	}
 
 	// Use executeWithRetry for gas estimation
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		// Simulate the transaction to estimate gas
 		gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
 			From:  fromAddress,
@@ -341,7 +341,7 @@ func (c *roundRobinClient) TransferToken(
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		// Get an authorized transactor
 		auth, err := c.getAuth(ctx, fromPrivateKey, new(big.Int).SetUint64(chainID), client)
 		if err != nil {
@@ -444,7 +444,7 @@ func (c *roundRobinClient) TransferNativeToken(
 	toAddress := common.HexToAddress(toAddressHex)
 
 	// Use `executeWithRetry` to simplify retry logic
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		// Get the sender's balance
 		balance, err := client.BalanceAt(ctx, fromAddress, nil)
 		if err != nil {
@@ -532,7 +532,7 @@ func (c *roundRobinClient) TransferNativeToken(
 // SuggestGasPrice retrieves the suggested gas price using round-robin retry logic.
 func (c *roundRobinClient) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	// Use `executeWithRetry` to simplify retry logic
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		gasPrice, err := client.SuggestGasPrice(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to suggest gas price: %w", err)
@@ -549,7 +549,7 @@ func (c *roundRobinClient) SuggestGasPrice(ctx context.Context) (*big.Int, error
 
 // GetBaseFee fetches the current base fee for dynamic fee transactions.
 func (c *roundRobinClient) GetBaseFee(ctx context.Context) (*big.Int, error) {
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		header, err := client.HeaderByNumber(ctx, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch header for base fee: %w", err)
@@ -566,7 +566,7 @@ func (c *roundRobinClient) GetBaseFee(ctx context.Context) (*big.Int, error) {
 // SuggestGasTipCap retrieves the suggested gas tip cap for dynamic fee transactions using round-robin retry logic.
 func (c *roundRobinClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
 	// Use executeWithRetry to simplify retry logic
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		// Use the client's SuggestGasTipCap method to fetch the tip cap
 		gasTipCap, err := client.SuggestGasTipCap(ctx)
 		if err != nil {
@@ -589,7 +589,7 @@ func (c *roundRobinClient) GetTokenBalance(
 	walletAddress string,
 ) (*big.Int, error) {
 	// Use executeWithRetry to perform the operation
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		// Convert the token contract address and wallet address to common.Address
 		tokenAddress := common.HexToAddress(tokenContractAddress)
 		accountAddress := common.HexToAddress(walletAddress)
@@ -622,7 +622,7 @@ func (c *roundRobinClient) GetNativeTokenBalance(
 	walletAddress string,
 ) (*big.Int, error) {
 	// Use executeWithRetry to perform the operation
-	result, err := c.executeWithRetry(func(client *ethclient.Client) (interface{}, error) {
+	result, err := c.executeWithRetry(func(client *ethclient.Client) (any, error) {
 		accountAddress := common.HexToAddress(walletAddress)
 
 		// Retrieve the native token balance

@@ -28,8 +28,8 @@ func TestRedisCacheClient(t *testing.T) {
 	tests := []struct {
 		name        string
 		key         string
-		value       interface{}
-		dest        interface{}
+		value       any
+		dest        any
 		expiration  time.Duration
 		expectError bool
 	}{
@@ -87,7 +87,7 @@ func TestRedisCacheClient_Delete(t *testing.T) {
 		require.NoError(t, client.Del(ctx, key))
 
 		// Ensure it's deleted
-		var dest interface{}
+		var dest any
 		err := client.Get(ctx, key, &dest)
 		require.Error(t, err)
 		require.Equal(t, "cache miss for key: "+key, err.Error())

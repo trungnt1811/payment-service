@@ -379,7 +379,7 @@ func (u *paymentOrderUCase) GetPaymentOrders(
 		return dto.PaginationDTOResponse{}, err
 	}
 
-	var orderHistoriesDTO []interface{}
+	var orderHistoriesDTO []any
 
 	// Map orders to DTOs, limiting to requested page size
 	for i, order := range orders {

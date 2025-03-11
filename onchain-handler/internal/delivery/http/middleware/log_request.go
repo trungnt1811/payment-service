@@ -34,7 +34,7 @@ func RequestLoggerWithLogger(log loggertypes.Logger) gin.HandlerFunc {
 		}
 
 		// Create fields map for structured logging
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"client_ip":  c.ClientIP(),
 			"method":     c.Request.Method,
 			"path":       path,
@@ -83,11 +83,11 @@ func RequestLoggerWithLogger(log loggertypes.Logger) gin.HandlerFunc {
 
 // Optional: Middleware configuration
 type LoggerConfig struct {
-	SkipPaths  []string                                            // Paths to skip logging
-	TimeFormat string                                              // Custom time format
-	UTC        bool                                                // Use UTC time
-	Headers    []string                                            // Headers to include in logs
-	Formatter  func(map[string]interface{}) map[string]interface{} // Custom formatter
+	SkipPaths  []string                            // Paths to skip logging
+	TimeFormat string                              // Custom time format
+	UTC        bool                                // Use UTC time
+	Headers    []string                            // Headers to include in logs
+	Formatter  func(map[string]any) map[string]any // Custom formatter
 }
 
 // RequestLoggerWithConfig returns a middleware with custom configuration
@@ -119,7 +119,7 @@ func RequestLoggerWithConfig(log loggertypes.Logger, conf LoggerConfig) gin.Hand
 		}
 
 		// Build basic fields
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"client_ip": c.ClientIP(),
 			"method":    c.Request.Method,
 			"path":      path,

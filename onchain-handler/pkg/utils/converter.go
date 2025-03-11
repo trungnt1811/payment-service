@@ -92,8 +92,8 @@ func CalculateFee(gasUsed uint64, gasPrice *big.Int) string {
 }
 
 // ToInterfaceSlice converts a slice of any type to a slice of interface{}
-func ToInterfaceSlice[T any](slice []T) []interface{} {
-	result := make([]interface{}, len(slice))
+func ToInterfaceSlice[T any](slice []T) []any {
+	result := make([]any, len(slice))
 	for i, v := range slice {
 		result[i] = v
 	}

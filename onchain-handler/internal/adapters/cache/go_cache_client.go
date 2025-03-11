@@ -26,13 +26,13 @@ func NewGoCacheClient() types.CacheClient {
 // Set adds an item to the cache with a specified expiration time
 // If the duration is 0 (DefaultExpiration), the cache's default expiration time is used.
 // If it is -1 (NoExpiration), the item never expires.
-func (c *goCacheClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func (c *goCacheClient) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	c.cache.Set(key, value, expiration)
 	return nil
 }
 
 // Get retrieves an item from the cache and assigns it to the destination using reflection
-func (c *goCacheClient) Get(ctx context.Context, key string, dest interface{}) error {
+func (c *goCacheClient) Get(ctx context.Context, key string, dest any) error {
 	cachedValue, found := c.cache.Get(key)
 	if !found {
 		return fmt.Errorf("item not found in cache")

@@ -40,7 +40,7 @@ func NewRedisCacheClient() types.CacheClient {
 }
 
 // Set stores a key-value pair in Redis with expiration
-func (r *redisCacheClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func (r *redisCacheClient) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	if expiration == 0 {
 		expiration = r.ttl
 	}
@@ -59,7 +59,7 @@ func (r *redisCacheClient) Set(ctx context.Context, key string, value interface{
 }
 
 // Get retrieves a value from Redis and assigns it to the destination
-func (r *redisCacheClient) Get(ctx context.Context, key string, dest interface{}) error {
+func (r *redisCacheClient) Get(ctx context.Context, key string, dest any) error {
 	// Validate that dest is a pointer and is not nil
 	if dest == nil || reflect.ValueOf(dest).Kind() != reflect.Ptr || reflect.ValueOf(dest).IsNil() {
 		return fmt.Errorf("destination must be a non-nil pointer")

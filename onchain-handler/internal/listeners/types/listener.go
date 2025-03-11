@@ -7,7 +7,7 @@ import (
 )
 
 // EventHandler is a type for event handler functions.
-type EventHandler func(log types.Log) (interface{}, error)
+type EventHandler func(log types.Log) (any, error)
 
 type BaseEventListener interface {
 	RunListener(ctx context.Context) error

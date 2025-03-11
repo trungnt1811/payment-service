@@ -23,7 +23,7 @@ import (
 type baseEventListener struct {
 	ethClient              clienttypes.Client
 	network                constants.NetworkType
-	eventChan              chan interface{}
+	eventChan              chan any
 	blockStateUCase        ucasetypes.BlockStateUCase
 	currentBlock           uint64
 	cacheRepo              cachetypes.CacheRepository
@@ -39,7 +39,7 @@ func NewBaseEventListener(
 	blockStateUCase ucasetypes.BlockStateUCase,
 	startBlockListener *uint64,
 ) listenertypes.BaseEventListener {
-	eventChan := make(chan interface{}, constants.DefaultEventChannelBufferSize)
+	eventChan := make(chan any, constants.DefaultEventChannelBufferSize)
 
 	// Fetch the last processed block from the repository
 	lastBlock, err := blockStateUCase.GetLastProcessedBlock(context.Background(), network)
@@ -268,23 +268,17 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 		logger.GetLogger().Debugf("Listening for confirmed events starting at block on network %s: %d", listener.network.String(), currentBlock)
 
 		// Determine the end block while respecting ApiMaxBlocksPerRequest and the effective latest block.
-		endBlock := currentBlock + constants.ApiMaxBlocksPerRequest/8
-		if endBlock > effectiveLatestBlock {
-			endBlock = effectiveLatestBlock
-		}
+		endBlock := min(currentBlock+constants.ApiMaxBlocksPerRequest/8, effectiveLatestBlock)
 
 		// Process the blocks in chunks.
 		for chunkStart := currentBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
-			chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
-			if chunkEnd > endBlock {
-				chunkEnd = endBlock
-			}
+			chunkEnd := min(chunkStart+constants.DefaultBlockOffset-1, endBlock)
 
 			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", listener.network.String(), chunkStart, chunkEnd)
 
 			var logs []types.Log
 			// Poll logs from the blockchain with retries in case of failure.
-			for retries := 0; retries < constants.MaxRetries; retries++ {
+			for range constants.MaxRetries {
 				// Poll logs from the chunk of blocks.
 				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
