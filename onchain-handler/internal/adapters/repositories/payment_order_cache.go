@@ -113,37 +113,40 @@ func (c *paymentOrderCache) GetActivePaymentOrders(ctx context.Context, network 
 
 func (c *paymentOrderCache) UpdatePaymentOrder(
 	ctx context.Context,
-	order *entities.PaymentOrder,
+	orderID uint64,
+	updateFunc func(order *entities.PaymentOrder) error,
 ) error {
-	// Construct the cache key for the payment order
-	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(order.ID, 10)}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
 
-	// Attempt to retrieve the payment order from the cache
+	var updatedOrder entities.PaymentOrder
+
+	// Update via repository transaction with provided updateFunc
+	err := c.paymentOrderRepository.UpdatePaymentOrder(ctx, orderID, func(order *entities.PaymentOrder) error {
+		// Perform user-defined updates
+		if err := updateFunc(order); err != nil {
+			return err
+		}
+
+		// Keep updated data for cache synchronization
+		updatedOrder = *order
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update payment order: %w", err)
+	}
+
+	// Attempt cache retrieval and synchronize
 	var cachedOrder entities.PaymentOrder
-	cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
-	if cacheErr != nil {
-		// Log the cache miss but proceed with the update
-		logger.GetLogger().Warnf("Failed to retrieve payment order ID %d from cache: %v", order.ID, cacheErr)
-	}
-
-	// Update the payment order in the repository (DB)
-	if err := c.paymentOrderRepository.UpdatePaymentOrder(ctx, order); err != nil {
-		return fmt.Errorf("failed to update payment order in repository: %w", err)
-	}
-
-	// Update the cache with the new order data
-	if cacheErr == nil {
-		// Merge changes from the updated order into the cached order
-		mergePaymentOrderFields(&cachedOrder, order)
-
-		// Save the updated order back into the cache
+	if cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder); cacheErr == nil {
+		// Cache hit: merge updated fields
+		mergePaymentOrderFields(&cachedOrder, &updatedOrder)
 		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
-			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", order.ID, saveErr)
+			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
 		}
 	} else {
-		// Cache miss: add the updated order directly to the cache
-		if saveErr := c.cache.SaveItem(cacheKey, order, conf.GetExpiredOrderTime()); saveErr != nil {
-			logger.GetLogger().Warnf("Failed to cache updated payment order ID %d: %v", order.ID, saveErr)
+		// Cache miss: save updated order directly to cache
+		if saveErr := c.cache.SaveItem(cacheKey, updatedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
+			logger.GetLogger().Warnf("Failed to cache payment order ID %d after update: %v", orderID, saveErr)
 		}
 	}
 

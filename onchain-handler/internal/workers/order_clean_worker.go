@@ -62,47 +62,46 @@ func (w *orderCleanWorker) run(ctx context.Context) {
 }
 
 func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
-	orderIDs, err := w.paymentOrderUCase.UpdateExpiredOrdersToFailed(ctx)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to update expired orders to failed and release wallet: %v", err)
-		return
-	}
-
-	orderDTOs, err := w.paymentOrderUCase.GetPaymentOrdersByIDs(ctx, orderIDs)
-	if err != nil {
-		logger.GetLogger().Errorf("Failed to get payment orders by IDs: %v", err)
-		return
-	}
-
-	errors := utils.SendWebhooks(
+	w.updateOrdersAndSendWebhooks(
 		ctx,
-		utils.ToInterfaceSlice(orderDTOs),
-		func(order any) string {
-			return order.(dto.PaymentOrderDTOResponse).WebhookURL
-		},
+		w.paymentOrderUCase.UpdateExpiredOrdersToFailed,
+		"update expired orders to failed and release wallet",
+		"All webhooks for failed orders sent successfully.",
+		"No expired orders updated to failed.",
 	)
-	if len(errors) > 0 {
-		logger.GetLogger().Errorf("Failed to send webhooks for orders %v: %v", orderIDs, errors)
-	} else {
-		logger.GetLogger().Info("All webhooks for failed orders sent successfully.")
-	}
 }
 
 func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
-	orderIDs, err := w.paymentOrderUCase.UpdateActiveOrdersToExpired(ctx)
+	w.updateOrdersAndSendWebhooks(
+		ctx,
+		w.paymentOrderUCase.UpdateActiveOrdersToExpired,
+		"update active orders to expired",
+		"All webhooks for expired orders sent successfully.",
+		"No active orders updated to expired.",
+	)
+}
+
+func (w *orderCleanWorker) updateOrdersAndSendWebhooks(
+	ctx context.Context,
+	updateFunc func(context.Context) ([]uint64, error),
+	actionDesc string,
+	successLog string,
+	noActionDesc string,
+) {
+	orderIDs, err := updateFunc(ctx)
 	if err != nil {
-		logger.GetLogger().Errorf("Failed to update active orders to expired: %v", err)
+		logger.GetLogger().Errorf("Failed to %s: %v", actionDesc, err)
 		return
 	}
 
 	if len(orderIDs) == 0 {
-		logger.GetLogger().Info("No active orders updated to expired.")
+		logger.GetLogger().Info(noActionDesc)
 		return
 	}
 
 	orderDTOs, err := w.paymentOrderUCase.GetPaymentOrdersByIDs(ctx, orderIDs)
 	if err != nil {
-		logger.GetLogger().Errorf("Failed to get payment orders by IDs: %v", err)
+		logger.GetLogger().Errorf("Failed to retrieve payment orders for IDs %v: %v", orderIDs, err)
 		return
 	}
 
@@ -113,9 +112,10 @@ func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {
 			return order.(dto.PaymentOrderDTOResponse).WebhookURL
 		},
 	)
+
 	if len(errors) > 0 {
 		logger.GetLogger().Errorf("Failed to send webhooks for orders %v: %v", orderIDs, errors)
 	} else {
-		logger.GetLogger().Info("All webhooks for expired orders sent successfully.")
+		logger.GetLogger().Info(successLog)
 	}
 }

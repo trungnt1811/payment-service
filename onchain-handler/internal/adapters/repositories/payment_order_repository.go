@@ -77,62 +77,56 @@ func (r *paymentOrderRepository) GetActivePaymentOrders(ctx context.Context, net
 	return orders, nil
 }
 
-func (r *paymentOrderRepository) UpdatePaymentOrder(ctx context.Context, order *entities.PaymentOrder) error {
+func (r *paymentOrderRepository) UpdatePaymentOrder(
+	ctx context.Context,
+	orderID uint64,
+	updateFunc func(order *entities.PaymentOrder) error,
+) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Construct the updates map, excluding block_height and upcoming_block_height if they are 0
+		var order entities.PaymentOrder
+
+		// Retrieve the order with row-level locking
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Preload("Wallet").
+			Preload("PaymentEventHistories").
+			First(&order, "id = ?", orderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("payment order id %d not found: %w", orderID, err)
+			}
+			return fmt.Errorf("failed to retrieve payment order: %w", err)
+		}
+
+		// Allow caller to update fields safely within transaction
+		if err := updateFunc(&order); err != nil {
+			return err
+		}
+
+		// Construct update fields dynamically
 		updates := map[string]any{
 			"status":       order.Status,
 			"transferred":  order.Transferred,
 			"succeeded_at": order.SucceededAt,
 		}
-		// Only include block_height if it's not 0
 		if order.BlockHeight != 0 {
 			updates["block_height"] = order.BlockHeight
 		}
-		// Only include upcoming_block_height if it's not 0
 		if order.UpcomingBlockHeight != 0 {
 			updates["upcoming_block_height"] = order.UpcomingBlockHeight
 		}
-		// Only include network if it's not empty
-		if order.Network != "" {
-			updates["network"] = order.Network
-		}
 
-		// Step 1: Update the payment order with row-level locking
-		if err := tx.Model(&entities.PaymentOrder{}).
-			Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ?", order.ID).
-			Updates(updates).Error; err != nil {
+		// Update the order directly
+		if err := tx.Model(&order).Updates(updates).Error; err != nil {
 			return fmt.Errorf("failed to update payment order: %w", err)
 		}
 
-		// Step 2: Fetch the WalletID with row-level locking
-		var paymentOrder struct {
-			WalletID uint64
-		}
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Model(&entities.PaymentOrder{}).
-			Select("wallet_id").
-			Where("id = ?", order.ID).
-			First(&paymentOrder).Error; err != nil {
-			return fmt.Errorf("failed to retrieve payment order with id %d: %w", order.ID, err)
-		}
+		// Determine wallet `in_use` status based on updated order status
+		walletInUse := !(order.Status == constants.Success || order.Status == constants.Failed)
 
-		// Step 3: Determine the wallet status
-		walletStatus := true
-		if order.Status == constants.Success || order.Status == constants.Failed {
-			walletStatus = false
-		}
-
-		// Step 4: Update the wallet's `in_use` status
-		result := tx.Model(&entities.PaymentWallet{}).
-			Where("id = ?", paymentOrder.WalletID).
-			Update("in_use", walletStatus)
-		if result.Error != nil {
-			return fmt.Errorf("failed to update wallet status for wallet id %d: %w", paymentOrder.WalletID, result.Error)
-		}
-		if result.RowsAffected == 0 {
-			return fmt.Errorf("wallet id %d not updated, it might have been modified by another transaction", paymentOrder.WalletID)
+		// Update associated wallet's `in_use` status
+		if err := tx.Model(&entities.PaymentWallet{}).
+			Where("id = ?", order.WalletID).
+			Update("in_use", walletInUse).Error; err != nil {
+			return fmt.Errorf("failed to update wallet in_use status: %w", err)
 		}
 
 		return nil
@@ -170,28 +164,30 @@ func (r *paymentOrderRepository) UpdateOrderNetwork(
 
 // BatchUpdateOrdersToExpired updates the status of multiple payment orders to "Expired" by their OrderIDs.
 func (r *paymentOrderRepository) BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error {
-	// Build the SQL CASE statement for updating different statuses based on order IDs
-	caseSQL := constants.SqlCase
-	for _, orderID := range orderIDs {
-		caseSQL += fmt.Sprintf(" WHEN id = %d THEN '%s'::order_status", orderID, constants.Expired)
-	}
-	caseSQL += constants.SqlEnd
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Explicit row locking
+		var orders []entities.PaymentOrder
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id IN ?", orderIDs).
+			Find(&orders).Error; err != nil {
+			return fmt.Errorf("failed to lock orders: %w", err)
+		}
 
-	// Perform the batch update using a single query with CASE and IN
-	result := r.db.WithContext(ctx).
-		Model(&entities.PaymentOrder{}).
-		Where("id IN ?", orderIDs).
-		Update("status", gorm.Expr(caseSQL))
+		if len(orders) == 0 {
+			return fmt.Errorf("no orders found with provided IDs")
+		}
 
-	if result.Error != nil {
-		return fmt.Errorf("failed to update orders: %w", result.Error)
-	}
+		// Perform the update
+		result := tx.Model(&entities.PaymentOrder{}).
+			Where("id IN ?", orderIDs).
+			Update("status", constants.Expired)
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("no orders found with the provided IDs")
-	}
+		if result.Error != nil {
+			return fmt.Errorf("failed to update orders: %w", result.Error)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 // BatchUpdateOrderBlockHeights updates the block heights of multiple payment orders by their OrderIDs.

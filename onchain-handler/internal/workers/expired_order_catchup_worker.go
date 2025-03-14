@@ -244,7 +244,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 	}
 
 	// Iterate over all expired orders to find a matching wallet address
-	for index, order := range orders {
+	for _, order := range orders {
 		// Check if the order matches the transfer event based on the wallet address and token symbol
 		if !w.isMatchingOrder(order, transferEvent, tokenSymbol) {
 			continue
@@ -253,7 +253,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 		logger.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), w.network.String(), order.ID)
 
 		// Call processOrderPayment to handle the order update logic based on the transfer event
-		isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
+		isUpdated, err := w.processOrderPayment(ctx, &order, transferEvent, blockHeight)
 		if err != nil {
 			return fmt.Errorf("failed to process order payment for order ID %d on network %s: %w", order.ID, w.network.String(), err)
 		}

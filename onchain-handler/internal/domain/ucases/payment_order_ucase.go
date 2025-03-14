@@ -244,48 +244,36 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	blockHeight, upcomingBlockHeight *uint64,
 	status, transferredAmount, network *string,
 ) error {
-	// Retrieve the payment order from the repository
-	order, err := u.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve payment order with id %d: %w", orderID, err)
-	}
-
-	// Update the fields of the payment order
-	if status != nil {
-		order.Status = *status
-		// Update the succeeded_at timestamp if the status is "Success"
-		if *status == constants.Success {
-			order.SucceededAt = time.Now().UTC()
+	return u.paymentOrderRepository.UpdatePaymentOrder(ctx, orderID, func(order *entities.PaymentOrder) error {
+		if status != nil {
+			order.Status = *status
+			if *status == constants.Success {
+				order.SucceededAt = time.Now().UTC()
+			}
 		}
-	}
 
-	if transferredAmount != nil {
-		order.Transferred = *transferredAmount
-	}
-
-	// Only update the network if the order is pending
-	if network != nil {
-		if order.Status == constants.Pending {
-			order.Network = *network
-		} else {
-			return fmt.Errorf("failed to update payment order with id %d: order status is not PENDING", orderID)
+		if transferredAmount != nil {
+			order.Transferred = *transferredAmount
 		}
-	}
 
-	if blockHeight != nil {
-		order.BlockHeight = *blockHeight
-	}
+		if network != nil {
+			if order.Status == constants.Pending {
+				order.Network = *network
+			} else {
+				return fmt.Errorf("cannot update network: order status is not PENDING")
+			}
+		}
 
-	if upcomingBlockHeight != nil {
-		order.UpcomingBlockHeight = *upcomingBlockHeight
-	}
+		if blockHeight != nil {
+			order.BlockHeight = *blockHeight
+		}
 
-	// Persist the updated payment order to the database
-	if err := u.paymentOrderRepository.UpdatePaymentOrder(ctx, order); err != nil {
-		return fmt.Errorf("failed to update payment order with id %d: %w", orderID, err)
-	}
+		if upcomingBlockHeight != nil {
+			order.UpcomingBlockHeight = *upcomingBlockHeight
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error {
