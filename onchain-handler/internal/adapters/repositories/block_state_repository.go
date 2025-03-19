@@ -25,7 +25,7 @@ func NewBlockstateRepository(db *gorm.DB) repotypes.BlockStateRepository {
 func (r *blockstateRepository) GetLatestBlock(ctx context.Context, network string) (uint64, error) {
 	var latestBlock uint64
 	err := r.db.WithContext(ctx).
-		Raw("SELECT latest_block FROM block_state WHERE network = ? FOR UPDATE", network).
+		Raw("SELECT latest_block FROM block_state WHERE network = ?", network).
 		Scan(&latestBlock).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -60,11 +60,10 @@ func (r *blockstateRepository) UpdateLatestBlock(ctx context.Context, blockNumbe
 	return nil
 }
 
-// GetLastProcessedBlock retrieves the last processed block with a lock
 func (r *blockstateRepository) GetLastProcessedBlock(ctx context.Context, network string) (uint64, error) {
 	var lastProcessedBlock uint64
 	err := r.db.WithContext(ctx).
-		Raw("SELECT last_processed_block FROM block_state WHERE network = ? FOR UPDATE", network).
+		Raw("SELECT last_processed_block FROM block_state WHERE network = ?", network).
 		Scan(&lastProcessedBlock).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
