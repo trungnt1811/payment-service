@@ -41,7 +41,7 @@ const (
 
 // Worker config
 const (
-	LatestBlockFetchInterval    = 3 * time.Second
+	LatestBlockFetchInterval    = 5 * time.Second
 	ExpiredOrderCatchupInterval = 1 * time.Minute
 	OrderCleanInterval          = 5 * time.Second
 )
