@@ -160,6 +160,12 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		return nil, err
 	}
 
+	// Prevent unnecessary status update
+	if order.Status != constants.Pending && order.Status != constants.Partial {
+		logger.GetLogger().Infof("Skipping status update for order ID %d as it is already in Processing", order.ID)
+		return nil, nil
+	}
+
 	// Update the order status to 'Processing'
 	status := constants.Processing
 	upcomingBlockHeight := vLog.BlockNumber
