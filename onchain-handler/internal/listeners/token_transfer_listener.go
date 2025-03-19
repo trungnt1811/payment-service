@@ -160,15 +160,22 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		return nil, err
 	}
 
+	// Get block number from the event
+	upcomingBlockHeight := vLog.BlockNumber
+
 	// Prevent unnecessary status update
-	if order.Status != constants.Pending && order.Status != constants.Partial {
-		logger.GetLogger().Infof("Skipping status update for order ID %d as it is already in Processing", order.ID)
+	if order.BlockHeight >= upcomingBlockHeight {
+		logger.GetLogger().Infof(
+			"Skipping event from older block %d for order ID %d (current block height: %d)",
+			upcomingBlockHeight,
+			order.ID,
+			order.BlockHeight,
+		)
 		return nil, nil
 	}
 
 	// Update the order status to 'Processing'
 	status := constants.Processing
-	upcomingBlockHeight := vLog.BlockNumber
 	err = listener.paymentOrderUCase.UpdatePaymentOrder(listener.ctx, order.ID, nil, &upcomingBlockHeight, &status, nil, nil)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
