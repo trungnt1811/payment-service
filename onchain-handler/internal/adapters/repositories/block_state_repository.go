@@ -21,72 +21,80 @@ func NewBlockstateRepository(db *gorm.DB) repotypes.BlockStateRepository {
 	}
 }
 
-// GetLastProcessedBlock retrieves the last processed block for the specified network from the database.
-func (r *blockstateRepository) GetLastProcessedBlock(ctx context.Context, network string) (uint64, error) {
-	var blockState entities.BlockState
-
-	// Attempt to find the block state entry for the specified network
-	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return 0, nil
-		}
-		return 0, err
-	}
-
-	return blockState.LastProcessedBlock, nil
-}
-
-// UpdateLastProcessedBlock updates the last processed block for the specified network in the database.
-func (r *blockstateRepository) UpdateLastProcessedBlock(ctx context.Context, blockNumber uint64, network string) error {
-	var blockState entities.BlockState
-
-	// Check if the block state record for the network exists
-	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Create a new record if none exists for this network
-			blockState.Network = network
-			blockState.LastProcessedBlock = blockNumber
-			return r.db.WithContext(ctx).Create(&blockState).Error
-		}
-		return err
-	}
-
-	// Update the last processed block for the network
-	blockState.LastProcessedBlock = blockNumber
-	return r.db.WithContext(ctx).Save(&blockState).Error
-}
-
-// GetLatestBlock retrieves the latest block for the specified network from the database.
+// GetLatestBlock retrieves the latest block with a lock to prevent race conditions
 func (r *blockstateRepository) GetLatestBlock(ctx context.Context, network string) (uint64, error) {
-	var blockState entities.BlockState
-
-	// Attempt to find the block state entry for the specified network
-	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
+	var latestBlock uint64
+	err := r.db.WithContext(ctx).
+		Raw("SELECT latest_block FROM block_state WHERE network = ? FOR UPDATE", network).
+		Scan(&latestBlock).Error
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return 0, nil
 		}
 		return 0, err
 	}
 
-	return blockState.LatestBlock, nil
+	return latestBlock, nil
 }
 
-// UpdateLatestBlock updates the latest block for the specified network in the database.
+// UpdateLatestBlock updates only the latest_block column efficiently
 func (r *blockstateRepository) UpdateLatestBlock(ctx context.Context, blockNumber uint64, network string) error {
-	var blockState entities.BlockState
+	result := r.db.WithContext(ctx).
+		Model(&entities.BlockState{}).
+		Where("network = ?", network).
+		Updates(map[string]any{"latest_block": blockNumber})
 
-	// Check if the block state record for the network exists
-	if err := r.db.WithContext(ctx).Where("network = ?", network).First(&blockState).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Create a new record if none exists for this network
-			blockState.Network = network
-			blockState.LatestBlock = blockNumber
-			return r.db.WithContext(ctx).Create(&blockState).Error
-		}
-		return err
+	if result.Error != nil {
+		return result.Error
 	}
 
-	// Update the latest block for the network
-	blockState.LatestBlock = blockNumber
-	return r.db.WithContext(ctx).Save(&blockState).Error
+	if result.RowsAffected == 0 {
+		// Create new one if not record updated
+		blockState := entities.BlockState{
+			Network:     network,
+			LatestBlock: blockNumber,
+		}
+		return r.db.WithContext(ctx).Create(&blockState).Error
+	}
+
+	return nil
+}
+
+// GetLastProcessedBlock retrieves the last processed block with a lock
+func (r *blockstateRepository) GetLastProcessedBlock(ctx context.Context, network string) (uint64, error) {
+	var lastProcessedBlock uint64
+	err := r.db.WithContext(ctx).
+		Raw("SELECT last_processed_block FROM block_state WHERE network = ? FOR UPDATE", network).
+		Scan(&lastProcessedBlock).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	return lastProcessedBlock, nil
+}
+
+// UpdateLastProcessedBlock updates only the last_processed_block column efficiently
+func (r *blockstateRepository) UpdateLastProcessedBlock(ctx context.Context, blockNumber uint64, network string) error {
+	result := r.db.WithContext(ctx).
+		Model(&entities.BlockState{}).
+		Where("network = ?", network).
+		Updates(map[string]any{"last_processed_block": blockNumber})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		// Create new one if not record updated
+		blockState := entities.BlockState{
+			Network:            network,
+			LastProcessedBlock: blockNumber,
+		}
+		return r.db.WithContext(ctx).Create(&blockState).Error
+	}
+
+	return nil
 }
