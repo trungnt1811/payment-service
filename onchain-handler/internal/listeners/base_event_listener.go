@@ -165,16 +165,13 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 		// Process the blocks in chunks.
 		currentBlock = effectiveLatestBlock + 1
 		for chunkStart := currentBlock; chunkStart <= latestBlock; chunkStart += constants.DefaultBlockOffset {
-			chunkEnd := chunkStart + constants.DefaultBlockOffset - 1
-			if chunkEnd > latestBlock {
-				chunkEnd = latestBlock
-			}
+			chunkEnd := min(chunkStart+constants.DefaultBlockOffset-1, latestBlock)
 
 			logger.GetLogger().Debugf("Base Event Listener: Processing block chunk on network %s: %d to %d", listener.network.String(), chunkStart, chunkEnd)
 
 			var logs []types.Log
 			// Poll logs from the blockchain with retries in case of failure.
-			for retries := 0; retries < constants.MaxRetries; retries++ {
+			for range constants.MaxRetries {
 				// Poll logs from the chunk of blocks.
 				logs, err = listener.ethClient.PollForLogsFromBlock(ctx, contractAddresses, chunkStart, chunkEnd)
 				if err != nil {
