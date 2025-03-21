@@ -181,7 +181,12 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 		logger.GetLogger().Errorf("Failed to update order status to processing on network %s for order ID %d, error: %v", listener.network.String(), order.ID, err)
 		return nil, err
 	}
-	logger.GetLogger().Infof("Updated order ID %d to status 'Processing' on network %s", order.ID, listener.network.String())
+	logger.GetLogger().Infof(
+		"Updated order ID %d to status 'Processing' on network %s, block height: %d",
+		order.ID,
+		listener.network.String(),
+		upcomingBlockHeight,
+	)
 
 	// Update the order status in the set
 	order.Status = status
