@@ -165,12 +165,13 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	upcomingBlockHeight := vLog.BlockNumber
 
 	// Prevent unnecessary status update
-	if order.BlockHeight >= upcomingBlockHeight {
+	if order.BlockHeight >= upcomingBlockHeight || order.UpcomingBlockHeight >= upcomingBlockHeight {
 		logger.GetLogger().Infof(
-			"Skipping event from older block %d for order ID %d (current block height: %d)",
+			"Skipping event from older block %d for order ID %d (current block height: %d, current upcoming block height: %d)",
 			upcomingBlockHeight,
 			order.ID,
 			order.BlockHeight,
+			order.UpcomingBlockHeight,
 		)
 		return nil, nil
 	}
