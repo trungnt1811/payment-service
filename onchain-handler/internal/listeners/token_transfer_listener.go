@@ -159,6 +159,7 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	if err != nil || order == nil {
 		return nil, err
 	}
+	logger.GetLogger().Infof("Found order ID %d in set: %v", order.ID, order)
 
 	// Get block number from the event
 	upcomingBlockHeight := vLog.BlockNumber
