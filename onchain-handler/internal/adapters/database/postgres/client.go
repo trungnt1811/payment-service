@@ -35,8 +35,8 @@ func (pgsql *postgreSQL) getDBConnectionURL() string {
 
 	// Format for PostgreSQL connection URL
 	return fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		config.DbHost, config.DbPort,
-		config.DbUser, config.DbName, config.DbPassword, sslMode)
+		config.DBHost, config.DBPort,
+		config.DBUser, config.DBName, config.DBPassword, sslMode)
 }
 
 func (pgsql *postgreSQL) Connect() *gorm.DB {
@@ -45,12 +45,12 @@ func (pgsql *postgreSQL) Connect() *gorm.DB {
 
 func (pgsql *postgreSQL) ConnectWithLogger(logLevel logger.LogLevel) *gorm.DB {
 	// Get the PostgreSQL connection URL
-	dbUrl := pgsql.getDBConnectionURL()
+	dbURL := pgsql.getDBConnectionURL()
 	var db *gorm.DB
 	var err error
 
 	// Open the database connection with a custom log level
-	db, err = gorm.Open(postgres.Open(dbUrl), &gorm.Config{
+	db, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {

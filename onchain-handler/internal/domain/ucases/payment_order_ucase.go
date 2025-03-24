@@ -107,12 +107,12 @@ func (u *paymentOrderUCase) updatePaymentStatistics(
 	granularity := constants.Daily
 	periodStart := utils.GetPeriodStart(granularity, time.Now())
 
-	for _, payload := range payloads {
+	for index, payload := range payloads {
 		err := u.paymentStatisticsRepository.IncrementStatistics(
 			ctx,
 			granularity,
 			periodStart.UTC(),
-			&payload.Amount,
+			&payloads[index].Amount,
 			nil, // Transferred value is not updated here
 			payload.Symbol,
 			vendorID,

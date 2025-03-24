@@ -2,8 +2,8 @@ package constants
 
 // SQL constants
 const (
-	SqlCase = "CASE"
-	SqlEnd  = " END"
+	SQLCase = "CASE"
+	SQLEnd  = " END"
 )
 
 // Order direction

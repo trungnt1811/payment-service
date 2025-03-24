@@ -33,22 +33,22 @@ func RunWorkers(
 	paymentOrderSet settypes.Set[dto.PaymentOrderDTO],
 ) {
 	// Initialize AVAX C-Chain client
-	avaxRpcUrls, err := conf.GetRpcUrls(constants.AvaxCChain)
+	avaxRPCUrls, err := conf.GetRPCUrls(constants.AvaxCChain)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to get AVAX C-Chain RPC URLs: %v", err)
 	}
-	ethClientAvax, err := providers.ProvideEthClient(constants.AvaxCChain, avaxRpcUrls)
+	ethClientAvax, err := providers.ProvideEthClient(constants.AvaxCChain, avaxRPCUrls)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize AVAX C-Chain client: %v", err)
 	}
 	defer ethClientAvax.Close()
 
 	// Initialize BSC client
-	bscRpcUrls, err := conf.GetRpcUrls(constants.Bsc)
+	bscRPCUrls, err := conf.GetRPCUrls(constants.Bsc)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to get BSC RPC URLs: %v", err)
 	}
-	ethClientBsc, err := providers.ProvideEthClient(constants.Bsc, bscRpcUrls)
+	ethClientBsc, err := providers.ProvideEthClient(constants.Bsc, bscRPCUrls)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize BSC client: %v", err)
 	}

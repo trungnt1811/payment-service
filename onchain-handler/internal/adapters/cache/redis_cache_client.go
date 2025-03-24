@@ -23,9 +23,9 @@ type redisCacheClient struct {
 // NewRedisCacheClient initializes Redis cache client with configuration
 func NewRedisCacheClient() types.CacheClient {
 	config := conf.GetRedisConfiguration()
-	ttl, err := time.ParseDuration(config.RedisTtl)
+	ttl, err := time.ParseDuration(config.RedisTTL)
 	if err != nil {
-		logger.GetLogger().Warnf("Invalid REDIS_TTL format (%s), using default 10m", config.RedisTtl)
+		logger.GetLogger().Warnf("Invalid REDIS_TTL format (%s), using default 10m", config.RedisTTL)
 		ttl = 10 * time.Minute
 	}
 

@@ -19,7 +19,7 @@ const (
 const (
 	DefaultEventChannelBufferSize = 1000 // Buffer size for event channel
 	DefaultBlockOffset            = 10   // Default block offset if last processed block is missing
-	ApiMaxBlocksPerRequest        = 2048 // Maximum number of blocks to query at once
+	APIMaxBlocksPerRequest        = 2048 // Maximum number of blocks to query at once
 )
 
 // Retry config

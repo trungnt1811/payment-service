@@ -264,8 +264,8 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 
 		logger.GetLogger().Debugf("Listening for confirmed events starting at block on network %s: %d", listener.network.String(), currentBlock)
 
-		// Determine the end block while respecting ApiMaxBlocksPerRequest and the effective latest block.
-		endBlock := min(currentBlock+constants.ApiMaxBlocksPerRequest/8, effectiveLatestBlock)
+		// Determine the end block while respecting APIMaxBlocksPerRequest and the effective latest block.
+		endBlock := min(currentBlock+constants.APIMaxBlocksPerRequest/8, effectiveLatestBlock)
 
 		// Process the blocks in chunks.
 		for chunkStart := currentBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {

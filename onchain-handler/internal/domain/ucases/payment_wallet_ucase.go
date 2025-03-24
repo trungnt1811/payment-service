@@ -316,7 +316,7 @@ func (u *paymentWalletUCase) getUSDTBalanceOnchain(ctx context.Context, walletAd
 	}
 
 	// Get RPC URLs and Ethereum Client based on network
-	rpcUrls, err := conf.GetRpcUrls(network)
+	rpcUrls, err := conf.GetRPCUrls(network)
 	if err != nil {
 		return "", fmt.Errorf("failed to get RPC URLs: %w", err)
 	}
@@ -350,7 +350,7 @@ func (u *paymentWalletUCase) getUSDTBalanceOnchain(ctx context.Context, walletAd
 // getNativeBalanceOnchain fetches and converts the on-chain native token balance for a given wallet
 func (u *paymentWalletUCase) getNativeBalanceOnchain(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
 	// Get RPC URLs and Ethereum Client based on network
-	rpcUrls, err := conf.GetRpcUrls(network)
+	rpcUrls, err := conf.GetRPCUrls(network)
 	if err != nil {
 		return "", fmt.Errorf("failed to get RPC URLs: %w", err)
 	}

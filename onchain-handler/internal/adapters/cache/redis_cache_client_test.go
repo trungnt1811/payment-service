@@ -14,7 +14,7 @@ func setupTestClient() *redisCacheClient {
 	// Override the Redis configuration
 	redisConfiguration := conf.GetRedisConfiguration()
 	redisConfiguration.RedisAddress = "localhost:6379"
-	redisConfiguration.RedisTtl = "5m"
+	redisConfiguration.RedisTTL = "5m"
 
 	// Initialize the Redis cache client
 	return NewRedisCacheClient().(*redisCacheClient)

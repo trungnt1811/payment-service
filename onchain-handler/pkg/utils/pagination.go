@@ -11,8 +11,8 @@ import (
 
 // ParsePaginationParams parses pagination parameters from the request context.
 func ParsePaginationParams(ctx *gin.Context) (int, int, error) {
-	page := ctx.DefaultQuery("page", constants.DEFAULT_PAGE)
-	size := ctx.DefaultQuery("size", constants.DEFAULT_PAGE_SIZE)
+	page := ctx.DefaultQuery("page", constants.DefaultPage)
+	size := ctx.DefaultQuery("size", constants.DefaultPageSize)
 
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {

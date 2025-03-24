@@ -13,6 +13,10 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/adapters/cache/mocks"
 )
 
+func buildPrefixedKey(appName, key string) string {
+	return appName + "_" + key
+}
+
 func TestSaveItem(t *testing.T) {
 	t.Run("TestCachingRepository_SaveItem", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -28,7 +32,7 @@ func TestSaveItem(t *testing.T) {
 		// Define mock key expectations properly
 		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
 
-		prefixedKey := config.AppName + "_testKey"
+		prefixedKey := buildPrefixedKey(config.AppName, "testKey")
 		value := "testValue"
 		expire := 5 * time.Minute
 
@@ -54,7 +58,7 @@ func TestRetrieveItem(t *testing.T) {
 
 		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
 
-		prefixedKey := config.AppName + "_testKey"
+		prefixedKey := buildPrefixedKey(config.AppName, "testKey")
 		var value string
 
 		mockClient.EXPECT().Get(ctx, prefixedKey, &value).Return(nil)
@@ -78,7 +82,7 @@ func TestRemoveItem(t *testing.T) {
 
 		mockStringer.EXPECT().String().Return("testKey").AnyTimes()
 
-		prefixedKey := config.AppName + "_testKey"
+		prefixedKey := buildPrefixedKey(config.AppName, "testKey")
 
 		mockClient.EXPECT().Del(ctx, prefixedKey).Return(nil)
 

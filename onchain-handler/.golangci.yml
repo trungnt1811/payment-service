@@ -10,7 +10,6 @@ linters:
   enable:
     - errcheck
     - dogsled
-    - copyloopvar
     - goconst
     - gocritic
     - gci
@@ -27,45 +26,10 @@ linters:
     - revive
     - stylecheck
     - typecheck
-    #    - thelper # too many positives with table tests that have custom setup(*testing.T)
     - unconvert
     - unused
 
 issues:
-  exclude-rules:
-    - text: "Use of weak random number generator"
-      linters:
-        - gosec
-    - text: "ST1003:"
-      linters:
-        - stylecheck
-    # FIXME: Disabled until golangci-lint updates stylecheck with this fix:
-    # https://github.com/dominikh/go-tools/issues/389
-    - text: "ST1016:"
-      linters:
-        - stylecheck
-    - path: "migrations"
-      text: "SA1019:"
-      linters:
-        - staticcheck
-    - text: "SA1019: codec.NewAminoCodec is deprecated" # TODO remove once migration path is set out
-      linters:
-        - staticcheck
-    - text: "SA1019: legacybech32.MustMarshalPubKey" # TODO remove once ready to remove from the sdk
-      linters:
-        - staticcheck
-    - text: "SA1019: legacybech32.MarshalPubKey" # TODO remove once ready to remove from the sdk
-      linters:
-        - staticcheck
-    - text: "SA1019: legacybech32.UnmarshalPubKey" # TODO remove once ready to remove from the sdk
-      linters:
-        - staticcheck
-    - text: "SA1019: params.SendEnabled is deprecated" # TODO remove once ready to remove from the sdk
-      linters:
-        - staticcheck
-    - text: "leading space"
-      linters:
-        - nolintlint
   max-issues-per-linter: 10000
   max-same-issues: 10000
 
@@ -87,7 +51,7 @@ linters-settings:
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
     includes:
-      #  - G101 # Look for hard coded credentials
+      - G101 # Look for hard coded credentials
       - G102 # Bind to all interfaces
       - G103 # Audit the use of unsafe block
       - G104 # Audit errors not checked

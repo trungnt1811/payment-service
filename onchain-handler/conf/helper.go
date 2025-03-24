@@ -10,14 +10,14 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 )
 
-func GetRpcUrls(network constants.NetworkType) ([]string, error) {
+func GetRPCUrls(network constants.NetworkType) ([]string, error) {
 	var rpcUrls string
 
 	switch network {
 	case constants.Bsc:
-		rpcUrls = configuration.Blockchain.BscNetwork.BscRpcUrls
+		rpcUrls = configuration.Blockchain.BscNetwork.BscRPCUrls
 	case constants.AvaxCChain:
-		rpcUrls = configuration.Blockchain.AvaxNetwork.AvaxRpcUrls
+		rpcUrls = configuration.Blockchain.AvaxNetwork.AvaxRPCUrls
 	default:
 		return nil, fmt.Errorf("unsupported network type: %s", network)
 	}

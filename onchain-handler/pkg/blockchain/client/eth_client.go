@@ -153,17 +153,17 @@ func (c *roundRobinClient) detectPendingTxs(
 }
 
 // executeWithRetry executes a function and retries with the next client on failure
-func (r *roundRobinClient) executeWithRetry(
+func (c *roundRobinClient) executeWithRetry(
 	fn func(client *ethclient.Client) (any, error),
 ) (any, error) {
 	var lastErr error
 	baseDelay := constants.RetryDelay
 
-	for range r.clients {
-		client := r.getClient()
-		clientIndex := (r.counter - 1 + len(r.clients)) % len(r.clients) // Get the last used client index
+	for range c.clients {
+		client := c.getClient()
+		clientIndex := (c.counter - 1 + len(c.clients)) % len(c.clients) // Get the last used client index
 
-		logger.GetLogger().Debugf("Using RPC endpoint: %s", r.endpoints[clientIndex])
+		logger.GetLogger().Debugf("Using RPC endpoint: %s", c.endpoints[clientIndex])
 
 		// Retry the current client up to 3 times before switching
 		for attempt := 1; attempt <= 3; attempt++ {
@@ -173,23 +173,23 @@ func (r *roundRobinClient) executeWithRetry(
 			}
 
 			lastErr = err
-			logger.GetLogger().Warnf("RPC call failed on endpoint %s (attempt %d/3): %v", r.endpoints[clientIndex], attempt, err)
+			logger.GetLogger().Warnf("RPC call failed on endpoint %s (attempt %d/3): %v", c.endpoints[clientIndex], attempt, err)
 			time.Sleep(baseDelay * (1 << (attempt - 1))) // Exponential backoff
 
 			// If this was the last attempt for this client, mark it as failed
 			if attempt == 3 {
-				r.mu.Lock()
-				r.failureTracker[clientIndex] = time.Now().Add(r.cooldown)
-				r.mu.Unlock()
-				logger.GetLogger().Warnf("Marking RPC endpoint %s as temporarily failed (cooldown active)", r.endpoints[clientIndex])
+				c.mu.Lock()
+				c.failureTracker[clientIndex] = time.Now().Add(c.cooldown)
+				c.mu.Unlock()
+				logger.GetLogger().Warnf("Marking RPC endpoint %s as temporarily failed (cooldown active)", c.endpoints[clientIndex])
 			}
 		}
 	}
 
 	// Try the last client as a fallback
-	lastClient := r.clients[len(r.clients)-1]
-	lastClientIndex := len(r.clients) - 1
-	logger.GetLogger().Warnf("Falling back to last RPC endpoint: %s", r.endpoints[lastClientIndex])
+	lastClient := c.clients[len(c.clients)-1]
+	lastClientIndex := len(c.clients) - 1
+	logger.GetLogger().Warnf("Falling back to last RPC endpoint: %s", c.endpoints[lastClientIndex])
 
 	for attempt := 1; attempt <= 3; attempt++ {
 		result, err := fn(lastClient)

@@ -10,15 +10,15 @@ import (
 
 type RedisConfiguration struct {
 	RedisAddress string `mapstructure:"REDIS_ADDRESS"`
-	RedisTtl     string `mapstructure:"REDIS_TTL"`
+	RedisTTL     string `mapstructure:"REDIS_TTL"`
 }
 
 type DatabaseConfiguration struct {
-	DbUser     string `mapstructure:"DB_USER"`
-	DbPassword string `mapstructure:"DB_PASSWORD"`
-	DbHost     string `mapstructure:"DB_HOST"`
-	DbPort     string `mapstructure:"DB_PORT"`
-	DbName     string `mapstructure:"DB_NAME"`
+	DBUser     string `mapstructure:"DB_USER"`
+	DBPassword string `mapstructure:"DB_PASSWORD"`
+	DBHost     string `mapstructure:"DB_HOST"`
+	DBPort     string `mapstructure:"DB_PORT"`
+	DBName     string `mapstructure:"DB_NAME"`
 	SSLMode    bool   `mapstructure:"DB_SSL_MODE"`
 }
 
@@ -38,14 +38,14 @@ type BlockchainConfiguration struct {
 }
 
 type AvaxNetworkConfiguration struct {
-	AvaxRpcUrls             string `mapstructure:"AVAX_RPC_URLS"`
+	AvaxRPCUrls             string `mapstructure:"AVAX_RPC_URLS"`
 	AvaxChainID             uint32 `mapstructure:"AVAX_CHAIN_ID"`
 	AvaxStartBlockListener  uint64 `mapstructure:"AVAX_START_BLOCK_LISTENER"`
 	AvaxUSDTContractAddress string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
 }
 
 type BscNetworkConfiguration struct {
-	BscRpcUrls             string `mapstructure:"BSC_RPC_URLS"`
+	BscRPCUrls             string `mapstructure:"BSC_RPC_URLS"`
 	BscChainID             uint32 `mapstructure:"BSC_CHAIN_ID"`
 	BscStartBlockListener  uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
 	BscUSDTContractAddress string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`

@@ -12,12 +12,12 @@ import (
 // Default Create a new pagination middleware with default values
 func DefaultPagination() gin.HandlerFunc {
 	return New(
-		constants.DEFAULT_PAGE_TEXT,
-		constants.DEFAULT_SIZE_TEXT,
-		constants.DEFAULT_PAGE,
-		constants.DEFAULT_PAGE_SIZE,
-		constants.DEFAULT_MIN_PAGESIZE,
-		constants.DEFAULT_MAX_PAGESIZE,
+		constants.DefaultPageText,
+		constants.DefaultSizeText,
+		constants.DefaultPage,
+		constants.DefaultPageSize,
+		constants.DefaultMinPageSize,
+		constants.DefaultMaxPageSize,
 	)
 }
 
