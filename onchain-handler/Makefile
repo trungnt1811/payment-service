@@ -31,6 +31,9 @@ stop:
 	@-pkill -SIGTERM -f "onchain-handler"
 	@echo "Stopped onchain-handler"
 
+install-lint:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(HOME)/go/bin v1.56.2	
+
 lint:
 	golangci-lint run --fix
 
