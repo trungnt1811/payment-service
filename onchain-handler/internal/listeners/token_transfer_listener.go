@@ -204,9 +204,6 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 
 // parseAndProcessConfirmedTransferEvent parses and processes a confirmed transfer event, checking if it matches any payment order in the set.
 func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLog types.Log) (any, error) {
-	// Handle expired and successful orders before processing the event
-	listener.removeOrders()
-
 	// Retrieve the token symbol for the event's contract address
 	tokenSymbol, err := conf.GetTokenSymbol(vLog.Address.Hex())
 	if err != nil {
@@ -339,11 +336,13 @@ func (listener *tokenTransferListener) processOrderPayment(
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
 		logger.GetLogger().Infof("Processed full payment on network %s for order ID: %d", listener.network.String(), order.ID)
 
-		// Check if order is still 'Processing' or needs to be marked as 'Success'.
 		status := constants.Success
-		if blockHeight < order.UpcomingBlockHeight {
-			status = constants.Processing
-		}
+		// Check if order is still 'Processing' or needs to be marked as 'Success'.
+		/*
+			if blockHeight < order.UpcomingBlockHeight {
+				status = constants.Processing
+			}
+		*/
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
 		return true, listener.updatePaymentOrderStatus(order, status, totalTransferred.String(), blockHeight)
