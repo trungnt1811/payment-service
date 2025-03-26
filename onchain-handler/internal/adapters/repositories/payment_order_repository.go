@@ -133,6 +133,48 @@ func (r *paymentOrderRepository) UpdatePaymentOrder(
 	})
 }
 
+// UpdateOrderToSuccessAndReleaseWallet updates the status of a payment order to "Success" and releases the associated wallet.
+func (r *paymentOrderRepository) UpdateOrderToSuccessAndReleaseWallet(
+	ctx context.Context,
+	orderID uint64,
+	succeededAt time.Time,
+) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Update order status and succeeded_at with row-level locking
+		result := tx.Model(&entities.PaymentOrder{}).
+			Where("id = ?", orderID).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Updates(map[string]any{
+				"status":       constants.Success,
+				"succeeded_at": succeededAt,
+			})
+
+		if result.Error != nil {
+			return fmt.Errorf("failed to set order status SUCCESS: %w", result.Error)
+		}
+
+		if result.RowsAffected != 1 {
+			return fmt.Errorf("unexpected number of rows affected updating payment_order ID %d: %d", orderID, result.RowsAffected)
+		}
+
+		// Release wallet (set in_use = false)
+		resultWallet := tx.Model(&entities.PaymentWallet{}).
+			Joins("JOIN payment_orders ON payment_orders.wallet_id = payment_wallets.id").
+			Where("payment_orders.id = ?", orderID).
+			Update("in_use", false)
+
+		if resultWallet.Error != nil {
+			return fmt.Errorf("failed to release wallet: %w", resultWallet.Error)
+		}
+
+		if resultWallet.RowsAffected != 1 {
+			return fmt.Errorf("unexpected number of rows affected releasing wallet for payment_order ID %d: %d", orderID, resultWallet.RowsAffected)
+		}
+
+		return nil
+	})
+}
+
 // UpdateOrderNetwork updates the network and block height of a payment order by its request ID.
 func (r *paymentOrderRepository) UpdateOrderNetwork(
 	ctx context.Context, requestID, network string, blockHeight uint64,

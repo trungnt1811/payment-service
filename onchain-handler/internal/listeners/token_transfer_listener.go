@@ -165,6 +165,10 @@ func (listener *tokenTransferListener) parseAndProcessRealtimeTransferEvent(vLog
 	upcomingBlockHeight := vLog.BlockNumber
 
 	// Prevent unnecessary status update
+	if order.Status == constants.Success {
+		logger.GetLogger().Infof("Skipping order ID %d as it is already in SUCCESS status", order.ID)
+		return nil, nil
+	}
 	if order.BlockHeight >= upcomingBlockHeight || order.UpcomingBlockHeight >= upcomingBlockHeight {
 		logger.GetLogger().Infof(
 			"Skipping event from older block %d for order ID %d (current block height: %d, current upcoming block height: %d)",
@@ -303,6 +307,11 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	// Return nil if no order was processed
 	if processedOrder.ID == 0 {
 		return nil, nil
+	}
+
+	// Recheck if the processed order is already SUCCESS
+	if err := listener.recheckOrder(&processedOrder); err != nil {
+		logger.GetLogger().Errorf("Recheck and release wallet failed for order ID %d: %v", processedOrder.ID, err)
 	}
 
 	// Ready to send webhook for the processed order
@@ -524,6 +533,60 @@ func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.Payment
 	} else {
 		logger.GetLogger().Infof("All webhooks for %s orders sent successfully.", status)
 	}
+}
+
+func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentOrderDTOResponse) error {
+	// Already success, no further processing required.
+	if processedOrder.Status == constants.Success {
+		logger.GetLogger().Infof("Order ID %d already SUCCESS and wallet released.", processedOrder.ID)
+		return nil
+	}
+
+	orderAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(processedOrder.Amount, listener.tokenDecimals)
+	if err != nil {
+		return fmt.Errorf("failed to convert order amount: %w", err)
+	}
+
+	transferredAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(processedOrder.Transferred, listener.tokenDecimals)
+	if err != nil {
+		return fmt.Errorf("failed to convert transferred amount: %w", err)
+	}
+
+	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(
+		orderAmountWei, conf.GetPaymentCovering(), listener.tokenDecimals,
+	)
+
+	// If transferred amount is insufficient, log and exit early.
+	if transferredAmountWei.Cmp(minimumAcceptedAmount) < 0 {
+		logger.GetLogger().Infof("Order ID %d has insufficient amount transferred for SUCCESS status.", processedOrder.ID)
+		return nil
+	}
+
+	// Update DB status and release wallet.
+	err = listener.paymentOrderUCase.UpdateOrderToSuccessAndReleaseWallet(listener.ctx, processedOrder.ID)
+	if err != nil {
+		return fmt.Errorf("failed to independently update order status to SUCCESS and release wallet: %w", err)
+	}
+
+	logger.GetLogger().Infof("Successfully updated order ID %d to SUCCESS status independently.", processedOrder.ID)
+
+	// Update the DTO's status.
+	processedOrder.Status = constants.Success
+
+	// Update the order in the set.
+	key := processedOrder.PaymentAddress + "_" + processedOrder.Symbol
+	orderInSet, exists := listener.orderSet.GetItem(key)
+	if !exists {
+		logger.GetLogger().Warnf("Order ID %d not found in set for key %s during recheck.", processedOrder.ID, key)
+		return nil
+	}
+
+	orderInSet.Status = constants.Success
+	if err := listener.orderSet.UpdateItem(key, orderInSet); err != nil {
+		return fmt.Errorf("failed to update order in set: %w", err)
+	}
+
+	return nil
 }
 
 // Register registers the listeners for token transfer events.

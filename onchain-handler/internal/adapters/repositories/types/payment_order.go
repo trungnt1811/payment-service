@@ -26,6 +26,11 @@ type PaymentOrderRepository interface {
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orderIDs, blockHeights []uint64) error
 	GetExpiredPaymentOrders(ctx context.Context, network string) ([]entities.PaymentOrder, error)
+	UpdateOrderToSuccessAndReleaseWallet(
+		ctx context.Context,
+		orderID uint64,
+		succeededAt time.Time,
+	) error
 	UpdateExpiredOrdersToFailed(ctx context.Context) ([]uint64, error)
 	UpdateActiveOrdersToExpired(ctx context.Context) ([]uint64, error)
 	GetPaymentOrders(

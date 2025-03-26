@@ -25,6 +25,10 @@ type PaymentOrderUCase interface {
 		status, transferredAmount, network *string,
 	) error
 	UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error
+	UpdateOrderToSuccessAndReleaseWallet(
+		ctx context.Context,
+		orderID uint64,
+	) error
 	BatchUpdateOrdersToExpired(ctx context.Context, orderIDs []uint64) error
 	BatchUpdateOrderBlockHeights(ctx context.Context, orders []dto.PaymentOrderDTO) error
 	GetActivePaymentOrders(ctx context.Context) ([]dto.PaymentOrderDTO, error)

@@ -212,6 +212,48 @@ func (c *paymentOrderCache) UpdateOrderNetwork(
 	return nil
 }
 
+// UpdateOrderToSuccessAndReleaseWallet updates the order status to SUCCESS, releases the associated wallet, and syncs cache
+func (c *paymentOrderCache) UpdateOrderToSuccessAndReleaseWallet(
+	ctx context.Context,
+	orderID uint64,
+	succeededAt time.Time,
+) error {
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+
+	// First, update in the repository
+	err := c.paymentOrderRepository.UpdateOrderToSuccessAndReleaseWallet(ctx, orderID, succeededAt)
+	if err != nil {
+		return fmt.Errorf("failed to update order to SUCCESS and release wallet: %w", err)
+	}
+
+	// Attempt to retrieve the payment order from the cache
+	var cachedOrder entities.PaymentOrder
+	if cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder); cacheErr == nil {
+		// Cache hit: update status and succeededAt fields
+		cachedOrder.Status = constants.Success
+		cachedOrder.SucceededAt = succeededAt
+
+		// Save updated order back into cache
+		if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
+			logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
+		}
+	} else {
+		// Cache miss: retrieve the fresh updated order from DB to ensure accuracy
+		updatedOrder, dbErr := c.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
+		if dbErr != nil {
+			logger.GetLogger().Warnf("Failed to retrieve updated order ID %d after updating status: %v", orderID, dbErr)
+			return nil // No critical error; DB already updated
+		}
+
+		// Cache the fresh order
+		if saveErr := c.cache.SaveItem(cacheKey, updatedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
+			logger.GetLogger().Warnf("Failed to cache payment order ID %d after update: %v", orderID, saveErr)
+		}
+	}
+
+	return nil
+}
+
 func (c *paymentOrderCache) BatchUpdateOrdersToExpired(
 	ctx context.Context,
 	orderIDs []uint64,

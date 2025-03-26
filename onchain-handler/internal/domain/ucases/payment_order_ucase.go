@@ -276,6 +276,17 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	})
 }
 
+func (u *paymentOrderUCase) UpdateOrderToSuccessAndReleaseWallet(
+	ctx context.Context,
+	orderID uint64,
+) error {
+	return u.paymentOrderRepository.UpdateOrderToSuccessAndReleaseWallet(
+		ctx,
+		orderID,
+		time.Now().UTC(),
+	)
+}
+
 func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID string, network constants.NetworkType) error {
 	// Step 1: Retrieve the payment order by request ID
 	order, err := u.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
