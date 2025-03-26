@@ -530,3 +530,20 @@ func (r *paymentOrderRepository) GetPaymentOrderIDByRequestID(ctx context.Contex
 
 	return orderID, nil
 }
+
+// ReleaseWalletsForSuccessfulOrders releases wallets that are still marked as in_use for successful orders.
+func (r *paymentOrderRepository) ReleaseWalletsForSuccessfulOrders(ctx context.Context) error {
+	return r.db.WithContext(ctx).Model(&entities.PaymentWallet{}).Where("in_use = true").
+		Where("NOT EXISTS (?)",
+			r.db.Model(&entities.PaymentOrder{}).
+				Select("1").
+				Where("payment_order.wallet_id = payment_wallet.id").
+				Where("status IN ?", []string{
+					constants.Processing,
+					constants.Pending,
+					constants.Partial,
+					constants.Expired,
+				}),
+		).
+		Update("in_use", false).Error
+}

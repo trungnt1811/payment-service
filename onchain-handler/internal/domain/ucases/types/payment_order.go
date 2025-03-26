@@ -45,4 +45,5 @@ type PaymentOrderUCase interface {
 	GetPaymentOrderByID(ctx context.Context, id uint64) (dto.PaymentOrderDTOResponse, error)
 	GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]dto.PaymentOrderDTOResponse, error)
 	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error)
+	ReleaseWalletsForSuccessfulOrders(ctx context.Context) error
 }

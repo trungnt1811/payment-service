@@ -47,4 +47,5 @@ type PaymentOrderRepository interface {
 	GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]entities.PaymentOrder, error)
 	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (*entities.PaymentOrder, error)
 	GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error)
+	ReleaseWalletsForSuccessfulOrders(ctx context.Context) error
 }

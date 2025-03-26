@@ -572,3 +572,7 @@ func (c *paymentOrderCache) GetPaymentOrderIDByRequestID(ctx context.Context, re
 
 	return orderID, nil
 }
+
+func (c *paymentOrderCache) ReleaseWalletsForSuccessfulOrders(ctx context.Context) error {
+	return c.paymentOrderRepository.ReleaseWalletsForSuccessfulOrders(ctx)
+}

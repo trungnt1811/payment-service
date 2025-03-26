@@ -363,20 +363,34 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 		logger.GetLogger().Infof("Processed order: %d on network %s. Ignore this turn.", order.ID, w.network.String())
 		return false, nil
 	}
-	// Convert order amount and transferred amount into the appropriate unit (e.g., wei)
+
+	// Convert order amount into the appropriate unit (e.g., wei)
 	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, w.tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(orderAmount, conf.GetPaymentCovering(), w.tokenDecimals)
 
-	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, w.tokenDecimals)
+	// Get newest order state in cache or DB
+	orderDTO, err := w.paymentOrderUCase.GetPaymentOrderByID(ctx, order.ID)
 	if err != nil {
-		return false, fmt.Errorf("failed to convert transferred amount to wei: %v", err)
+		logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
+		return false, err
+	}
+
+	// Calculate total transferred amount from EventHistories
+	totalTransferred := big.NewInt(0)
+	for _, event := range orderDTO.EventHistories {
+		amountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, w.tokenDecimals)
+		if err != nil {
+			logger.GetLogger().Warnf("Failed to convert event amount to Wei, tx: %s, err: %v", event.TransactionHash, err)
+			continue
+		}
+		totalTransferred = new(big.Int).Add(totalTransferred, amountWei)
 	}
 
 	// Calculate the total transferred amount by adding the new transfer event value.
-	totalTransferred := new(big.Int).Add(transferredAmount, transferEvent.Value)
+	totalTransferred = new(big.Int).Add(totalTransferred, transferEvent.Value)
 
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {

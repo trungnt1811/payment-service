@@ -69,6 +69,13 @@ func (w *orderCleanWorker) releaseWallet(ctx context.Context) {
 		"All webhooks for failed orders sent successfully.",
 		"No expired orders updated to failed.",
 	)
+
+	// Release stuck wallets for successful orders
+	if err := w.paymentOrderUCase.ReleaseWalletsForSuccessfulOrders(ctx); err != nil {
+		logger.GetLogger().Errorf("Failed to release wallets for successful orders: %v", err)
+	} else {
+		logger.GetLogger().Info("Successfully released wallets for successful orders.")
+	}
 }
 
 func (w *orderCleanWorker) updateActiveOrdersToExpired(ctx context.Context) {

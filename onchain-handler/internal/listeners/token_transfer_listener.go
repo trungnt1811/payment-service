@@ -333,13 +333,26 @@ func (listener *tokenTransferListener) processOrderPayment(
 		orderAmount, conf.GetPaymentCovering(), listener.tokenDecimals,
 	)
 
-	transferredAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Transferred, listener.tokenDecimals)
+	// Get newest order state in cache or DB
+	orderDTO, err := listener.paymentOrderUCase.GetPaymentOrderByID(listener.ctx, order.ID)
 	if err != nil {
-		return false, fmt.Errorf("failed to convert transferred amount: %v", err)
+		logger.GetLogger().Errorf("Failed to get order by ID %d, error: %v", order.ID, err)
+		return false, err
+	}
+
+	// Calculate total transferred amount from EventHistories
+	totalTransferred := big.NewInt(0)
+	for _, event := range orderDTO.EventHistories {
+		amountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, listener.tokenDecimals)
+		if err != nil {
+			logger.GetLogger().Warnf("Failed to convert event amount to Wei, tx: %s, err: %v", event.TransactionHash, err)
+			continue
+		}
+		totalTransferred = new(big.Int).Add(totalTransferred, amountWei)
 	}
 
 	// Calculate the total transferred amount by adding the new transfer event value.
-	totalTransferred := new(big.Int).Add(transferredAmount, transferEvent.Value)
+	totalTransferred = new(big.Int).Add(totalTransferred, transferEvent.Value)
 
 	// Check if the total transferred amount is greater than or equal to the minimum accepted amount (full payment).
 	if totalTransferred.Cmp(minimumAcceptedAmount) >= 0 {
@@ -361,7 +374,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 
 		// Check if the order is still 'Processing' or needs to be marked as 'Partial'.
 		status := constants.Partial
-		if blockHeight < order.UpcomingBlockHeight {
+		if blockHeight < orderDTO.UpcomingBlockHeight {
 			status = constants.Processing
 		}
 

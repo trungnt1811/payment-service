@@ -489,3 +489,14 @@ func mapEventHistoriesToDTO(eventHistories []entities.PaymentEventHistory) []dto
 	}
 	return eventHistoriesDTO
 }
+
+func (u *paymentOrderUCase) ReleaseWalletsForSuccessfulOrders(ctx context.Context) error {
+	err := u.paymentOrderRepository.ReleaseWalletsForSuccessfulOrders(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to release wallets for successful orders: %v", err)
+		return err
+	}
+
+	logger.GetLogger().Info("Successfully released wallets for successful orders.")
+	return nil
+}
