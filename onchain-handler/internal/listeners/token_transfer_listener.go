@@ -542,38 +542,52 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 		return nil
 	}
 
+	// Convert order amount to smallest unit (Wei)
 	orderAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(processedOrder.Amount, listener.tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %w", err)
 	}
 
-	transferredAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(processedOrder.Transferred, listener.tokenDecimals)
-	if err != nil {
-		return fmt.Errorf("failed to convert transferred amount: %w", err)
+	// Calculate total transferred amount from PaymentHistory
+	totalTransferredWei := big.NewInt(0)
+	for _, event := range processedOrder.EventHistories {
+		eventAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, listener.tokenDecimals)
+		if err != nil {
+			return fmt.Errorf("failed to convert event amount (tx: %s): %w", event.TransactionHash, err)
+		}
+		totalTransferredWei.Add(totalTransferredWei, eventAmountWei)
 	}
 
 	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(
 		orderAmountWei, conf.GetPaymentCovering(), listener.tokenDecimals,
 	)
 
-	// If transferred amount is insufficient, log and exit early.
-	if transferredAmountWei.Cmp(minimumAcceptedAmount) < 0 {
-		logger.GetLogger().Infof("Order ID %d has insufficient amount transferred for SUCCESS status.", processedOrder.ID)
+	// Check if total transferred amount is sufficient
+	if totalTransferredWei.Cmp(minimumAcceptedAmount) < 0 {
+		logger.GetLogger().Infof(
+			"Order ID %d has insufficient amount transferred (%s Wei) for SUCCESS status (minimum required: %s Wei).",
+			processedOrder.ID,
+			totalTransferredWei.String(),
+			minimumAcceptedAmount.String(),
+		)
 		return nil
 	}
 
-	// Update DB status and release wallet.
-	err = listener.paymentOrderUCase.UpdateOrderToSuccessAndReleaseWallet(listener.ctx, processedOrder.ID)
-	if err != nil {
-		return fmt.Errorf("failed to independently update order status to SUCCESS and release wallet: %w", err)
+	// Update DB status and release wallet
+	if err := listener.paymentOrderUCase.UpdateOrderToSuccessAndReleaseWallet(listener.ctx, processedOrder.ID); err != nil {
+		return fmt.Errorf("failed to update order status to SUCCESS and release wallet: %w", err)
 	}
 
 	logger.GetLogger().Infof("Successfully updated order ID %d to SUCCESS status independently.", processedOrder.ID)
 
-	// Update the DTO's status.
+	// Update processed order status
 	processedOrder.Status = constants.Success
+	processedOrder.Transferred, err = utils.ConvertSmallestUnitToFloatToken(totalTransferredWei.String(), listener.tokenDecimals)
+	if err != nil {
+		return fmt.Errorf("failed to convert total transferred amount back to float: %w", err)
+	}
 
-	// Update the order in the set.
+	// Update the order in the set
 	key := processedOrder.PaymentAddress + "_" + processedOrder.Symbol
 	orderInSet, exists := listener.orderSet.GetItem(key)
 	if !exists {
@@ -582,6 +596,7 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 	}
 
 	orderInSet.Status = constants.Success
+	orderInSet.Transferred = processedOrder.Transferred
 	if err := listener.orderSet.UpdateItem(key, orderInSet); err != nil {
 		return fmt.Errorf("failed to update order in set: %w", err)
 	}
