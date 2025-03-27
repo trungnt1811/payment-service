@@ -576,3 +576,28 @@ func (c *paymentOrderCache) GetPaymentOrderIDByRequestID(ctx context.Context, re
 func (c *paymentOrderCache) ReleaseWalletsForSuccessfulOrders(ctx context.Context) error {
 	return c.paymentOrderRepository.ReleaseWalletsForSuccessfulOrders(ctx)
 }
+
+func (c *paymentOrderCache) GetProcessingOrdersExpired(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
+	cacheKey := &cachetypes.Keyer{
+		Raw: fmt.Sprintf("%sGetProcessingOrdersExpired_network:%s", keyPrefixPaymentOrder, network),
+	}
+
+	var cachedOrders []entities.PaymentOrder
+	if err := c.cache.RetrieveItem(cacheKey, &cachedOrders); err == nil {
+		// Cache hit
+		return cachedOrders, nil
+	}
+
+	// Cache miss: fetch from DB
+	orders, err := c.paymentOrderRepository.GetProcessingOrdersExpired(ctx, network)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch processing expired orders from repository: %w", err)
+	}
+
+	// Cache result for next use
+	if cacheErr := c.cache.SaveItem(cacheKey, orders, defaultCacheTimePaymentOrder); cacheErr != nil {
+		logger.GetLogger().Warnf("Failed to cache processing expired orders for network %s: %v", network, cacheErr)
+	}
+
+	return orders, nil
+}

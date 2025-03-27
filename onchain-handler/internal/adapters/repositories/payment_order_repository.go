@@ -140,7 +140,7 @@ func (r *paymentOrderRepository) UpdateOrderToSuccessAndReleaseWallet(
 	succeededAt time.Time,
 ) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Update order status and succeeded_at with row-level locking
+		// Step 1: Update order status
 		result := tx.Model(&entities.PaymentOrder{}).
 			Where("id = ?", orderID).
 			Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -148,27 +148,32 @@ func (r *paymentOrderRepository) UpdateOrderToSuccessAndReleaseWallet(
 				"status":       constants.Success,
 				"succeeded_at": succeededAt,
 			})
-
 		if result.Error != nil {
 			return fmt.Errorf("failed to set order status SUCCESS: %w", result.Error)
 		}
-
 		if result.RowsAffected != 1 {
 			return fmt.Errorf("unexpected number of rows affected updating payment_order ID %d: %d", orderID, result.RowsAffected)
 		}
 
-		// Release wallet (set in_use = false)
-		resultWallet := tx.Model(&entities.PaymentWallet{}).
-			Joins("JOIN payment_orders ON payment_orders.wallet_id = payment_wallets.id").
-			Where("payment_orders.id = ?", orderID).
-			Update("in_use", false)
+		// Step 2: Get wallet ID
+		var walletID uint64
+		err := tx.Model(&entities.PaymentOrder{}).
+			Select("wallet_id").
+			Where("id = ?", orderID).
+			Scan(&walletID).Error
+		if err != nil {
+			return fmt.Errorf("failed to get wallet_id for order ID %d: %w", orderID, err)
+		}
 
+		// Step 3: Release wallet
+		resultWallet := tx.Model(&entities.PaymentWallet{}).
+			Where("id = ?", walletID).
+			Update("in_use", false)
 		if resultWallet.Error != nil {
 			return fmt.Errorf("failed to release wallet: %w", resultWallet.Error)
 		}
-
 		if resultWallet.RowsAffected != 1 {
-			return fmt.Errorf("unexpected number of rows affected releasing wallet for payment_order ID %d: %d", orderID, resultWallet.RowsAffected)
+			return fmt.Errorf("unexpected number of rows affected releasing wallet ID %d: %d", walletID, resultWallet.RowsAffected)
 		}
 
 		return nil
@@ -546,4 +551,25 @@ func (r *paymentOrderRepository) ReleaseWalletsForSuccessfulOrders(ctx context.C
 				}),
 		).
 		Update("in_use", false).Error
+}
+
+// GetProcessingOrdersExpired retrieves processing orders that have expired.
+func (r *paymentOrderRepository) GetProcessingOrdersExpired(ctx context.Context, network string) ([]entities.PaymentOrder, error) {
+	var orders []entities.PaymentOrder
+
+	orderExpiredTime := conf.GetExpiredOrderTime()
+	expiredTime := time.Now().UTC().Add(-orderExpiredTime)
+
+	err := r.db.WithContext(ctx).
+		Joins("JOIN payment_wallet ON payment_wallet.id = payment_order.wallet_id").
+		Preload("Wallet").
+		Preload("PaymentEventHistories").
+		Where("payment_order.network = ? AND payment_order.status = ? AND payment_order.expired_time <= ?",
+			network, constants.Processing, expiredTime).
+		Find(&orders).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve expired processing orders: %w", err)
+	}
+
+	return orders, nil
 }

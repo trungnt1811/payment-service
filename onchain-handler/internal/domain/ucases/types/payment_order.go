@@ -46,4 +46,5 @@ type PaymentOrderUCase interface {
 	GetPaymentOrdersByIDs(ctx context.Context, ids []uint64) ([]dto.PaymentOrderDTOResponse, error)
 	GetPaymentOrderByRequestID(ctx context.Context, requestID string) (dto.PaymentOrderDTOResponse, error)
 	ReleaseWalletsForSuccessfulOrders(ctx context.Context) error
+	GetProcessingOrdersExpired(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTOResponse, error)
 }

@@ -500,3 +500,16 @@ func (u *paymentOrderUCase) ReleaseWalletsForSuccessfulOrders(ctx context.Contex
 	logger.GetLogger().Info("Successfully released wallets for successful orders.")
 	return nil
 }
+
+func (u *paymentOrderUCase) GetProcessingOrdersExpired(ctx context.Context, network constants.NetworkType) ([]dto.PaymentOrderDTOResponse, error) {
+	orders, err := u.paymentOrderRepository.GetProcessingOrdersExpired(ctx, network.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get expired processing orders: %w", err)
+	}
+
+	var result []dto.PaymentOrderDTOResponse
+	for _, order := range orders {
+		result = append(result, mapOrderToDTO(order))
+	}
+	return result, nil
+}
