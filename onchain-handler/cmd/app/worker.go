@@ -63,7 +63,7 @@ func RunWorkers(
 	)
 
 	// Start order clean worker
-	releaseWalletWorker := workers.NewOrderCleanWorker(paymentOrderUCase)
+	releaseWalletWorker := workers.NewOrderCleanWorker(paymentOrderUCase, paymentOrderSet)
 	go releaseWalletWorker.Start(ctx)
 
 	// Start AVAX workers

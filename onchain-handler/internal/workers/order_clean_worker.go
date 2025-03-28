@@ -8,6 +8,7 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	settypes "github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
@@ -18,12 +19,17 @@ import (
 type orderCleanWorker struct {
 	paymentOrderUCase ucasetypes.PaymentOrderUCase
 	isRunning         bool
+	orderSet          settypes.Set[dto.PaymentOrderDTO]
 	mu                sync.Mutex
 }
 
-func NewOrderCleanWorker(paymentOrderUCase ucasetypes.PaymentOrderUCase) workertypes.Worker {
+func NewOrderCleanWorker(
+	paymentOrderUCase ucasetypes.PaymentOrderUCase,
+	orderSet settypes.Set[dto.PaymentOrderDTO],
+) workertypes.Worker {
 	return &orderCleanWorker{
 		paymentOrderUCase: paymentOrderUCase,
+		orderSet:          orderSet,
 	}
 }
 
@@ -125,6 +131,18 @@ func (w *orderCleanWorker) tryResolveProcessingOrder(ctx context.Context, orderD
 
 	if updatedOrder.Status != constants.Success {
 		return
+	}
+
+	// Update the order in the set
+	key := updatedOrder.PaymentAddress + "_" + updatedOrder.Symbol
+	orderInSet, exists := w.orderSet.GetItem(key)
+	if !exists {
+		logger.GetLogger().Warnf("Order not found in set for key: %s", key)
+	} else {
+		orderInSet.Status = constants.Success
+		if err := w.orderSet.UpdateItem(key, orderInSet); err != nil {
+			logger.GetLogger().Warnf("Failed to update order in set for key %s: %v", key, err)
+		}
 	}
 
 	// Send webhook
