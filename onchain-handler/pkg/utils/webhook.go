@@ -36,6 +36,7 @@ func SendWebhook(payload any, webhookURL string) error {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, string(body))
 	}
+	logger.GetLogger().Infof("Webhook sent successfully for payload: %+v", payload)
 	return nil
 }
 
