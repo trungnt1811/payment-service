@@ -14,6 +14,10 @@ import (
 )
 
 func SendWebhook(payload any, webhookURL string) error {
+	if webhookURL == "" {
+		logger.GetLogger().Warnf("No webhook URL provided for payload: %+v", payload)
+		return nil
+	}
 	client := http.Client{Timeout: constants.WebhookTimeout}
 	parsedPayload, err := json.Marshal(payload)
 	if err != nil {
