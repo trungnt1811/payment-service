@@ -90,3 +90,48 @@ func TestRemoveItem(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestGetAllMatching(t *testing.T) {
+	t.Run("TestCachingRepository_GetAllMatching", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockClient := mocks.NewMockCacheClient(ctrl)
+		mockPrefix := mocks.NewMockStringer(ctrl)
+
+		ctx := context.Background()
+		config := &conf.Configuration{AppName: conf.GetAppName()}
+		repo := NewCachingRepository(ctx, mockClient)
+
+		mockPrefix.EXPECT().String().Return("testPrefix").AnyTimes()
+
+		fullPrefix := buildPrefixedKey(config.AppName, "testPrefix")
+
+		type Dummy struct {
+			Value string
+		}
+
+		expectedResults := []any{
+			&Dummy{Value: "One"},
+			&Dummy{Value: "Two"},
+		}
+
+		// Expect the client to return those dummy values
+		mockClient.EXPECT().
+			GetAllMatching(ctx, fullPrefix, gomock.Any()).
+			Return(expectedResults, nil)
+
+		results, err := repo.GetAllMatching(mockPrefix, func() any {
+			return new(Dummy)
+		})
+
+		require.NoError(t, err)
+		require.Len(t, results, 2)
+
+		v1 := results[0].(*Dummy)
+		v2 := results[1].(*Dummy)
+
+		require.Equal(t, "One", v1.Value)
+		require.Equal(t, "Two", v2.Value)
+	})
+}

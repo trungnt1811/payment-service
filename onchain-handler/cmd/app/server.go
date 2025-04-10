@@ -57,7 +57,6 @@ func RunServer(
 func initializeRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.DefaultPagination())
-	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(gin.Recovery())
 	return r
 }

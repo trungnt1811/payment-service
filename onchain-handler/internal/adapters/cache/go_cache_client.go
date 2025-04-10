@@ -35,10 +35,9 @@ func (c *goCacheClient) Set(ctx context.Context, key string, value any, expirati
 func (c *goCacheClient) Get(ctx context.Context, key string, dest any) error {
 	cachedValue, found := c.cache.Get(key)
 	if !found {
-		return fmt.Errorf("item not found in cache")
+		return types.ErrNotFound // standardized error
 	}
 
-	// Use reflection to set the value to the destination
 	destVal := reflect.ValueOf(dest)
 	if destVal.Kind() != reflect.Ptr || destVal.IsNil() {
 		return fmt.Errorf("destination must be a non-nil pointer")
@@ -51,11 +50,45 @@ func (c *goCacheClient) Get(ctx context.Context, key string, dest any) error {
 		return nil
 	}
 
-	return fmt.Errorf("cached value type (%v) does not match destination type (%v)", cachedVal.Type(), destVal.Elem().Type())
+	return fmt.Errorf(
+		"cached value type (%v) does not match destination type (%v)",
+		cachedVal.Type(), destVal.Elem().Type(),
+	)
 }
 
 // Del deletes an item from the cache
 func (c *goCacheClient) Del(ctx context.Context, key string) error {
 	c.cache.Delete(key)
 	return nil
+}
+
+// GetAllMatching retrieves all items from the cache that match a given prefix
+func (c *goCacheClient) GetAllMatching(ctx context.Context, prefix string, valFactory func() any) ([]any, error) {
+	items := c.cache.Items()
+	var result []any
+
+	for key, item := range items {
+		if prefix != "" && !startsWith(key, prefix) {
+			continue
+		}
+
+		valPtr := valFactory()
+		val := reflect.ValueOf(valPtr)
+
+		if val.Kind() != reflect.Ptr || val.IsNil() {
+			return nil, fmt.Errorf("valFactory must return a non-nil pointer")
+		}
+
+		cachedVal := reflect.ValueOf(item.Object)
+		if cachedVal.Type().AssignableTo(val.Elem().Type()) {
+			val.Elem().Set(cachedVal)
+			result = append(result, valPtr)
+		}
+	}
+
+	return result, nil
+}
+
+func startsWith(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }

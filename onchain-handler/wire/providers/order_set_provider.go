@@ -24,7 +24,7 @@ func ProvidePaymentOrderSet(ctx context.Context) settypes.Set[dto.PaymentOrderDT
 
 		// Initialize the order set
 		var err error
-		paymentOrderSet, err = orderset.NewSet(ctx, keyFunc)
+		paymentOrderSet, err = orderset.NewSet(ctx, keyFunc, ProvideCacheRepository(ctx))
 		if err != nil {
 			logger.GetLogger().Fatalf("Create payment order set error: %v", err)
 		}

@@ -68,7 +68,7 @@ func (r *redisCacheClient) Get(ctx context.Context, key string, dest any) error 
 	data, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return fmt.Errorf("cache miss for key: %s", key)
+			return types.ErrNotFound
 		}
 		logger.GetLogger().Errorf("Failed to get cache from Redis for key: %s", key)
 		return err
@@ -88,4 +88,63 @@ func (r *redisCacheClient) Del(ctx context.Context, key string) error {
 		logger.GetLogger().Errorf("Failed to delete cache from Redis for key: %s", key)
 	}
 	return err
+}
+
+// GetAllMatching retrieves all keys matching a pattern and unmarshals them into a slice of values
+func (r *redisCacheClient) GetAllMatching(ctx context.Context, pattern string, valFactory func() any) ([]any, error) {
+	var (
+		cursor uint64
+		keys   []string
+		result []any
+	)
+
+	// SCAN loop
+	for {
+		var err error
+		var k []string
+		k, cursor, err = r.client.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan Redis keys: %w", err)
+		}
+		keys = append(keys, k...)
+		if cursor == 0 {
+			break
+		}
+	}
+
+	// Batch MGET to reduce round trips (optional)
+	if len(keys) == 0 {
+		return result, nil
+	}
+
+	values, err := r.client.MGet(ctx, keys...).Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed to MGET Redis keys: %w", err)
+	}
+
+	for i, raw := range values {
+		if raw == nil {
+			continue
+		}
+		strVal, ok := raw.(string)
+		if !ok {
+			logger.GetLogger().Warnf("Unexpected value type for key %s", keys[i])
+			continue
+		}
+
+		dest := valFactory()
+		if dest == nil || reflect.ValueOf(dest).Kind() != reflect.Ptr || reflect.ValueOf(dest).IsNil() {
+			logger.GetLogger().Warnf("valFactory returned nil or non-pointer")
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(strVal), dest); err != nil {
+			logger.GetLogger().Warnf("Failed to unmarshal key %s: %v", keys[i], err)
+			continue
+		}
+
+		result = append(result, dest)
+	}
+
+	return result, nil
 }

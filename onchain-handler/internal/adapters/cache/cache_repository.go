@@ -44,3 +44,10 @@ func (repo *cachingRepository) RemoveItem(key fmt.Stringer) error {
 	prefixedKey := repo.prependAppPrefix(key.String())
 	return repo.client.Del(repo.ctx, prefixedKey)
 }
+
+// GetAllMatching retrieves all items whose keys match a given prefix
+func (repo *cachingRepository) GetAllMatching(prefix fmt.Stringer, valFactory func() any) ([]any, error) {
+	// Full prefix must also be namespaced with the app name
+	fullPrefix := repo.prependAppPrefix(prefix.String())
+	return repo.client.GetAllMatching(repo.ctx, fullPrefix, valFactory)
+}

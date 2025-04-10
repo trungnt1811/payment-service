@@ -2,12 +2,14 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/genefriendway/onchain-handler/conf"
+	"github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 )
 
 func setupTestClient() *redisCacheClient {
@@ -90,11 +92,52 @@ func TestRedisCacheClient_Delete(t *testing.T) {
 		var dest any
 		err := client.Get(ctx, key, &dest)
 		require.Error(t, err)
-		require.Equal(t, "cache miss for key: "+key, err.Error())
+		require.True(t, errors.Is(err, types.ErrNotFound))
 	})
 
 	t.Run("Delete_NonExistingKey", func(t *testing.T) {
 		key := "non_existent_key"
 		require.NoError(t, client.Del(ctx, key))
 	})
+}
+
+func TestRedisCacheClient_GetAllMatching(t *testing.T) {
+	client := setupTestClient()
+	ctx := context.Background()
+
+	type User struct {
+		Name string
+		Age  int
+	}
+
+	prefix := "test_getallmatching_user:"
+	entries := map[string]User{
+		prefix + "1":    {Name: "Alice", Age: 25},
+		prefix + "2":    {Name: "Bob", Age: 30},
+		"unrelated:key": {Name: "Eve", Age: 40}, // should be skipped
+	}
+
+	// Add all entries
+	for k, v := range entries {
+		require.NoError(t, client.Set(ctx, k, v, 5*time.Minute))
+	}
+
+	// Call GetAllMatching
+	results, err := client.GetAllMatching(ctx, prefix+"*", func() any {
+		return new(User)
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+
+	// Check content
+	names := map[string]bool{}
+	for _, r := range results {
+		u, ok := r.(*User)
+		require.True(t, ok)
+		names[u.Name] = true
+	}
+
+	require.True(t, names["Alice"])
+	require.True(t, names["Bob"])
+	require.False(t, names["Eve"])
 }
