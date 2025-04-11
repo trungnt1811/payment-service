@@ -28,7 +28,7 @@ type repos struct {
 func initializeRepos(db *gorm.DB, cacheRepo cachetypes.CacheRepository) *repos {
 	// Return all repositories
 	return &repos{
-		BlockStateRepo:           repositories.NewBlockstateRepository(db),
+		BlockStateRepo:           repositories.NewBlockStateCacheRepository(repositories.NewBlockStateRepository(db), cacheRepo),
 		PaymentOrderRepo:         repositories.NewPaymentOrderCacheRepository(repositories.NewPaymentOrderRepository(db), cacheRepo),
 		PaymentWalletRepo:        repositories.NewPaymentWalletRepository(db),
 		PaymentWalletBalanceRepo: repositories.NewPaymentWalletBalanceRepository(db),
@@ -65,7 +65,6 @@ func InitializeUseCases(
 			repos.PaymentWalletRepo,
 			repos.BlockStateRepo,
 			repos.PaymentStatisticsRepo,
-			cacheRepo,
 			paymentOrderSet,
 		),
 		TokenTransferUCase:       ucases.NewTokenTransferUCase(repos.TokenTransferRepo),

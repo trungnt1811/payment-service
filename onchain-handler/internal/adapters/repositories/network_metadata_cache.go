@@ -9,9 +9,7 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
-const (
-	keyPrefixNetworkMetadata = "network_metadata_"
-)
+var keyPrefixNetworkMetadata = "network_metadata_"
 
 type networkMetadataCache struct {
 	networkMetadataRepository repotypes.NetworkMetadataRepository

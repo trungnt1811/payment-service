@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	workertypes "github.com/genefriendway/onchain-handler/internal/workers/types"
 	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
@@ -14,7 +13,6 @@ import (
 )
 
 type latestBlockWorker struct {
-	cacheRepo       cachetypes.CacheRepository
 	blockStateUCase ucasetypes.BlockStateUCase
 	ethClient       clienttypes.Client
 	network         constants.NetworkType
@@ -23,13 +21,11 @@ type latestBlockWorker struct {
 }
 
 func NewLatestBlockWorker(
-	cacheRepo cachetypes.CacheRepository,
 	blockStateUCase ucasetypes.BlockStateUCase,
 	ethClient clienttypes.Client,
 	network constants.NetworkType,
 ) workertypes.Worker {
 	return &latestBlockWorker{
-		cacheRepo:       cacheRepo,
 		blockStateUCase: blockStateUCase,
 		ethClient:       ethClient,
 		network:         network,
@@ -75,49 +71,28 @@ func (w *latestBlockWorker) run(ctx context.Context) {
 
 // fetchAndStoreLatestBlock fetches the latest block and stores it in cache and DB
 func (w *latestBlockWorker) fetchAndStoreLatestBlock(ctx context.Context) {
-	cacheKey := &cachetypes.Keyer{Raw: constants.LatestBlockCacheKey + w.network.String()}
-
-	// Try to retrieve the latest block from cache
-	var latestBlock uint64
-	err := w.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
+	// Get the current latest block in DB/cache
+	existingBlock, err := w.blockStateUCase.GetLatestBlock(ctx, w.network)
 	if err != nil {
-		// If cache is empty, load from the database
-		latestBlock, err = w.blockStateUCase.GetLatestBlock(ctx, w.network)
-		if err != nil {
-			logger.GetLogger().Infof("Failed to retrieve latest block from DB: %v", err)
-			return
-		}
-
-		// Save the latest block to cache for future requests
-		err = w.cacheRepo.SaveItem(cacheKey, latestBlock, constants.LatestBlockCacheTime)
-		if err != nil {
-			logger.GetLogger().Infof("Failed to save latest block to cache: %v", err)
-		}
+		logger.GetLogger().Infof("Failed to get latest block for network %s: %v", w.network.String(), err)
+		return
 	}
 
-	// Fetch the latest block from the Ethereum blockchain
+	// Get the current head of the chain
 	blockNumber, err := w.ethClient.GetLatestBlockNumber(ctx)
 	if err != nil {
 		logger.GetLogger().Infof("Failed to fetch latest block from %s: %v", w.network.String(), err)
 		return
 	}
 
-	// Compare and update if the blockchain block number is newer
-	if blockNumber.Uint64() > latestBlock {
-		latestBlock = blockNumber.Uint64()
+	if blockNumber.Uint64() > existingBlock {
+		updatedBlock := blockNumber.Uint64()
 
-		// Save to cache
-		err = w.cacheRepo.SaveItem(cacheKey, latestBlock, constants.LatestBlockCacheTime)
-		if err != nil {
-			logger.GetLogger().Infof("Failed to save updated block to cache: %v", err)
-		}
-
-		// Save to DB
-		err = w.blockStateUCase.UpdateLatestBlock(ctx, latestBlock, w.network)
-		if err != nil {
+		if err := w.blockStateUCase.UpdateLatestBlock(ctx, updatedBlock, w.network); err != nil {
 			logger.GetLogger().Infof("Failed to update latest block in DB: %v", err)
+			return
 		}
 
-		logger.GetLogger().Infof("Latest block on network %s updated to: %d", w.network.String(), latestBlock)
+		logger.GetLogger().Infof("Latest block on network %s updated to: %d", w.network.String(), updatedBlock)
 	}
 }

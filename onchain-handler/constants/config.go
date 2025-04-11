@@ -6,12 +6,6 @@ import (
 
 // Global cache key
 const (
-	LatestBlockCacheKey  = "latest_block_"
-	LatestBlockCacheTime = 1 * time.Minute
-
-	LastProcessedBlockCacheKey  = "last_processed_block_"
-	LastProcessedBlockCacheTime = 1 * time.Minute
-
 	TokenDecimals = "token_decimals_"
 )
 

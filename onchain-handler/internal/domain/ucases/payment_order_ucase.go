@@ -9,13 +9,11 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	settypes "github.com/genefriendway/onchain-handler/internal/adapters/orderset/types"
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
-	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
 )
@@ -26,7 +24,6 @@ type paymentOrderUCase struct {
 	paymentWalletRepository     repotypes.PaymentWalletRepository     // Repository to interact with payment wallets
 	blockStateRepo              repotypes.BlockStateRepository        // Repository to fetch the latest block state
 	paymentStatisticsRepository repotypes.PaymentStatisticsRepository // Repository to interact with payment statistics
-	cacheRepo                   cachetypes.CacheRepository            // Cache repository to retrieve and store block information
 	paymentOrderSet             settypes.Set[dto.PaymentOrderDTO]     // Payment order set
 }
 
@@ -37,7 +34,6 @@ func NewPaymentOrderUCase(
 	paymentWalletRepository repotypes.PaymentWalletRepository,
 	blockStateRepo repotypes.BlockStateRepository,
 	paymentStatisticsRepository repotypes.PaymentStatisticsRepository,
-	cacheRepo cachetypes.CacheRepository,
 	paymentOrderSet settypes.Set[dto.PaymentOrderDTO],
 ) ucasetypes.PaymentOrderUCase {
 	return &paymentOrderUCase{
@@ -46,7 +42,6 @@ func NewPaymentOrderUCase(
 		paymentWalletRepository:     paymentWalletRepository,
 		blockStateRepo:              blockStateRepo,
 		paymentStatisticsRepository: paymentStatisticsRepository,
-		cacheRepo:                   cacheRepo,
 		paymentOrderSet:             paymentOrderSet,
 	}
 }
@@ -69,18 +64,10 @@ func (u *paymentOrderUCase) CreatePaymentOrders(
 
 	// Process each network's payloads
 	for network, groupedPayloads := range networkPayloads {
-		// Retrieve the latest block
-		cacheKey := &cachetypes.Keyer{Raw: constants.LatestBlockCacheKey + network}
-		var latestBlock uint64
-
-		// Attempt to retrieve the latest block from cache
-		err := u.cacheRepo.RetrieveItem(cacheKey, &latestBlock)
+		// Retrieve the latest block directly from the cache/db
+		latestBlock, err := u.blockStateRepo.GetLatestBlock(ctx, network)
 		if err != nil {
-			// If not in cache, retrieve from the database
-			latestBlock, err = u.blockStateRepo.GetLatestBlock(ctx, network)
-			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve latest block from database: %w", err)
-			}
+			return nil, fmt.Errorf("failed to retrieve latest block from database: %w", err)
 		}
 
 		// Begin transaction and process orders
@@ -300,9 +287,9 @@ func (u *paymentOrderUCase) UpdateOrderNetwork(ctx context.Context, requestID st
 	}
 
 	// Step 3: Fetch the latest block height for the given network
-	latestBlock, err := blockchain.GetLatestBlockFromCache(ctx, network.String(), u.cacheRepo)
+	latestBlock, err := u.blockStateRepo.GetLatestBlock(ctx, network.String())
 	if err != nil {
-		return fmt.Errorf("failed to get latest block from cache: %w", err)
+		return fmt.Errorf("failed to get latest block from blockStateRepo: %w", err)
 	}
 
 	// Step 4: Update the order in the database

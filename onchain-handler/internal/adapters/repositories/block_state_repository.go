@@ -14,8 +14,8 @@ type blockstateRepository struct {
 	db *gorm.DB
 }
 
-// NewBlockstateRepository creates a new BlockStateRepository
-func NewBlockstateRepository(db *gorm.DB) repotypes.BlockStateRepository {
+// NewBlockStateRepository creates a new BlockStateRepository
+func NewBlockStateRepository(db *gorm.DB) repotypes.BlockStateRepository {
 	return &blockstateRepository{
 		db: db,
 	}

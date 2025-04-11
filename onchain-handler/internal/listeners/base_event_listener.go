@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/genefriendway/onchain-handler/constants"
-	cachetypes "github.com/genefriendway/onchain-handler/internal/adapters/cache/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	listenertypes "github.com/genefriendway/onchain-handler/internal/listeners/types"
@@ -27,7 +26,6 @@ type baseEventListener struct {
 	blockStateUCase        ucasetypes.BlockStateUCase
 	currentBlock           uint64
 	confirmationDepth      uint64
-	cacheRepo              cachetypes.CacheRepository
 	confirmedEventHandlers map[common.Address]listenertypes.EventHandler
 	realtimeEventHandlers  map[common.Address]listenertypes.EventHandler
 }
@@ -36,7 +34,6 @@ type baseEventListener struct {
 func NewBaseEventListener(
 	client clienttypes.Client,
 	network constants.NetworkType,
-	cacheRepo cachetypes.CacheRepository,
 	blockStateUCase ucasetypes.BlockStateUCase,
 	startBlockListener *uint64,
 ) listenertypes.BaseEventListener {
@@ -67,7 +64,6 @@ func NewBaseEventListener(
 	return &baseEventListener{
 		ethClient:              client,
 		network:                network,
-		cacheRepo:              cacheRepo,
 		eventChan:              eventChan,
 		blockStateUCase:        blockStateUCase,
 		currentBlock:           currentBlock, // Store the final determined current block
@@ -135,12 +131,7 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 	// Continuously listen for new events.
 	for {
 		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
-		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
-			ctx,
-			listener.network.String(),
-			listener.cacheRepo,
-			listener.ethClient,
-		)
+		latestBlock, err := listener.blockStateUCase.GetLatestBlock(ctx, listener.network)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", listener.network.String(), err)
 			time.Sleep(constants.RetryDelay)
@@ -224,12 +215,7 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 		logger.GetLogger().Warnf("Failed to get last processed block on %s or it was zero: %v", listener.network.String(), err)
 
 		// Try to retrieve the latest block from cache or blockchain
-		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
-			ctx,
-			listener.network.String(),
-			listener.cacheRepo,
-			listener.ethClient,
-		)
+		latestBlock, err := listener.blockStateUCase.GetLatestBlock(ctx, listener.network)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", listener.network.String(), err)
 			return
@@ -252,12 +238,7 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 	// Continuously listen for new confirmed events.
 	for {
 		// Retrieve the latest block number from cache or blockchain to stay up-to-date.
-		latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
-			ctx,
-			listener.network.String(),
-			listener.cacheRepo,
-			listener.ethClient,
-		)
+		latestBlock, err := listener.blockStateUCase.GetLatestBlock(ctx, listener.network)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to retrieve the latest block number from %s: %v", listener.network.String(), err)
 			time.Sleep(constants.RetryDelay)

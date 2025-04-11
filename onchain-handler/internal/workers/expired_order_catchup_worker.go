@@ -31,6 +31,7 @@ type expiredOrderCatchupWorker struct {
 	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase
 	paymentStatisticsUCase   ucasetypes.PaymentStatisticsUCase
 	paymentWalletUCase       ucasetypes.PaymentWalletUCase
+	blockStateUCase          ucasetypes.BlockStateUCase
 	cacheRepo                cachetypes.CacheRepository
 	tokenContractAddress     string
 	tokenDecimals            uint8
@@ -48,6 +49,7 @@ func NewExpiredOrderCatchupWorker(
 	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
 	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
+	blockStateUCase ucasetypes.BlockStateUCase,
 	cacheRepo cachetypes.CacheRepository,
 	tokenContractAddress string,
 	ethClient clienttypes.Client,
@@ -76,6 +78,7 @@ func NewExpiredOrderCatchupWorker(
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
 		paymentStatisticsUCase:   paymentStatisticsUCase,
 		paymentWalletUCase:       paymentWalletUCase,
+		blockStateUCase:          blockStateUCase,
 		cacheRepo:                cacheRepo,
 		tokenContractAddress:     tokenContractAddress,
 		tokenDecimals:            decimals,
@@ -142,12 +145,7 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	minBlockHeight := expiredOrders[0].BlockHeight
 
 	// Define the maximum block we should query up to
-	latestBlock, err := blockchain.GetLatestBlockFromCacheOrBlockchain(
-		ctx,
-		w.network.String(),
-		w.cacheRepo,
-		w.ethClient,
-	)
+	latestBlock, err := w.blockStateUCase.GetLatestBlock(ctx, w.network)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve latest block number on network %s: %v", w.network.String(), err)
 		return

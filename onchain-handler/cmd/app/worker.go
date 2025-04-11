@@ -24,7 +24,7 @@ func RunWorkers(
 	db *gorm.DB,
 	config *conf.Configuration,
 	cacheRepository cachetypes.CacheRepository,
-	blockstateUcase ucasetypes.BlockStateUCase,
+	blockStateUCase ucasetypes.BlockStateUCase,
 	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
 	paymentOrderUCase ucasetypes.PaymentOrderUCase,
 	tokenTransferUCase ucasetypes.TokenTransferUCase,
@@ -75,7 +75,7 @@ func RunWorkers(
 		constants.AvaxCChain,
 		uint64(config.Blockchain.AvaxNetwork.AvaxChainID),
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
-		blockstateUcase,
+		blockStateUCase,
 		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
@@ -92,7 +92,7 @@ func RunWorkers(
 		constants.Bsc,
 		uint64(config.Blockchain.BscNetwork.BscChainID),
 		config.Blockchain.BscNetwork.BscUSDTContractAddress,
-		blockstateUcase,
+		blockStateUCase,
 		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
@@ -108,7 +108,7 @@ func RunWorkers(
 		config.Blockchain.AvaxNetwork.AvaxStartBlockListener,
 		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
 		cacheRepository,
-		blockstateUcase,
+		blockStateUCase,
 		paymentOrderUCase,
 		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
@@ -124,7 +124,7 @@ func RunWorkers(
 		config.Blockchain.BscNetwork.BscStartBlockListener,
 		config.Blockchain.BscNetwork.BscUSDTContractAddress,
 		cacheRepository,
-		blockstateUcase,
+		blockStateUCase,
 		paymentOrderUCase,
 		paymentStatisticsUCase,
 		paymentEventHistoryUCase,
@@ -162,14 +162,14 @@ func startWorkers(
 	network constants.NetworkType,
 	chainID uint64,
 	usdtContractAddress string,
-	blockstateUcase ucasetypes.BlockStateUCase,
+	blockStateUCase ucasetypes.BlockStateUCase,
 	tokenTransferUCase ucasetypes.TokenTransferUCase,
 	paymentOrderUCase ucasetypes.PaymentOrderUCase,
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 	paymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase,
 ) {
-	latestBlockWorker := workers.NewLatestBlockWorker(cacheRepository, blockstateUcase, ethClient, network)
+	latestBlockWorker := workers.NewLatestBlockWorker(blockStateUCase, ethClient, network)
 	go latestBlockWorker.Start(ctx)
 
 	expiredOrderCatchupWorker := workers.NewExpiredOrderCatchupWorker(
@@ -177,6 +177,7 @@ func startWorkers(
 		paymentEventHistoryUCase,
 		paymentStatisticsUCase,
 		paymentWalletUCase,
+		blockStateUCase,
 		cacheRepository,
 		usdtContractAddress,
 		ethClient,
@@ -222,7 +223,6 @@ func startEventListeners(
 	baseEventListener := listeners.NewBaseEventListener(
 		ethClient,
 		network,
-		cacheRepository,
 		blockstateUcase,
 		&startBlockListener,
 	)

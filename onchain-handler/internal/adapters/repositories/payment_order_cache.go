@@ -17,7 +17,7 @@ import (
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 )
 
-const (
+var (
 	keyPrefixPaymentOrder        = "payment_order_"
 	defaultCacheTimePaymentOrder = 5 * time.Second
 )
