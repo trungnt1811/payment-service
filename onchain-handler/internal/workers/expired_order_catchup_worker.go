@@ -37,6 +37,7 @@ type expiredOrderCatchupWorker struct {
 	parsedABI                abi.ABI
 	ethClient                clienttypes.Client
 	network                  constants.NetworkType
+	confirmationDepth        uint64
 	processedOrderIDs        map[uint64]struct{}
 	isRunning                bool       // Tracks if catchup is running
 	mu                       sync.Mutex // Mutex to protect the isRunning flag
@@ -64,6 +65,12 @@ func NewExpiredOrderCatchupWorker(
 		return nil
 	}
 
+	confirmationDepth, err := blockchain.GetConfirmationDepth(network)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get confirmation depth for network %s: %v", network.String(), err)
+		confirmationDepth = constants.DefaultConfirmationDepth // Fallback to a default value
+	}
+
 	return &expiredOrderCatchupWorker{
 		paymentOrderUCase:        paymentOrderUCase,
 		paymentEventHistoryUCase: paymentEventHistoryUCase,
@@ -75,6 +82,7 @@ func NewExpiredOrderCatchupWorker(
 		parsedABI:                parsedABI,
 		ethClient:                ethClient,
 		network:                  network,
+		confirmationDepth:        confirmationDepth,
 		processedOrderIDs:        make(map[uint64]struct{}),
 	}
 }
@@ -146,7 +154,7 @@ func (w *expiredOrderCatchupWorker) catchupExpiredOrders(ctx context.Context) {
 	}
 
 	// Calculate the effective latest block considering the confirmation depth.
-	effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
+	effectiveLatestBlock := latestBlock - w.confirmationDepth
 
 	// Start processing logs from the smallest block height to the effective latest block
 	w.processExpiredOrders(ctx, minBlockHeight, effectiveLatestBlock, expiredOrders)

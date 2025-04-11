@@ -26,6 +26,7 @@ type baseEventListener struct {
 	eventChan              chan any
 	blockStateUCase        ucasetypes.BlockStateUCase
 	currentBlock           uint64
+	confirmationDepth      uint64
 	cacheRepo              cachetypes.CacheRepository
 	confirmedEventHandlers map[common.Address]listenertypes.EventHandler
 	realtimeEventHandlers  map[common.Address]listenertypes.EventHandler
@@ -56,6 +57,13 @@ func NewBaseEventListener(
 		logger.GetLogger().Debugf("Using startBlockListener on network %s : %d instead of last processed block: %d", network.String(), *startBlockListener, lastBlock)
 	}
 
+	// Fetch the confirmation depth for the network
+	confirmationDepth, err := blockchain.GetConfirmationDepth(network)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to get confirmation depth for network %s: %v", network.String(), err)
+		confirmationDepth = constants.DefaultConfirmationDepth // Fallback to a default value
+	}
+
 	return &baseEventListener{
 		ethClient:              client,
 		network:                network,
@@ -63,6 +71,7 @@ func NewBaseEventListener(
 		eventChan:              eventChan,
 		blockStateUCase:        blockStateUCase,
 		currentBlock:           currentBlock, // Store the final determined current block
+		confirmationDepth:      confirmationDepth,
 		confirmedEventHandlers: make(map[common.Address]listenertypes.EventHandler),
 		realtimeEventHandlers:  make(map[common.Address]listenertypes.EventHandler),
 	}
@@ -147,13 +156,13 @@ func (listener *baseEventListener) listenRealtimeEvents(ctx context.Context, con
 
 		// Determine the effective latest block.
 		var effectiveLatestBlock uint64
-		if lastProcessedBlock+constants.ConfirmationDepth >= latestBlock {
-			effectiveLatestBlock = latestBlock - constants.ConfirmationDepth
+		if lastProcessedBlock+listener.confirmationDepth >= latestBlock {
+			effectiveLatestBlock = latestBlock - listener.confirmationDepth
 			if effectiveLatestBlock <= 0 {
 				continue
 			}
 		} else {
-			effectiveLatestBlock = lastProcessedBlock + constants.ConfirmationDepth
+			effectiveLatestBlock = lastProcessedBlock + listener.confirmationDepth
 		}
 
 		if currentBlock > latestBlock {
@@ -256,7 +265,7 @@ func (listener *baseEventListener) listenConfirmedEvents(ctx context.Context, co
 		}
 
 		// Calculate the effective latest block considering the confirmation depth.
-		effectiveLatestBlock := latestBlock - constants.ConfirmationDepth
+		effectiveLatestBlock := latestBlock - listener.confirmationDepth
 		if currentBlock > effectiveLatestBlock {
 			time.Sleep(constants.RetryDelay) // Wait before rechecking to prevent excessive polling
 			continue
