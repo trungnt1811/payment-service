@@ -18,9 +18,9 @@ const (
 
 // Block confirmations
 const (
-	DefaultConfirmationDepth = 15
-	ConfirmationDepthBSC     = 20
-	ConfirmationDepthAVAX    = 15
+	DefaultConfirmationDepth = 20
+	ConfirmationDepthBSC     = 30
+	ConfirmationDepthAVAX    = 20
 )
 
 // Method ID
