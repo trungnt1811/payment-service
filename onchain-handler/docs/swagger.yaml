@@ -42,7 +42,9 @@ definitions:
         type: integer
       total_balance_per_network:
         additionalProperties:
-          type: string
+          additionalProperties:
+            type: string
+          type: object
         type: object
       total_token_amount:
         type: number
@@ -105,6 +107,9 @@ definitions:
         type: string
       request_id:
         type: string
+    required:
+    - network
+    - request_id
     type: object
   dto.PaymentOrderPayloadDTO:
     properties:
@@ -119,19 +124,6 @@ definitions:
       webhook_url:
         type: string
     type: object
-  dto.PaymentStatistics:
-    properties:
-      period_start:
-        type: integer
-      symbol:
-        type: string
-      total_amount:
-        type: string
-      total_orders:
-        type: integer
-      total_transferred:
-        type: string
-    type: object
   dto.PaymentWalletBalanceDTO:
     properties:
       address:
@@ -143,7 +135,16 @@ definitions:
           $ref: '#/definitions/dto.NetworkBalanceDTO'
         type: array
     type: object
-  dto.SyncWalletBalancePayload:
+  dto.PeriodStatistics:
+    properties:
+      period_start:
+        type: integer
+      token_stats:
+        items:
+          $ref: '#/definitions/dto.TokenStats'
+        type: array
+    type: object
+  dto.SyncWalletBalancePayloadDTO:
     properties:
       network:
         $ref: '#/definitions/constants.NetworkType'
@@ -156,6 +157,35 @@ definitions:
   dto.TokenBalanceDTO:
     properties:
       amount:
+        type: string
+      symbol:
+        type: string
+    type: object
+  dto.TokenMetadataDTO:
+    properties:
+      icon_base64:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      symbol:
+        type: string
+    type: object
+  dto.TokenStats:
+    properties:
+      symbol:
+        type: string
+      total_amount:
+        type: string
+      total_orders:
+        type: integer
+      total_transferred:
+        type: string
+    type: object
+  dto.UpdatePaymentOrderPayloadDTO:
+    properties:
+      network:
         type: string
       symbol:
         type: string
@@ -195,6 +225,27 @@ paths:
       summary: Retrieves all networks metadata.
       tags:
       - metadata
+  /api/v1/metadata/tokens:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all tokens metadata.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.TokenMetadataDTO'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.GeneralError'
+      summary: Retrieves all tokens metadata.
+      tags:
+      - metadata
   /api/v1/payment-order/{request_id}:
     get:
       consumes:
@@ -227,6 +278,53 @@ paths:
           schema:
             $ref: '#/definitions/http.GeneralError'
       summary: Retrieve payment order by request ID
+      tags:
+      - payment-order
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Updates one or both of the following fields of a payment order:
+
+        `network`: Target blockchain network (e.g., `BSC`, `AVAX-C`)
+        `symbol`: Payment token symbol (e.g., `USDT`, `USDC`)
+
+        At least one of the two fields is required.
+        Only orders in `PENDING` status can be updated.
+        If the order is not found or is not in `PENDING` status, the update will be rejected.
+      parameters:
+      - description: Payment order request ID
+        in: path
+        name: request_id
+        required: true
+        type: string
+      - description: Fields to update (must include at least 'network' or 'symbol')
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdatePaymentOrderPayloadDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Success response: {\"success\": true}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Missing fields, invalid values, or non-PENDING order
+          schema:
+            $ref: '#/definitions/http.GeneralError'
+        "404":
+          description: Payment order not found
+          schema:
+            $ref: '#/definitions/http.GeneralError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.GeneralError'
+      summary: Update payment order fields
       tags:
       - payment-order
   /api/v1/payment-order/network:
@@ -346,7 +444,7 @@ paths:
         required: true
         type: string
       - description: List of payment orders. Each order must include request id, amount,
-          symbol (USDT) and network (AVAX C-Chain or BSC).
+          symbol (USDT or USDC) and network (AVAX C-Chain or BSC).
         in: body
         name: payload
         required: true
@@ -404,6 +502,13 @@ paths:
         name: end_time
         required: true
         type: integer
+      - collectionFormat: csv
+        description: Filter by one or more symbols (e.g., USDT, USDC)
+        in: query
+        items:
+          type: string
+        name: symbols
+        type: array
       produces:
       - application/json
       responses:
@@ -411,7 +516,7 @@ paths:
           description: Payment statistics retrieved successfully
           schema:
             items:
-              $ref: '#/definitions/dto.PaymentStatistics'
+              $ref: '#/definitions/dto.PeriodStatistics'
             type: array
         "400":
           description: Invalid parameters
@@ -457,33 +562,33 @@ paths:
     put:
       consumes:
       - application/json
-      description: Fetches the balance of a payment wallet for a specific token and
-        updates it in the database.
+      description: Fetches the balances of a payment wallet for predefined tokens
+        (USDT, USDC) and updates them in the database.
       parameters:
       - description: Sync wallet balance payload
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/dto.SyncWalletBalancePayload'
+          $ref: '#/definitions/dto.SyncWalletBalancePayloadDTO'
       produces:
       - application/json
       responses:
         "200":
           description: 'Success response: {\"success\": true, \"wallet_address\":
-            \"0x123\", \"usdt_amount\": 100.00}'
+            \"0x123\", \"balances\": {\"USDT\": \"100.00\", \"USDC\": \"45.00\"}}'
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid request payload or token symbol
+          description: Invalid request payload or wallet address
           schema:
             $ref: '#/definitions/http.GeneralError'
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/http.GeneralError'
-      summary: Syncs a payment wallet balance.
+      summary: Syncs a payment wallet's balances.
       tags:
       - payment-wallet
   /api/v1/payment-wallets/balances:

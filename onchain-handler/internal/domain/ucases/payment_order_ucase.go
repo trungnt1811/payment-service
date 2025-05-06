@@ -263,6 +263,90 @@ func (u *paymentOrderUCase) UpdatePaymentOrder(
 	})
 }
 
+func (u *paymentOrderUCase) UpdateOrderMetaByRequestID(
+	ctx context.Context,
+	requestID string,
+	payload dto.UpdatePaymentOrderPayloadDTO,
+) error {
+	// Step 1: Retrieve original order before update
+	originalOrder, err := u.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve original payment order: %w", err)
+	}
+
+	// Step 2: Prepare update fields
+	updates := make(map[string]any)
+
+	if payload.Network != "" {
+		latestBlock, err := u.blockStateRepo.GetLatestBlock(ctx, payload.Network)
+		if err != nil {
+			return fmt.Errorf("failed to get latest block for network %s: %w", payload.Network, err)
+		}
+		updates["network"] = payload.Network
+		updates["block_height"] = latestBlock
+	}
+
+	if payload.Symbol != "" {
+		updates["symbol"] = payload.Symbol
+	}
+
+	if len(updates) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	// Step 3: Update DB + cache
+	if err := u.paymentOrderRepository.UpdateOrderFieldsByRequestIDAndStatus(
+		ctx,
+		requestID,
+		constants.Pending,
+		updates,
+	); err != nil {
+		return err
+	}
+
+	// Step 4: If symbol was updated -> update stats
+	if payload.Symbol != "" && payload.Symbol != originalOrder.Symbol {
+		granularity := constants.Daily
+		periodStart := utils.GetPeriodStart(granularity, time.Now())
+
+		err := u.paymentStatisticsRepository.RevertAndIncrementStatistics(
+			ctx,
+			granularity,
+			periodStart,
+			&originalOrder.Amount,
+			originalOrder.Symbol,
+			payload.Symbol,
+			originalOrder.VendorID,
+		)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to revert/increment payment statistics for symbol change: %v", err)
+			return fmt.Errorf("failed to update statistics after symbol change: %w", err)
+		}
+	}
+
+	// Step 5: Re-fetch updated order and update memory set
+	updatedOrder, err := u.paymentOrderRepository.GetPaymentOrderByRequestID(ctx, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve updated payment order: %w", err)
+	}
+
+	// Step 6: Delete old order from memory set
+	originalOrderDTO := originalOrder.ToDto()
+	u.paymentOrderSet.Remove(func(item dto.PaymentOrderDTO) bool {
+		return item.PaymentAddress == originalOrderDTO.PaymentAddress && item.Symbol == originalOrderDTO.Symbol
+	})
+
+	// Step 7: Add updated order to memory set
+	orderDTO := updatedOrder.ToDto()
+	key := orderDTO.PaymentAddress + "_" + orderDTO.Symbol
+	if err := u.paymentOrderSet.Add(orderDTO); err != nil {
+		logger.GetLogger().Errorf("Failed to update order set for key %s: %v", key, err)
+		return fmt.Errorf("failed to update payment order in memory: %w", err)
+	}
+
+	return nil
+}
+
 func (u *paymentOrderUCase) UpdateOrderToSuccessAndReleaseWallet(
 	ctx context.Context,
 	orderID uint64,

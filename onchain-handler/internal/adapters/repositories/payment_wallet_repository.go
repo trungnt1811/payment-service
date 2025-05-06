@@ -51,7 +51,7 @@ func (r *paymentWalletRepository) ClaimFirstAvailableWallet(tx *gorm.DB, ctx con
 
 	// Step 1: Try to claim an existing available wallet
 	err := tx.WithContext(ctx).
-		Clauses(clause.Locking{Strength: "UPDATE"}). // Lock row to prevent race conditions
+		Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}). // Lock row to prevent race conditions
 		Where("in_use = ?", false).
 		Order("id").
 		First(&wallet).Error
@@ -82,7 +82,7 @@ func (r *paymentWalletRepository) CreateNewWallet(tx *gorm.DB, inUse bool) (*ent
 	var placeholderWallet entities.PaymentWallet
 
 	// Step 1: Create a new wallet with a unique temp address
-	for i := 0; i < constants.MaxRetries; i++ {
+	for range constants.MaxRetries {
 		tempAddress := payment.GenerateTempAddress()
 
 		placeholderWallet = entities.PaymentWallet{
@@ -151,20 +151,25 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 	ctx context.Context,
 	limit, offset int,
 	network *string,
+	symbols []string,
 ) ([]entities.PaymentWallet, error) {
 	var wallets []entities.PaymentWallet
 
 	query := r.db.WithContext(ctx).
 		Select("payment_wallet.*").
 		Joins("JOIN payment_wallet_balance ON payment_wallet.id = payment_wallet_balance.wallet_id").
-		Where("payment_wallet_balance.symbol = ?", constants.USDT). // USDT filter
 		Group("payment_wallet.id").
-		Having("SUM(payment_wallet_balance.balance) > 0"). // Ensure only wallets with USDT appear
+		Having("SUM(payment_wallet_balance.balance) > 0").
 		Order("payment_wallet.id ASC")
 
-	// Apply optional network filtering
+	// Apply optional network filter
 	if network != nil {
 		query = query.Where("payment_wallet_balance.network = ?", *network)
+	}
+
+	// Apply optional symbol filter
+	if len(symbols) > 0 {
+		query = query.Where("payment_wallet_balance.symbol IN ?", symbols)
 	}
 
 	// Apply pagination
@@ -175,11 +180,13 @@ func (r *paymentWalletRepository) GetPaymentWalletsWithBalances(
 		query = query.Offset(offset)
 	}
 
-	// Execute query and Preload balances (ensures no null values)
+	// Preload balances (only > 0, and filter if symbol list exists)
 	if err := query.Preload("PaymentWalletBalances", func(db *gorm.DB) *gorm.DB {
-		// Preload only USDT balances that are > 0
-		return db.Where("payment_wallet_balance.symbol = ?", constants.USDT).
-			Where("payment_wallet_balance.balance > 0")
+		db = db.Where("payment_wallet_balance.balance > 0")
+		if len(symbols) > 0 {
+			db = db.Where("payment_wallet_balance.symbol IN ?", symbols)
+		}
+		return db
 	}).Find(&wallets).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch payment wallets with balances: %w", err)
 	}
@@ -221,36 +228,42 @@ func (r *paymentWalletRepository) GetPaymentWalletWithBalancesByAddress(
 	return wallet, nil
 }
 
-func (r *paymentWalletRepository) GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error) {
-	var totalBalances []struct {
+func (r *paymentWalletRepository) GetTotalBalancePerNetwork(
+	ctx context.Context,
+	network *string,
+	symbols []string,
+) (map[string]map[string]string, error) {
+	type balanceRow struct {
 		Network      string
+		Symbol       string
 		TotalBalance string
 	}
 
-	// Start query to sum only USDT balances per network
+	var rows []balanceRow
+
 	query := r.db.WithContext(ctx).
 		Table("payment_wallet_balance").
-		Select("network, COALESCE(SUM(balance), '0') as total_balance"). //	Ensures zero if no balance exists
-		Where("symbol = ?", constants.USDT).                             // Filter by USDT only
-		Group("network")
+		Select("network, symbol, COALESCE(SUM(balance), '0') as total_balance").
+		Where("symbol IN ?", symbols).
+		Group("network, symbol")
 
-	// Apply optional network filter
 	if network != nil {
 		query = query.Where("network = ?", *network)
 	}
 
-	// Execute query
-	if err := query.Scan(&totalBalances).Error; err != nil {
-		return nil, fmt.Errorf("failed to compute total balance per network: %w", err)
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to compute total balances: %w", err)
 	}
 
-	// Convert to map
-	totalBalanceMap := make(map[string]string)
-	for _, row := range totalBalances {
-		totalBalanceMap[row.Network] = row.TotalBalance
+	result := make(map[string]map[string]string)
+	for _, row := range rows {
+		if result[row.Network] == nil {
+			result[row.Network] = make(map[string]string)
+		}
+		result[row.Network][row.Symbol] = row.TotalBalance
 	}
 
-	return totalBalanceMap, nil
+	return result, nil
 }
 
 func (r *paymentWalletRepository) ReleaseWalletsByIDs(tx *gorm.DB, walletIDs []uint64) error {
@@ -273,7 +286,7 @@ func (r *paymentWalletRepository) GetWalletIDByAddress(ctx context.Context, addr
 	err := r.db.WithContext(ctx).
 		Model(&entities.PaymentWallet{}).
 		Select("id").
-		Where("address = ?", address).
+		Where("LOWER(address) = ?", strings.ToLower(address)).
 		Limit(1).
 		Scan(&walletID).
 		Error

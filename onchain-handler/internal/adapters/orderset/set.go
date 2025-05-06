@@ -157,7 +157,7 @@ func (s *set[T]) Fill(loader func(ctx context.Context) ([]T, error)) error {
 		var existing T
 		err := s.cacheRepo.RetrieveItem(&cachetypes.Keyer{Raw: key}, &existing)
 		if err == nil {
-			// Item already exists → skip
+			// Item already exists -> skip
 			continue
 		}
 

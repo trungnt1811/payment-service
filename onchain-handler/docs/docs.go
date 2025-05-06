@@ -47,6 +47,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/metadata/tokens": {
+            "get": {
+                "description": "Retrieves all tokens metadata.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metadata"
+                ],
+                "summary": "Retrieves all tokens metadata.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TokenMetadataDTO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.GeneralError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payment-order/network": {
             "put": {
                 "description": "This endpoint allows updating the network of a payment order.",
@@ -125,6 +157,64 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request ID",
+                        "schema": {
+                            "$ref": "#/definitions/http.GeneralError"
+                        }
+                    },
+                    "404": {
+                        "description": "Payment order not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.GeneralError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.GeneralError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Updates one or both of the following fields of a payment order:\n\n` + "`" + `network` + "`" + `: Target blockchain network (e.g., ` + "`" + `BSC` + "`" + `, ` + "`" + `AVAX-C` + "`" + `)\n` + "`" + `symbol` + "`" + `: Payment token symbol (e.g., ` + "`" + `USDT` + "`" + `, ` + "`" + `USDC` + "`" + `)\n\nAt least one of the two fields is required.\nOnly orders in ` + "`" + `PENDING` + "`" + ` status can be updated.\nIf the order is not found or is not in ` + "`" + `PENDING` + "`" + ` status, the update will be rejected.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-order"
+                ],
+                "summary": "Update payment order fields",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment order request ID",
+                        "name": "request_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update (must include at least 'network' or 'symbol')",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdatePaymentOrderPayloadDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response: {\\\"success\\\": true}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Missing fields, invalid values, or non-PENDING order",
                         "schema": {
                             "$ref": "#/definitions/http.GeneralError"
                         }
@@ -272,7 +362,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC).",
+                        "description": "List of payment orders. Each order must include request id, amount, symbol (USDT or USDC) and network (AVAX C-Chain or BSC).",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -354,6 +444,16 @@ const docTemplate = `{
                         "name": "end_time",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Filter by one or more symbols (e.g., USDT, USDC)",
+                        "name": "symbols",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -362,7 +462,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dto.PaymentStatistics"
+                                "$ref": "#/definitions/dto.PeriodStatistics"
                             }
                         }
                     },
@@ -427,7 +527,7 @@ const docTemplate = `{
         },
         "/api/v1/payment-wallets/balance/sync": {
             "put": {
-                "description": "Fetches the balance of a payment wallet for a specific token and updates it in the database.",
+                "description": "Fetches the balances of a payment wallet for predefined tokens (USDT, USDC) and updates them in the database.",
                 "consumes": [
                     "application/json"
                 ],
@@ -437,7 +537,7 @@ const docTemplate = `{
                 "tags": [
                     "payment-wallet"
                 ],
-                "summary": "Syncs a payment wallet balance.",
+                "summary": "Syncs a payment wallet's balances.",
                 "parameters": [
                     {
                         "description": "Sync wallet balance payload",
@@ -445,20 +545,20 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.SyncWalletBalancePayload"
+                            "$ref": "#/definitions/dto.SyncWalletBalancePayloadDTO"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response: {\\\"success\\\": true, \\\"wallet_address\\\": \\\"0x123\\\", \\\"usdt_amount\\\": 100.00}",
+                        "description": "Success response: {\\\"success\\\": true, \\\"wallet_address\\\": \\\"0x123\\\", \\\"balances\\\": {\\\"USDT\\\": \\\"100.00\\\", \\\"USDC\\\": \\\"45.00\\\"}}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid request payload or token symbol",
+                        "description": "Invalid request payload or wallet address",
                         "schema": {
                             "$ref": "#/definitions/http.GeneralError"
                         }
@@ -778,7 +878,10 @@ const docTemplate = `{
                 "total_balance_per_network": {
                     "type": "object",
                     "additionalProperties": {
-                        "type": "string"
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
                     }
                 },
                 "total_token_amount": {
@@ -867,6 +970,10 @@ const docTemplate = `{
         },
         "dto.PaymentOrderNetworkPayloadDTO": {
             "type": "object",
+            "required": [
+                "network",
+                "request_id"
+            ],
             "properties": {
                 "network": {
                     "type": "string"
@@ -896,26 +1003,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.PaymentStatistics": {
-            "type": "object",
-            "properties": {
-                "period_start": {
-                    "type": "integer"
-                },
-                "symbol": {
-                    "type": "string"
-                },
-                "total_amount": {
-                    "type": "string"
-                },
-                "total_orders": {
-                    "type": "integer"
-                },
-                "total_transferred": {
-                    "type": "string"
-                }
-            }
-        },
         "dto.PaymentWalletBalanceDTO": {
             "type": "object",
             "properties": {
@@ -933,7 +1020,21 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.SyncWalletBalancePayload": {
+        "dto.PeriodStatistics": {
+            "type": "object",
+            "properties": {
+                "period_start": {
+                    "type": "integer"
+                },
+                "token_stats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TokenStats"
+                    }
+                }
+            }
+        },
+        "dto.SyncWalletBalancePayloadDTO": {
             "type": "object",
             "required": [
                 "network",
@@ -952,6 +1053,51 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TokenMetadataDTO": {
+            "type": "object",
+            "properties": {
+                "icon_base64": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TokenStats": {
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "string"
+                },
+                "total_orders": {
+                    "type": "integer"
+                },
+                "total_transferred": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdatePaymentOrderPayloadDTO": {
+            "type": "object",
+            "properties": {
+                "network": {
                     "type": "string"
                 },
                 "symbol": {

@@ -18,9 +18,9 @@ const (
 
 // Block confirmations
 const (
-	DefaultConfirmationDepth = 20
-	ConfirmationDepthBSC     = 30
-	ConfirmationDepthAVAX    = 20
+	DefaultConfirmationDepth = 15
+	ConfirmationDepthBSC     = 15
+	ConfirmationDepthAVAX    = 12
 )
 
 // Method ID
@@ -78,4 +78,5 @@ const (
 // Token symbols
 const (
 	USDT = "USDT"
+	USDC = "USDC"
 )

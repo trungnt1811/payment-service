@@ -13,12 +13,18 @@ import (
 
 	"github.com/genefriendway/onchain-handler/conf"
 	"github.com/genefriendway/onchain-handler/constants"
+	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/pkg/database/postgresql"
 	httpresponse "github.com/genefriendway/onchain-handler/pkg/http"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
+)
+
+var (
+	errLogInvalidPayload     = "Invalid payload: %v"
+	errLogUnsupportedNetwork = "Unsupported network: %s"
 )
 
 type paymentOrderHandler struct {
@@ -40,7 +46,7 @@ func NewPaymentOrderHandler(
 // @Accept json
 // @Produce json
 // @Param Vendor-Id header string true "Vendor ID for authentication"
-// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT) and network (AVAX C-Chain or BSC)."
+// @Param payload body []dto.PaymentOrderPayloadDTO true "List of payment orders. Each order must include request id, amount, symbol (USDT or USDC) and network (AVAX C-Chain or BSC)."
 // @Success 201 {object} map[string]interface{} "Success created: {\"success\": true, \"data\": []dto.CreatedPaymentOrderDTO}"
 // @Failure 400 {object} http.GeneralError "Invalid payload"
 // @Failure 412 {object} http.GeneralError "Duplicate key value"
@@ -54,7 +60,7 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.GetLogger().Errorf("Invalid payload: %v", err)
+		logger.GetLogger().Errorf(errLogInvalidPayload, err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to create payment orders, invalid payload", err)
 		return
 	}
@@ -64,11 +70,6 @@ func (h *paymentOrderHandler) CreateOrders(ctx *gin.Context) {
 		if err := validatePaymentOrder(order); err != nil {
 			logger.GetLogger().Errorf("Validation failed for request id %s: %v", order.RequestID, err)
 			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, validation failed for request id: %s", order.RequestID), err)
-			return
-		}
-		if err := utils.ValidateNetworkType(order.Network); err != nil {
-			logger.GetLogger().Errorf("Validation failed for network alias %s: %v", order.Network, err)
-			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to create payment orders, unsupported network: %s", order.Network), err)
 			return
 		}
 	}
@@ -167,7 +168,7 @@ func (h *paymentOrderHandler) GetPaymentOrders(ctx *gin.Context) {
 	if network != nil {
 		if err := utils.ValidateNetworkType(*network); err != nil {
 			logger.GetLogger().Errorf("Invalid network: %v", err)
-			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Unsupported network: %s", *network), err)
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf(errLogUnsupportedNetwork, *network), err)
 			return
 		}
 	}
@@ -264,6 +265,82 @@ func (h *paymentOrderHandler) GetPaymentOrderByRequestID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// UpdatePaymentOrderByRequestID updates network and/or symbol of a payment order by request ID.
+// @Summary Update payment order fields
+// @Description Updates one or both of the following fields of a payment order:
+// @Description
+// @Description `network`: Target blockchain network (e.g., `BSC`, `AVAX-C`)
+// @Description `symbol`: Payment token symbol (e.g., `USDT`, `USDC`)
+// @Description
+// @Description At least one of the two fields is required.
+// @Description Only orders in `PENDING` status can be updated.
+// @Description If the order is not found or is not in `PENDING` status, the update will be rejected.
+// @Tags payment-order
+// @Accept json
+// @Produce json
+// @Param request_id path string true "Payment order request ID"
+// @Param payload body dto.UpdatePaymentOrderPayloadDTO true "Fields to update (must include at least 'network' or 'symbol')"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true}"
+// @Failure 400 {object} http.GeneralError "Missing fields, invalid values, or non-PENDING order"
+// @Failure 404 {object} http.GeneralError "Payment order not found"
+// @Failure 500 {object} http.GeneralError "Internal server error"
+// @Router /api/v1/payment-order/{request_id} [put]
+func (h *paymentOrderHandler) UpdatePaymentOrderByRequestID(ctx *gin.Context) {
+	requestID := ctx.Param("request_id")
+	if requestID == "" {
+		logger.GetLogger().Error("Request ID is empty")
+		httpresponse.Error(ctx, http.StatusBadRequest, "Request ID cannot be empty", nil)
+		return
+	}
+
+	var req dto.UpdatePaymentOrderPayloadDTO
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.GetLogger().Errorf(errLogInvalidPayload, err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Reject if both fields are empty
+	if req.Network == "" && req.Symbol == "" {
+		logger.GetLogger().Warnf("No fields provided to update for request ID: %s", requestID)
+		httpresponse.Error(ctx, http.StatusBadRequest, "At least one of 'network' or 'symbol' must be provided", nil)
+		return
+	}
+
+	if req.Network != "" {
+		if err := utils.ValidateNetworkType(req.Network); err != nil {
+			logger.GetLogger().Errorf(errLogUnsupportedNetwork, req.Network)
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf(errLogUnsupportedNetwork, req.Network))
+			return
+		}
+	}
+
+	if req.Symbol != "" {
+		if err := utils.ValidateSymbol(req.Symbol); err != nil {
+			logger.GetLogger().Errorf("Unsupported symbol: %s", req.Symbol)
+			httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Unsupported symbol: %s", err))
+			return
+		}
+	}
+
+	payload := dto.UpdatePaymentOrderPayloadDTO{
+		Network: req.Network,
+		Symbol:  req.Symbol,
+	}
+
+	if err := h.ucase.UpdateOrderMetaByRequestID(ctx, requestID, payload); err != nil {
+		if errors.Is(err, repotypes.ErrPaymentOrderNotFound) {
+			httpresponse.Error(ctx, http.StatusNotFound, "Pending payment order not found", nil)
+			return
+		}
+		logger.GetLogger().Errorf("Failed to update payment order: %v", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to update payment order", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 // UpdatePaymentOrderNetwork updates the network of a payment order.
 // @Summary Update payment order network
 // @Description This endpoint allows updating the network of a payment order.
@@ -281,13 +358,13 @@ func (h *paymentOrderHandler) UpdatePaymentOrderNetwork(ctx *gin.Context) {
 
 	// Parse and validate the request payload
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.GetLogger().Errorf("Invalid payload: %v", err)
+		logger.GetLogger().Errorf(errLogInvalidPayload, err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to update payment order network, invalid payload", err)
 		return
 	}
 
 	if err := utils.ValidateNetworkType(req.Network); err != nil {
-		logger.GetLogger().Errorf("Unsupported network: %s", req.Network)
+		logger.GetLogger().Errorf(errLogUnsupportedNetwork, req.Network)
 		httpresponse.Error(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to update payment order network, unsupported network: %s", err))
 		return
 	}
@@ -320,13 +397,14 @@ func validatePaymentOrder(order dto.PaymentOrderPayloadDTO) error {
 		return fmt.Errorf("invalid amount: %v", err)
 	}
 
-	// Validate symbol is USDT
-	validSymbols := map[string]bool{
-		constants.USDT: true,
-		// constants.LP:   true,
+	// Validate network
+	if err := utils.ValidateNetworkType(order.Network); err != nil {
+		return err
 	}
-	if !validSymbols[order.Symbol] {
-		return fmt.Errorf("invalid symbol: %s, must be USDT", order.Symbol)
+
+	// Validate symbol
+	if err := utils.ValidateSymbol(order.Symbol); err != nil {
+		return err
 	}
 
 	return nil

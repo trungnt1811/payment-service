@@ -55,16 +55,35 @@ func RunWorkers(
 	defer ethClientBsc.Close()
 
 	// Persist token decimals to cache
-	persistTokenDecimalsToCache(
-		ctx, ethClientAvax, config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress, constants.AvaxCChain, cacheRepository,
-	)
-	persistTokenDecimalsToCache(
-		ctx, ethClientBsc, config.Blockchain.BscNetwork.BscUSDTContractAddress, constants.Bsc, cacheRepository,
-	)
+	type tokenInfo struct {
+		Client          clienttypes.Client
+		ContractAddress string
+		Network         constants.NetworkType
+	}
+	tokens := []tokenInfo{
+		{ethClientAvax, config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress, constants.AvaxCChain},
+		{ethClientAvax, config.Blockchain.AvaxNetwork.AvaxUSDCContractAddress, constants.AvaxCChain},
+		{ethClientBsc, config.Blockchain.BscNetwork.BscUSDTContractAddress, constants.Bsc},
+		{ethClientBsc, config.Blockchain.BscNetwork.BscUSDCContractAddress, constants.Bsc},
+	}
+	for _, token := range tokens {
+		persistTokenDecimalsToCache(ctx, token.Client, token.ContractAddress, token.Network, cacheRepository)
+	}
 
 	// Start order clean worker
 	releaseWalletWorker := workers.NewOrderCleanWorker(paymentOrderUCase, paymentOrderSet)
 	go releaseWalletWorker.Start(ctx)
+
+	// Token contract addresses for AVAX and BSC
+	tokenBSCContractAddresses := []string{
+		config.Blockchain.BscNetwork.BscUSDTContractAddress,
+		config.Blockchain.BscNetwork.BscUSDCContractAddress,
+	}
+
+	tokenAVAXContractAddresses := []string{
+		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		config.Blockchain.AvaxNetwork.AvaxUSDCContractAddress,
+	}
 
 	// Start AVAX workers
 	startWorkers(
@@ -74,7 +93,7 @@ func RunWorkers(
 		ethClientAvax,
 		constants.AvaxCChain,
 		uint64(config.Blockchain.AvaxNetwork.AvaxChainID),
-		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		tokenAVAXContractAddresses,
 		blockStateUCase,
 		tokenTransferUCase,
 		paymentOrderUCase,
@@ -91,7 +110,7 @@ func RunWorkers(
 		ethClientBsc,
 		constants.Bsc,
 		uint64(config.Blockchain.BscNetwork.BscChainID),
-		config.Blockchain.BscNetwork.BscUSDTContractAddress,
+		tokenBSCContractAddresses,
 		blockStateUCase,
 		tokenTransferUCase,
 		paymentOrderUCase,
@@ -106,7 +125,7 @@ func RunWorkers(
 		ethClientAvax,
 		constants.AvaxCChain,
 		config.Blockchain.AvaxNetwork.AvaxStartBlockListener,
-		config.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+		tokenAVAXContractAddresses,
 		cacheRepository,
 		blockStateUCase,
 		paymentOrderUCase,
@@ -122,7 +141,7 @@ func RunWorkers(
 		ethClientBsc,
 		constants.Bsc,
 		config.Blockchain.BscNetwork.BscStartBlockListener,
-		config.Blockchain.BscNetwork.BscUSDTContractAddress,
+		tokenBSCContractAddresses,
 		cacheRepository,
 		blockStateUCase,
 		paymentOrderUCase,
@@ -161,7 +180,7 @@ func startWorkers(
 	ethClient clienttypes.Client,
 	network constants.NetworkType,
 	chainID uint64,
-	usdtContractAddress string,
+	tokenContractAddresses []string,
 	blockStateUCase ucasetypes.BlockStateUCase,
 	tokenTransferUCase ucasetypes.TokenTransferUCase,
 	paymentOrderUCase ucasetypes.PaymentOrderUCase,
@@ -179,7 +198,7 @@ func startWorkers(
 		paymentWalletUCase,
 		blockStateUCase,
 		cacheRepository,
-		usdtContractAddress,
+		tokenContractAddresses,
 		ethClient,
 		network,
 	)
@@ -194,7 +213,7 @@ func startWorkers(
 		cacheRepository,
 		tokenTransferUCase,
 		paymentWalletUCase,
-		usdtContractAddress,
+		tokenContractAddresses,
 		config.PaymentGateway.MasterWalletAddress,
 		config.Wallet.Mnemonic,
 		config.Wallet.Passphrase,
@@ -211,7 +230,7 @@ func startEventListeners(
 	ethClient clienttypes.Client,
 	network constants.NetworkType,
 	startBlockListener uint64,
-	usdtContractAddress string,
+	tokenContractAddresses []string,
 	cacheRepository cachetypes.CacheRepository,
 	blockstateUcase ucasetypes.BlockStateUCase,
 	paymentOrderUCase ucasetypes.PaymentOrderUCase,
@@ -236,7 +255,7 @@ func startEventListeners(
 		paymentStatisticsUCase,
 		paymentWalletUCase,
 		network,
-		usdtContractAddress,
+		tokenContractAddresses,
 		paymentOrderSet,
 	)
 	if err != nil {

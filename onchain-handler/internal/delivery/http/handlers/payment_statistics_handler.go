@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -32,7 +33,8 @@ func NewPaymentStatisticsHandler(ucase ucasetypes.PaymentStatisticsUCase) *payme
 // @Param granularity query string true "Granularity (DAILY, WEEKLY, MONTHLY, YEARLY)"
 // @Param start_time query int true "Start time in UNIX timestamp format"
 // @Param end_time query int true "End time in UNIX timestamp format"
-// @Success 200 {object} []dto.PaymentStatistics "Payment statistics retrieved successfully"
+// @Param symbols query []string false "Filter by one or more symbols (e.g., USDT, USDC)"
+// @Success 200 {object} []dto.PeriodStatistics "Payment statistics retrieved successfully"
 // @Failure 400 {object} http.GeneralError "Invalid parameters"
 // @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-statistics [get]
@@ -72,8 +74,25 @@ func (h *paymentStatisticsHandler) GetPaymentStatistics(ctx *gin.Context) {
 		return
 	}
 
+	// Optional parse symbols[] query param: symbols=USDT,USDC
+	symbolsParam := ctx.Query("symbols")
+	symbolsMap := make(map[string]struct{})
+	var symbols []string
+
+	if symbolsParam != "" {
+		for _, s := range strings.Split(symbolsParam, ",") {
+			trimmed := strings.TrimSpace(s)
+			if trimmed != "" {
+				if _, exists := symbolsMap[trimmed]; !exists {
+					symbolsMap[trimmed] = struct{}{}
+					symbols = append(symbols, trimmed)
+				}
+			}
+		}
+	}
+
 	// Call the use case to retrieve statistics
-	paymentStatistics, err := h.ucase.GetStatisticsByTimeRangeAndGranularity(ctx, granularity, *startTime, *endTime, vendorID)
+	paymentStatistics, err := h.ucase.GetStatisticsByTimeRangeAndGranularity(ctx, granularity, *startTime, *endTime, vendorID, symbols)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment statistics: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment statistics", err)

@@ -110,8 +110,13 @@ func GetGasBufferMultiplier() float64 {
 
 func GetTokenSymbol(tokenAddress string) (string, error) {
 	tokenSymbols := map[string]string{
+		// USDT token symbol
 		configuration.Blockchain.AvaxNetwork.AvaxUSDTContractAddress: constants.USDT,
 		configuration.Blockchain.BscNetwork.BscUSDTContractAddress:   constants.USDT,
+
+		// USDC token symbol
+		configuration.Blockchain.AvaxNetwork.AvaxUSDCContractAddress: constants.USDC,
+		configuration.Blockchain.BscNetwork.BscUSDCContractAddress:   constants.USDC,
 	}
 
 	if symbol, exists := tokenSymbols[tokenAddress]; exists {
@@ -124,15 +129,15 @@ func GetTokenAddress(symbol, network string) (string, error) {
 	tokenAddresses := map[string]map[string]string{
 		constants.AvaxCChain.String(): {
 			constants.USDT: configuration.Blockchain.AvaxNetwork.AvaxUSDTContractAddress,
+			constants.USDC: configuration.Blockchain.AvaxNetwork.AvaxUSDCContractAddress,
 		},
 		constants.Bsc.String(): {
 			constants.USDT: configuration.Blockchain.BscNetwork.BscUSDTContractAddress,
+			constants.USDC: configuration.Blockchain.BscNetwork.BscUSDCContractAddress,
 		},
 	}
 
-	// Check if the network exists in the mapping
 	if tokensForNetwork, exists := tokenAddresses[network]; exists {
-		// Check if the symbol exists in the network's tokens
 		if address, exists := tokensForNetwork[symbol]; exists {
 			return address, nil
 		}

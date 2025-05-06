@@ -20,8 +20,13 @@ type PaymentOrderPayloadDTO struct {
 }
 
 type PaymentOrderNetworkPayloadDTO struct {
-	RequestID string `json:"request_id"`
-	Network   string `json:"network"`
+	RequestID string `json:"request_id" binding:"required"`
+	Network   string `json:"network" binding:"required"`
+}
+
+type PaymentOrderSymbolPayloadDTO struct {
+	RequestID string `json:"request_id" binding:"required"`
+	Symbol    string `json:"symbol" binding:"required"`
 }
 
 type PaymentEventPayloadDTO struct {
@@ -46,7 +51,12 @@ type UserWalletPayloadDTO struct {
 	Address string `json:"address"`
 }
 
-type SyncWalletBalancePayload struct {
+type SyncWalletBalancePayloadDTO struct {
 	WalletAddress string                `json:"wallet_address" binding:"required"`
 	Network       constants.NetworkType `json:"network" binding:"required"`
+}
+
+type UpdatePaymentOrderPayloadDTO struct {
+	Network string `json:"network,omitempty"`
+	Symbol  string `json:"symbol,omitempty"`
 }

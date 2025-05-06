@@ -1,4 +1,4 @@
-package interfaces
+package types
 
 import (
 	"context"
@@ -18,11 +18,16 @@ type PaymentWalletRepository interface {
 		ctx context.Context,
 		limit, offset int,
 		network *string,
+		symbols []string,
 	) ([]entities.PaymentWallet, error)
 	GetPaymentWalletWithBalancesByAddress(
 		ctx context.Context, address *string,
 	) (entities.PaymentWallet, error)
-	GetTotalBalancePerNetwork(ctx context.Context, network *string) (map[string]string, error)
+	GetTotalBalancePerNetwork(
+		ctx context.Context,
+		network *string,
+		symbols []string,
+	) (map[string]map[string]string, error)
 	ReleaseWalletsByIDs(tx *gorm.DB, walletIDs []uint64) error
 	GetWalletIDByAddress(ctx context.Context, address string) (uint64, error)
 }

@@ -71,7 +71,7 @@ func main() {
 		ucases.PaymentWalletUCase,
 		ucases.PaymentOrderUCase,
 		ucases.TokenTransferUCase,
-		ucases.NetworkMetadataUCase,
+		ucases.MetadataUCase,
 		ucases.PaymentStatisticsUCase,
 	)
 

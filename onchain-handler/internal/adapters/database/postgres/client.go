@@ -64,9 +64,9 @@ func (pgsql *postgreSQL) ConnectWithLogger(logLevel logger.LogLevel) *gorm.DB {
 	}
 
 	// Configure the connection pool
-	sqlDB.SetMaxIdleConns(10)           // Maximum number of idle connections
-	sqlDB.SetMaxOpenConns(100)          // Maximum number of open connections
-	sqlDB.SetConnMaxLifetime(time.Hour) // Maximum amount of time a connection may be reused
+	sqlDB.SetMaxIdleConns(pgsql.config.MaxIdleConns) // Maximum number of idle connections
+	sqlDB.SetMaxOpenConns(pgsql.config.MaxOpenConns) // Maximum number of open connections
+	sqlDB.SetConnMaxLifetime(time.Hour)              // Maximum amount of time a connection may be reused
 
 	return db
 }

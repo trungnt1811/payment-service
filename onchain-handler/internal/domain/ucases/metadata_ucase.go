@@ -8,19 +8,22 @@ import (
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 )
 
-type networkMetadataUCase struct {
+type metadataUCase struct {
 	networkMetadataRepository repotypes.NetworkMetadataRepository
+	tokenMetadataRepository   repotypes.TokenMetadataRepository
 }
 
-func NewNetworkMetadataUCase(
+func NewMetadataUCase(
 	networkMetadataRepository repotypes.NetworkMetadataRepository,
-) ucasetypes.NetworkMetadataUCase {
-	return &networkMetadataUCase{
+	tokenMetadataRepository repotypes.TokenMetadataRepository,
+) ucasetypes.MetadataUCase {
+	return &metadataUCase{
 		networkMetadataRepository: networkMetadataRepository,
+		tokenMetadataRepository:   tokenMetadataRepository,
 	}
 }
 
-func (u *networkMetadataUCase) GetNetworksMetadata(ctx context.Context) ([]dto.NetworkMetadataDTO, error) {
+func (u *metadataUCase) GetNetworksMetadata(ctx context.Context) ([]dto.NetworkMetadataDTO, error) {
 	networksMetadata, err := u.networkMetadataRepository.GetNetworksMetadata(ctx)
 	if err != nil {
 		return nil, err
@@ -32,4 +35,18 @@ func (u *networkMetadataUCase) GetNetworksMetadata(ctx context.Context) ([]dto.N
 	}
 
 	return networksMetadataDTO, nil
+}
+
+func (u *metadataUCase) GetTokensMetadata(ctx context.Context) ([]dto.TokenMetadataDTO, error) {
+	tokensMetadata, err := u.tokenMetadataRepository.GetTokensMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var tokensMetadataDTO []dto.TokenMetadataDTO
+	for _, tokenMetadata := range tokensMetadata {
+		tokensMetadataDTO = append(tokensMetadataDTO, tokenMetadata.ToDto())
+	}
+
+	return tokensMetadataDTO, nil
 }

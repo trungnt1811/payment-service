@@ -11,10 +11,10 @@ import (
 )
 
 type metadataHandler struct {
-	ucase ucasetypes.NetworkMetadataUCase
+	ucase ucasetypes.MetadataUCase
 }
 
-func NewMetadataHandler(ucase ucasetypes.NetworkMetadataUCase) *metadataHandler {
+func NewMetadataHandler(ucase ucasetypes.MetadataUCase) *metadataHandler {
 	return &metadataHandler{
 		ucase: ucase,
 	}
@@ -34,6 +34,25 @@ func (h *metadataHandler) GetNetworksMetadata(ctx *gin.Context) {
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve networks metadata: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve networks metadata", err)
+		return
+	}
+	ctx.JSON(http.StatusOK, metadata)
+}
+
+// GetTokensMetadata retrieves all tokens metadata.
+// @Summary Retrieves all tokens metadata.
+// @Description Retrieves all tokens metadata.
+// @Tags metadata
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.TokenMetadataDTO
+// @Failure 500 {object} http.GeneralError "Internal server error"
+// @Router /api/v1/metadata/tokens [get]
+func (h *metadataHandler) GetTokensMetadata(ctx *gin.Context) {
+	metadata, err := h.ucase.GetTokensMetadata(ctx)
+	if err != nil {
+		logger.GetLogger().Errorf("Failed to retrieve tokens metadata: %v", err)
+		httpresponse.Error(ctx, http.StatusBadRequest, "Failed to retrieve tokens metadata", err)
 		return
 	}
 	ctx.JSON(http.StatusOK, metadata)

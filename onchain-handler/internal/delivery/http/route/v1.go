@@ -21,7 +21,7 @@ func RegisterRoutes(
 	tokenTransferUCase ucasetypes.TokenTransferUCase,
 	paymentOrderUCase ucasetypes.PaymentOrderUCase,
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
-	networkMetadataUCase ucasetypes.NetworkMetadataUCase,
+	metadataUCase ucasetypes.MetadataUCase,
 	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 ) {
 	v1 := r.Group("/api/v1")
@@ -37,6 +37,7 @@ func RegisterRoutes(
 	appRouter.POST("/payment-orders", middleware.ValidateVendorID(), paymentOrderHandler.CreateOrders)
 	appRouter.GET("/payment-orders", middleware.ValidateVendorID(), paymentOrderHandler.GetPaymentOrders)
 	appRouter.GET("/payment-order/:request_id", paymentOrderHandler.GetPaymentOrderByRequestID)
+	appRouter.PUT("/payment-order/:request_id", paymentOrderHandler.UpdatePaymentOrderByRequestID)
 	appRouter.PUT("/payment-order/network", paymentOrderHandler.UpdatePaymentOrderNetwork)
 
 	// SECTION: payment wallet
@@ -47,8 +48,9 @@ func RegisterRoutes(
 	appRouter.PUT("payment-wallets/balance/sync", paymentWalletHander.SyncPaymentWalletBalance)
 
 	// SECTION: metadata
-	metadataHandler := handlers.NewMetadataHandler(networkMetadataUCase)
+	metadataHandler := handlers.NewMetadataHandler(metadataUCase)
 	appRouter.GET("/metadata/networks", metadataHandler.GetNetworksMetadata)
+	appRouter.GET("/metadata/tokens", metadataHandler.GetTokensMetadata)
 
 	// SECTION: payment statistics
 	paymentStatisticsHandler := handlers.NewPaymentStatisticsHandler(paymentStatisticsUCase)

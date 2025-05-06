@@ -19,3 +19,16 @@ func ValidateNetworkType(network string) error {
 
 	return nil
 }
+
+func ValidateSymbol(symbol string) error {
+	// Validate symbol is either USDT or USDC
+	validSymbols := map[string]bool{
+		constants.USDT: true,
+		constants.USDC: true,
+	}
+	if !validSymbols[symbol] {
+		return fmt.Errorf("invalid symbol: %s, must be USDT or USDC", symbol)
+	}
+
+	return nil
+}

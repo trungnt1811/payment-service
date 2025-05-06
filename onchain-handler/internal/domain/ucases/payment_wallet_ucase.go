@@ -125,7 +125,11 @@ func (u *paymentWalletUCase) GetPaymentWallets(ctx context.Context) ([]dto.Payme
 	return dtos, nil
 }
 
-func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, network *constants.NetworkType) ([]dto.PaymentWalletBalanceDTO, error) {
+func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(
+	ctx context.Context,
+	network *constants.NetworkType,
+	symbols []string,
+) ([]dto.PaymentWalletBalanceDTO, error) {
 	// Convert `network` to `*string`
 	var parsedNetwork *string
 	if network != nil {
@@ -133,19 +137,17 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 		parsedNetwork = &networkStr
 	}
 
-	// Fetch wallets & total balance per network
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, parsedNetwork)
+	// Fetch wallets & balances by network and symbol(s)
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, 0, 0, parsedNetwork, symbols)
 	if err != nil {
 		return nil, err
 	}
 
 	// Prepare result DTOs
 	var dtos []dto.PaymentWalletBalanceDTO
-
 	for _, wallet := range wallets {
-		networkBalances := make(map[string][]dto.TokenBalanceDTO) // Map to group balances by network
+		networkBalances := make(map[string][]dto.TokenBalanceDTO)
 
-		// Group balances by network
 		for _, balance := range wallet.PaymentWalletBalances {
 			networkBalances[balance.Network] = append(networkBalances[balance.Network], dto.TokenBalanceDTO{
 				Symbol: balance.Symbol,
@@ -153,7 +155,6 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 			})
 		}
 
-		// Convert grouped balances to DTOs
 		var networkBalanceDTOs []dto.NetworkBalanceDTO
 		for network, tokenBalances := range networkBalances {
 			networkBalanceDTOs = append(networkBalanceDTOs, dto.NetworkBalanceDTO{
@@ -162,20 +163,18 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalances(ctx context.Context, 
 			})
 		}
 
-		// Build the PaymentWalletBalanceDTO
-		dto := dto.PaymentWalletBalanceDTO{
+		dtos = append(dtos, dto.PaymentWalletBalanceDTO{
 			ID:              wallet.ID,
 			Address:         wallet.Address,
-			NetworkBalances: networkBalanceDTOs, // Include all network balances
-		}
-		dtos = append(dtos, dto)
+			NetworkBalances: networkBalanceDTOs,
+		})
 	}
 
 	return dtos, nil
 }
 
 func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
-	ctx context.Context, page, size int, network *constants.NetworkType,
+	ctx context.Context, page, size int, network *constants.NetworkType, tokenSymbols []string,
 ) (dto.PaginationDTOResponse, error) {
 	// Setup pagination variables
 	limit := size + 1 // Fetch one extra record to determine if there's a next page
@@ -189,13 +188,15 @@ func (u *paymentWalletUCase) GetPaymentWalletsWithBalancesPagination(
 	}
 
 	// Fetch total balance per network
-	totalBalancePerNetwork, err := u.paymentWalletRepository.GetTotalBalancePerNetwork(ctx, parsedNetwork)
+	totalBalancePerNetwork, err := u.paymentWalletRepository.GetTotalBalancePerNetwork(ctx, parsedNetwork, tokenSymbols)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}
 
 	// Fetch wallets per network
-	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(ctx, limit, offset, parsedNetwork)
+	wallets, err := u.paymentWalletRepository.GetPaymentWalletsWithBalances(
+		ctx, limit, offset, parsedNetwork, []string{constants.USDC, constants.USDT},
+	)
 	if err != nil {
 		return dto.PaginationDTOResponse{}, err
 	}
@@ -284,35 +285,48 @@ func (u *paymentWalletUCase) GetReceivingWalletAddressWithBalances(
 	return walletAddress, balances, nil
 }
 
-func (u *paymentWalletUCase) SyncWalletBalance(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
+func (u *paymentWalletUCase) SyncWalletBalances(
+	ctx context.Context,
+	walletAddress string,
+	network constants.NetworkType,
+	tokenSymbols []string,
+) (map[string]string, error) {
 	// Check if the wallet exists and get its ID
 	walletID, err := u.paymentWalletRepository.GetWalletIDByAddress(ctx, walletAddress)
 	if err != nil {
-		return "", fmt.Errorf("failed to get wallet ID by address: %w", err)
+		return nil, fmt.Errorf("failed to get wallet ID by address: %w", err)
 	}
 
-	// Fetch the USDT balance from the blockchain
-	usdtAmount, err := u.getUSDTBalanceOnchain(ctx, walletAddress, network)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch on-chain balance: %w", err)
+	balances := make(map[string]string)
+
+	// Iterate through token symbols to fetch and upsert balances
+	for _, symbol := range tokenSymbols {
+		tokenAmount, err := u.getTokenBalanceOnchain(ctx, walletAddress, network, symbol)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to fetch on-chain balance for token %s: %v", symbol, err)
+			continue // Skip this token, do not stop the whole process
+		}
+
+		err = u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, tokenAmount, network.String(), symbol)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to upsert balance for token %s: %v", symbol, err)
+			continue
+		}
+
+		balances[symbol] = tokenAmount
 	}
 
-	// Update the wallet balance
-	err = u.paymentWalletBalanceRepository.UpsertPaymentWalletBalance(ctx, walletID, usdtAmount, network.String(), constants.USDT)
-	if err != nil {
-		return "", fmt.Errorf("failed to upsert wallet balance: %w", err)
-	}
-
-	// Return the balance as a float string
-	return usdtAmount, nil
+	return balances, nil
 }
 
-// getBalanceOnchain fetches and converts the on-chain USDT balance for a given wallet
-func (u *paymentWalletUCase) getUSDTBalanceOnchain(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error) {
-	// Get USDT contract address by network
-	usdtContractAddress, err := conf.GetTokenAddress(constants.USDT, network.String())
+// getBalanceOnchain fetches and converts the on-chain token balance for a given wallet
+func (u *paymentWalletUCase) getTokenBalanceOnchain(
+	ctx context.Context, walletAddress string, network constants.NetworkType, symbol string,
+) (string, error) {
+	// Get token contract address by network
+	tokenContractAddress, err := conf.GetTokenAddress(symbol, network.String())
 	if err != nil {
-		return "", fmt.Errorf("failed to get USDT contract address: %w", err)
+		return "", fmt.Errorf("failed to get %s contract address: %w", symbol, err)
 	}
 
 	// Get RPC URLs and Ethereum Client based on network
@@ -326,25 +340,25 @@ func (u *paymentWalletUCase) getUSDTBalanceOnchain(ctx context.Context, walletAd
 		return "", fmt.Errorf("failed to initialize Ethereum client: %w", err)
 	}
 
-	// Fetch the USDT balance from the blockchain
-	usdtBalance, err := ethClient.GetTokenBalance(ctx, usdtContractAddress, walletAddress)
+	// Fetch the token balance from the blockchain
+	tokenBalance, err := ethClient.GetTokenBalance(ctx, tokenContractAddress, walletAddress)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch USDT balance: %w", err)
+		return "", fmt.Errorf("failed to fetch token balance: %w", err)
 	}
 
 	// Get token decimals from cache
-	decimals, err := blockchain.GetTokenDecimalsFromCache(usdtContractAddress, network.String(), providers.ProvideCacheRepository(ctx))
+	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, network.String(), providers.ProvideCacheRepository(ctx))
 	if err != nil {
-		return "", fmt.Errorf("failed to get token decimals: %w", err)
+		return "", fmt.Errorf("failed to get %s decimals: %w", symbol, err)
 	}
 
 	// Convert balance from smallest unit
-	usdtAmount, err := utils.ConvertSmallestUnitToFloatToken(usdtBalance.String(), decimals)
+	tokenAmount, err := utils.ConvertSmallestUnitToFloatToken(tokenBalance.String(), decimals)
 	if err != nil {
-		return "", fmt.Errorf("failed to convert USDT balance to float: %w", err)
+		return "", fmt.Errorf("failed to convert %s balance to float: %w", symbol, err)
 	}
 
-	return usdtAmount, nil
+	return tokenAmount, nil
 }
 
 // getNativeBalanceOnchain fetches and converts the on-chain native token balance for a given wallet

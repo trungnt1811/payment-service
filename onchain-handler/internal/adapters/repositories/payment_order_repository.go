@@ -86,7 +86,7 @@ func (r *paymentOrderRepository) UpdatePaymentOrder(
 		var order entities.PaymentOrder
 
 		// Retrieve the order with row-level locking
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 			Preload("Wallet").
 			Preload("PaymentEventHistories").
 			First(&order, "id = ?", orderID).Error; err != nil {
@@ -143,7 +143,7 @@ func (r *paymentOrderRepository) UpdateOrderToSuccessAndReleaseWallet(
 		// Step 1: Update order status
 		result := tx.Model(&entities.PaymentOrder{}).
 			Where("id = ?", orderID).
-			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 			Updates(map[string]any{
 				"status":       constants.Success,
 				"succeeded_at": succeededAt,
@@ -214,7 +214,7 @@ func (r *paymentOrderRepository) BatchUpdateOrdersToExpired(ctx context.Context,
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Explicit row locking
 		var orders []entities.PaymentOrder
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 			Where("id IN ?", orderIDs).
 			Find(&orders).Error; err != nil {
 			return fmt.Errorf("failed to lock orders: %w", err)
@@ -308,7 +308,7 @@ func (r *paymentOrderRepository) UpdateExpiredOrdersToFailed(ctx context.Context
 
 			// Step 1: Select a batch of expired orders with row-level locks
 			if err := tx.Model(&entities.PaymentOrder{}).
-				Clauses(clause.Locking{Strength: "UPDATE"}).
+				Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 				Where("status NOT IN (?)", []string{constants.Success, constants.Failed, constants.Processing}).
 				Where("expired_time <= ?", cutoffTime).
 				Limit(constants.BatchSize).
@@ -572,4 +572,26 @@ func (r *paymentOrderRepository) GetProcessingOrdersExpired(ctx context.Context,
 	}
 
 	return orders, nil
+}
+
+func (r *paymentOrderRepository) UpdateOrderFieldsByRequestIDAndStatus(
+	ctx context.Context,
+	requestID string,
+	status string,
+	updates map[string]any,
+) error {
+	result := r.db.WithContext(ctx).
+		Model(&entities.PaymentOrder{}).
+		Where("request_id = ? AND status = ?", requestID, status).
+		Updates(updates)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("%w: request ID %s and status %s", repotypes.ErrPaymentOrderNotFound, requestID, status)
+	}
+
+	return nil
 }

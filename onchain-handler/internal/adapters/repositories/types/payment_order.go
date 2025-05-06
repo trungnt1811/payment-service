@@ -1,7 +1,8 @@
-package interfaces
+package types
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -9,6 +10,8 @@ import (
 	"github.com/genefriendway/onchain-handler/constants"
 	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 )
+
+var ErrPaymentOrderNotFound = errors.New("payment order not found")
 
 type PaymentOrderRepository interface {
 	CreatePaymentOrders(tx *gorm.DB,
@@ -49,4 +52,10 @@ type PaymentOrderRepository interface {
 	GetPaymentOrderIDByRequestID(ctx context.Context, requestID string) (uint64, error)
 	ReleaseWalletsForSuccessfulOrders(ctx context.Context) error
 	GetProcessingOrdersExpired(ctx context.Context, network string) ([]entities.PaymentOrder, error)
+	UpdateOrderFieldsByRequestIDAndStatus(
+		ctx context.Context,
+		requestID string,
+		status string,
+		updates map[string]any,
+	) error
 }

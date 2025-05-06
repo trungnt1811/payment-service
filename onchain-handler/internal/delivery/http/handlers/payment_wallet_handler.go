@@ -91,8 +91,10 @@ func (h *paymentWalletHandler) GetPaymentWalletsWithBalances(ctx *gin.Context) {
 		network = &parsedNetwork
 	}
 
+	tokenSymbols := []string{constants.USDC, constants.USDT}
+
 	// Retrieve wallets with optional network filtering
-	wallets, err := h.ucase.GetPaymentWalletsWithBalancesPagination(ctx, page, size, network)
+	wallets, err := h.ucase.GetPaymentWalletsWithBalancesPagination(ctx, page, size, network, tokenSymbols)
 	if err != nil {
 		logger.GetLogger().Errorf("Failed to retrieve payment wallets with balances: %v", err)
 		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to retrieve payment wallets with balances", err)
@@ -129,19 +131,19 @@ func (h *paymentWalletHandler) GetReceivingWalletAddress(ctx *gin.Context) {
 	})
 }
 
-// SyncPaymentWalletBalance syncs the balance of a specific payment wallet.
-// @Summary Syncs a payment wallet balance.
-// @Description Fetches the balance of a payment wallet for a specific token and updates it in the database.
+// SyncPaymentWalletBalance syncs the balances of a specific payment wallet for multiple tokens.
+// @Summary Syncs a payment wallet's balances.
+// @Description Fetches the balances of a payment wallet for predefined tokens (USDT, USDC) and updates them in the database.
 // @Tags payment-wallet
 // @Accept json
 // @Produce json
-// @Param payload body dto.SyncWalletBalancePayload true "Sync wallet balance payload"
-// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"wallet_address\": \"0x123\", \"usdt_amount\": 100.00}"
-// @Failure 400 {object} http.GeneralError "Invalid request payload or token symbol"
+// @Param payload body dto.SyncWalletBalancePayloadDTO true "Sync wallet balance payload"
+// @Success 200 {object} map[string]interface{} "Success response: {\"success\": true, \"wallet_address\": \"0x123\", \"balances\": {\"USDT\": \"100.00\", \"USDC\": \"45.00\"}}"
+// @Failure 400 {object} http.GeneralError "Invalid request payload or wallet address"
 // @Failure 500 {object} http.GeneralError "Internal server error"
 // @Router /api/v1/payment-wallets/balance/sync [put]
 func (h *paymentWalletHandler) SyncPaymentWalletBalance(ctx *gin.Context) {
-	var payload dto.SyncWalletBalancePayload
+	var payload dto.SyncWalletBalancePayloadDTO
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		logger.GetLogger().Errorf("Invalid request payload: %v", err)
 		httpresponse.Error(ctx, http.StatusBadRequest, "Invalid request payload", err)
@@ -155,17 +157,19 @@ func (h *paymentWalletHandler) SyncPaymentWalletBalance(ctx *gin.Context) {
 		return
 	}
 
-	// Call the use case to fetch the wallet balance
-	usdtAmount, err := h.ucase.SyncWalletBalance(ctx, payload.WalletAddress, payload.Network)
+	tokenSymbols := []string{constants.USDC, constants.USDT}
+
+	// Sync balances for USDT and USDC
+	balances, err := h.ucase.SyncWalletBalances(ctx, payload.WalletAddress, payload.Network, tokenSymbols)
 	if err != nil {
-		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to sync wallet balance", err)
+		httpresponse.Error(ctx, http.StatusInternalServerError, "Failed to sync wallet balances", err)
 		return
 	}
 
-	// Return the balance as a JSON response
+	// Return response
 	ctx.JSON(http.StatusOK, gin.H{
 		"success":        true,
 		"wallet_address": payload.WalletAddress,
-		"usdt_amount":    usdtAmount,
+		"balances":       balances,
 	})
 }

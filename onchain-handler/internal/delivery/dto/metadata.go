@@ -6,3 +6,10 @@ type NetworkMetadataDTO struct {
 	Name       string `json:"name"`
 	IconBase64 string `json:"icon_base64"`
 }
+
+type TokenMetadataDTO struct {
+	ID         uint64 `json:"id"`
+	Symbol     string `json:"symbol"`
+	Name       string `json:"name"`
+	IconBase64 string `json:"icon_base64"`
+}

@@ -3,13 +3,13 @@ package dto
 import "time"
 
 type PaginationDTOResponse struct {
-	NextPage               int               `json:"next_page"`
-	Page                   int               `json:"page"`
-	Size                   int               `json:"size"`
-	Total                  uint64            `json:"total,omitempty"`
-	TotalTokenAmount       float64           `json:"total_token_amount,omitempty"`
-	TotalBalancePerNetwork map[string]string `json:"total_balance_per_network,omitempty"`
-	Data                   []any             `json:"data"`
+	NextPage               int                          `json:"next_page"`
+	Page                   int                          `json:"page"`
+	Size                   int                          `json:"size"`
+	Total                  uint64                       `json:"total,omitempty"`
+	TotalTokenAmount       float64                      `json:"total_token_amount,omitempty"`
+	TotalBalancePerNetwork map[string]map[string]string `json:"total_balance_per_network,omitempty"`
+	Data                   []any                        `json:"data"`
 }
 
 type TokenTransferResultDTOResponse struct {

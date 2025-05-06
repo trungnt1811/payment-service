@@ -34,8 +34,8 @@ type tokenTransferListener struct {
 	paymentStatisticsUCase   ucasetypes.PaymentStatisticsUCase
 	paymentWalletUCase       ucasetypes.PaymentWalletUCase
 	network                  constants.NetworkType
-	tokenContractAddress     string
-	tokenDecimals            uint8
+	tokenContractAddresses   []string
+	tokenDecimalsMap         map[string]uint8
 	parsedABI                abi.ABI
 	orderSet                 settypes.Set[dto.PaymentOrderDTO]
 	mu                       sync.Mutex // Mutex for ticker synchronization
@@ -51,7 +51,7 @@ func NewTokenTransferListener(
 	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	network constants.NetworkType,
-	tokenContractAddress string,
+	tokenContractAddresses []string,
 	orderSet settypes.Set[dto.PaymentOrderDTO],
 ) (listenertypes.EventListener, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(constants.Erc20TransferEventABI))
@@ -59,9 +59,13 @@ func NewTokenTransferListener(
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
 	}
 
-	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, network.String(), cacheRepo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get token decimals: %w", err)
+	tokenDecimalsMap := make(map[string]uint8)
+	for _, addr := range tokenContractAddresses {
+		decimals, err := blockchain.GetTokenDecimalsFromCache(addr, network.String(), cacheRepo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token decimals for %s: %w", addr, err)
+		}
+		tokenDecimalsMap[addr] = decimals
 	}
 
 	listener := &tokenTransferListener{
@@ -73,8 +77,8 @@ func NewTokenTransferListener(
 		paymentStatisticsUCase:   paymentStatisticsUCase,
 		paymentWalletUCase:       paymentWalletUCase,
 		network:                  network,
-		tokenContractAddress:     tokenContractAddress,
-		tokenDecimals:            decimals,
+		tokenContractAddresses:   tokenContractAddresses,
+		tokenDecimalsMap:         tokenDecimalsMap,
 		orderSet:                 orderSet,
 		parsedABI:                parsedABI,
 	}
@@ -237,8 +241,11 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 		return nil, err
 	}
 
+	// Get decimals for the token
+	tokenDecimals := listener.tokenDecimalsMap[vLog.Address.Hex()]
+
 	// Convert transfer amount to token units
-	transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), listener.tokenDecimals)
+	transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), tokenDecimals)
 	if err != nil {
 		logger.GetLogger().Errorf(
 			"Failed to convert transfer event on network %s value to ETH for order ID %d, error: %v",
@@ -260,7 +267,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	}
 
 	// Process Order Payment
-	isUpdated, err := listener.processOrderPayment(*order, transferEvent, vLog.BlockNumber)
+	isUpdated, err := listener.processOrderPayment(*order, transferEvent, vLog.BlockNumber, tokenDecimals)
 	if err != nil {
 		logger.GetLogger().Errorf(
 			"Failed to process payment on network %s for order ID %d, error: %v",
@@ -310,7 +317,7 @@ func (listener *tokenTransferListener) parseAndProcessConfirmedTransferEvent(vLo
 	}
 
 	// Recheck if the processed order is already SUCCESS
-	if err := listener.recheckOrder(&processedOrder); err != nil {
+	if err := listener.recheckOrder(&processedOrder, tokenDecimals); err != nil {
 		logger.GetLogger().Errorf("Recheck and release wallet failed for order ID %d: %v", processedOrder.ID, err)
 	}
 
@@ -324,13 +331,14 @@ func (listener *tokenTransferListener) processOrderPayment(
 	order dto.PaymentOrderDTO,
 	transferEvent blockchain.TransferEvent,
 	blockHeight uint64,
+	tokenDecimals uint8,
 ) (bool, error) {
-	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, listener.tokenDecimals)
+	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
 	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(
-		orderAmount, conf.GetPaymentCovering(), listener.tokenDecimals,
+		orderAmount, conf.GetPaymentCovering(), tokenDecimals,
 	)
 
 	// Get newest order state in cache or DB
@@ -343,7 +351,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 	// Calculate total transferred amount from EventHistories
 	totalTransferred := big.NewInt(0)
 	for _, event := range orderDTO.EventHistories {
-		amountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, listener.tokenDecimals)
+		amountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, tokenDecimals)
 		if err != nil {
 			logger.GetLogger().Warnf("Failed to convert event amount to Wei, tx: %s, err: %v", event.TransactionHash, err)
 			continue
@@ -367,7 +375,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 		*/
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return true, listener.updatePaymentOrderStatus(order, status, totalTransferred.String(), blockHeight)
+		return true, listener.updatePaymentOrderStatus(order, status, totalTransferred.String(), blockHeight, tokenDecimals)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", listener.network.String(), order.ID)
@@ -379,7 +387,7 @@ func (listener *tokenTransferListener) processOrderPayment(
 		}
 
 		// Update the order status and keep the wallet associated with the order.
-		return true, listener.updatePaymentOrderStatus(order, status, totalTransferred.String(), blockHeight)
+		return true, listener.updatePaymentOrderStatus(order, status, totalTransferred.String(), blockHeight, tokenDecimals)
 	}
 
 	return false, nil
@@ -389,9 +397,10 @@ func (listener *tokenTransferListener) updatePaymentOrderStatus(
 	order dto.PaymentOrderDTO,
 	status, transferredAmount string,
 	blockHeight uint64,
+	tokenDecimals uint8,
 ) error {
 	// Convert transferredAmount from Wei to Native token
-	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, listener.tokenDecimals)
+	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert transferred amount: %w", err)
 	}
@@ -548,7 +557,7 @@ func (listener *tokenTransferListener) sendWebhookForOrders(orders []dto.Payment
 	}
 }
 
-func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentOrderDTOResponse) error {
+func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentOrderDTOResponse, tokenDecimals uint8) error {
 	// Already success, no further processing required.
 	if processedOrder.Status == constants.Success {
 		logger.GetLogger().Infof("Order ID %d already SUCCESS and wallet released.", processedOrder.ID)
@@ -556,7 +565,7 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 	}
 
 	// Convert order amount to smallest unit (Wei)
-	orderAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(processedOrder.Amount, listener.tokenDecimals)
+	orderAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(processedOrder.Amount, tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert order amount: %w", err)
 	}
@@ -564,7 +573,7 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 	// Calculate total transferred amount from PaymentHistory
 	totalTransferredWei := big.NewInt(0)
 	for _, event := range processedOrder.EventHistories {
-		eventAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, listener.tokenDecimals)
+		eventAmountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, tokenDecimals)
 		if err != nil {
 			return fmt.Errorf("failed to convert event amount (tx: %s): %w", event.TransactionHash, err)
 		}
@@ -572,7 +581,7 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 	}
 
 	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(
-		orderAmountWei, conf.GetPaymentCovering(), listener.tokenDecimals,
+		orderAmountWei, conf.GetPaymentCovering(), tokenDecimals,
 	)
 
 	// Check if total transferred amount is sufficient
@@ -595,7 +604,7 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 
 	// Update processed order status
 	processedOrder.Status = constants.Success
-	processedOrder.Transferred, err = utils.ConvertSmallestUnitToFloatToken(totalTransferredWei.String(), listener.tokenDecimals)
+	processedOrder.Transferred, err = utils.ConvertSmallestUnitToFloatToken(totalTransferredWei.String(), tokenDecimals)
 	if err != nil {
 		return fmt.Errorf("failed to convert total transferred amount back to float: %w", err)
 	}
@@ -617,14 +626,16 @@ func (listener *tokenTransferListener) recheckOrder(processedOrder *dto.PaymentO
 	return nil
 }
 
-// Register registers the listeners for token transfer events.
+// Register registers the token transfer listener for confirmed and real-time events.
 func (listener *tokenTransferListener) Register(ctx context.Context) {
-	listener.baseEventListener.RegisterConfirmedEventListener(
-		listener.tokenContractAddress,
-		listener.parseAndProcessConfirmedTransferEvent,
-	)
-	listener.baseEventListener.RegisterRealtimeEventListener(
-		listener.tokenContractAddress,
-		listener.parseAndProcessRealtimeTransferEvent,
-	)
+	for _, contractAddress := range listener.tokenContractAddresses {
+		listener.baseEventListener.RegisterConfirmedEventListener(
+			contractAddress,
+			listener.parseAndProcessConfirmedTransferEvent,
+		)
+		listener.baseEventListener.RegisterRealtimeEventListener(
+			contractAddress,
+			listener.parseAndProcessRealtimeTransferEvent,
+		)
+	}
 }

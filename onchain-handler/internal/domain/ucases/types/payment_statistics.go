@@ -20,5 +20,6 @@ type PaymentStatisticsUCase interface {
 		granularity string,
 		startTime, endTime time.Time,
 		vendorID string,
-	) ([]dto.PaymentStatistics, error)
+		symbols []string,
+	) ([]dto.PeriodStatistics, error)
 }

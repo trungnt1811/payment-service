@@ -33,8 +33,8 @@ type expiredOrderCatchupWorker struct {
 	paymentWalletUCase       ucasetypes.PaymentWalletUCase
 	blockStateUCase          ucasetypes.BlockStateUCase
 	cacheRepo                cachetypes.CacheRepository
-	tokenContractAddress     string
-	tokenDecimals            uint8
+	tokenContractAddresses   []string
+	tokenDecimalsMap         map[string]uint8
 	parsedABI                abi.ABI
 	ethClient                clienttypes.Client
 	network                  constants.NetworkType
@@ -51,7 +51,7 @@ func NewExpiredOrderCatchupWorker(
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	blockStateUCase ucasetypes.BlockStateUCase,
 	cacheRepo cachetypes.CacheRepository,
-	tokenContractAddress string,
+	tokenContractAddresses []string,
 	ethClient clienttypes.Client,
 	network constants.NetworkType,
 ) workertypes.Worker {
@@ -61,10 +61,14 @@ func NewExpiredOrderCatchupWorker(
 		return nil
 	}
 
-	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, network.String(), cacheRepo)
-	if err != nil {
-		logger.GetLogger().Errorf("failed to get token decimals: %v", err)
-		return nil
+	tokenDecimalsMap := make(map[string]uint8)
+	for _, addr := range tokenContractAddresses {
+		decimals, err := blockchain.GetTokenDecimalsFromCache(addr, network.String(), cacheRepo)
+		if err != nil {
+			logger.GetLogger().Errorf("Failed to get token decimals from cache for %s: %v", addr, err)
+			return nil
+		}
+		tokenDecimalsMap[addr] = decimals
 	}
 
 	confirmationDepth, err := blockchain.GetConfirmationDepth(network)
@@ -80,8 +84,8 @@ func NewExpiredOrderCatchupWorker(
 		paymentWalletUCase:       paymentWalletUCase,
 		blockStateUCase:          blockStateUCase,
 		cacheRepo:                cacheRepo,
-		tokenContractAddress:     tokenContractAddress,
-		tokenDecimals:            decimals,
+		tokenContractAddresses:   tokenContractAddresses,
+		tokenDecimalsMap:         tokenDecimalsMap,
 		parsedABI:                parsedABI,
 		ethClient:                ethClient,
 		network:                  network,
@@ -205,14 +209,17 @@ func (w *expiredOrderCatchupWorker) processExpiredOrders(ctx context.Context, st
 	}
 
 	// Process logs in chunks of DefaultBlockOffset
-	address := common.HexToAddress(w.tokenContractAddress)
+	var addresses []common.Address
+	for _, tokenAddress := range w.tokenContractAddresses {
+		addresses = append(addresses, common.HexToAddress(tokenAddress))
+	}
 	for chunkStart := startBlock; chunkStart <= endBlock; chunkStart += constants.DefaultBlockOffset {
 		chunkEnd := min(chunkStart+constants.DefaultBlockOffset-1, endBlock)
 
 		logger.GetLogger().Debugf("Expired Order Catchup Worker: Processing block chunk from %d to %d on network %s", chunkStart, chunkEnd, w.network.String())
 
 		// Poll logs from blockchain for this block range
-		logs, err := w.ethClient.PollForLogsFromBlock(ctx, []common.Address{address}, chunkStart, chunkEnd)
+		logs, err := w.ethClient.PollForLogsFromBlock(ctx, addresses, chunkStart, chunkEnd)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to poll logs on network %s from block range %d-%d: %v", w.network.String(), chunkStart, chunkEnd, err)
 			continue
@@ -243,6 +250,8 @@ func (w *expiredOrderCatchupWorker) processLog(
 		return fmt.Errorf("failed to get token symbol from token contract address on network %s: %w", w.network.String(), err)
 	}
 
+	tokenDecimals := w.tokenDecimalsMap[vLog.Address.Hex()]
+
 	// Unpack the transfer event from the log
 	transferEvent, err := blockchain.UnpackTransferEvent(vLog, w.parsedABI)
 	if err != nil {
@@ -259,7 +268,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 		logger.GetLogger().Infof("Matched transfer to wallet %s for order ID on network %s: %d", transferEvent.To.Hex(), w.network.String(), order.ID)
 
 		// Call processOrderPayment to handle the order update logic based on the transfer event
-		isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight)
+		isUpdated, err := w.processOrderPayment(ctx, &orders[index], transferEvent, blockHeight, tokenDecimals)
 		if err != nil {
 			return fmt.Errorf("failed to process order payment for order ID %d on network %s: %w", order.ID, w.network.String(), err)
 		}
@@ -269,7 +278,7 @@ func (w *expiredOrderCatchupWorker) processLog(
 		}
 
 		// Convert the transfer event value to ETH
-		transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), w.tokenDecimals)
+		transferEventValueInEth, err := utils.ConvertSmallestUnitToFloatToken(transferEvent.Value.String(), tokenDecimals)
 		if err != nil {
 			logger.GetLogger().Errorf("Failed to convert transfer event value to ETH for order ID %d: %v", order.ID, err)
 			return err
@@ -364,6 +373,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	order *dto.PaymentOrderDTO,
 	transferEvent blockchain.TransferEvent,
 	blockHeight uint64,
+	tokenDecimals uint8,
 ) (bool, error) {
 	if blockHeight <= order.BlockHeight {
 		logger.GetLogger().Infof("Processed order: %d on network %s. Ignore this turn.", order.ID, w.network.String())
@@ -371,11 +381,11 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	}
 
 	// Convert order amount into the appropriate unit (e.g., wei)
-	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, w.tokenDecimals)
+	orderAmount, err := utils.ConvertFloatTokenToSmallestUnit(order.Amount, tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("failed to convert order amount: %v", err)
 	}
-	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(orderAmount, conf.GetPaymentCovering(), w.tokenDecimals)
+	minimumAcceptedAmount := payment.CalculatePaymentCoveringAsDiscount(orderAmount, conf.GetPaymentCovering(), tokenDecimals)
 
 	// Get newest order state in cache or DB
 	orderDTO, err := w.paymentOrderUCase.GetPaymentOrderByID(ctx, order.ID)
@@ -387,7 +397,7 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 	// Calculate total transferred amount from EventHistories
 	totalTransferred := big.NewInt(0)
 	for _, event := range orderDTO.EventHistories {
-		amountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, w.tokenDecimals)
+		amountWei, err := utils.ConvertFloatTokenToSmallestUnit(event.Amount, tokenDecimals)
 		if err != nil {
 			logger.GetLogger().Warnf("Failed to convert event amount to Wei, tx: %s, err: %v", event.TransactionHash, err)
 			continue
@@ -404,17 +414,17 @@ func (w *expiredOrderCatchupWorker) processOrderPayment(
 
 		if order.BlockHeight < order.UpcomingBlockHeight {
 			// Update the order tranferred and keep the wallet associated with the order.
-			return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight)
+			return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight, tokenDecimals)
 		}
 
 		// Update the order status to 'Success' and mark the wallet as no longer in use.
-		return w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), blockHeight)
+		return w.updatePaymentOrderStatus(ctx, order, constants.Success, totalTransferred.String(), blockHeight, tokenDecimals)
 	} else if totalTransferred.Cmp(big.NewInt(0)) > 0 {
 		// If the total transferred amount is greater than 0 but less than the minimum accepted amount (partial payment).
 		logger.GetLogger().Infof("Processed partial payment on network %s for order ID: %d", w.network.String(), order.ID)
 
 		// Update the order tranferred and keep the wallet associated with the order.
-		return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight)
+		return w.updatePaymentOrderStatus(ctx, order, order.Status, totalTransferred.String(), blockHeight, tokenDecimals)
 	}
 
 	return false, nil
@@ -426,9 +436,10 @@ func (w *expiredOrderCatchupWorker) updatePaymentOrderStatus(
 	order *dto.PaymentOrderDTO,
 	status, transferredAmount string,
 	blockHeight uint64,
+	tokenDecimals uint8,
 ) (bool, error) {
 	// Convert transferredAmount from Wei to Eth (Ether)
-	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, w.tokenDecimals)
+	transferredAmountInEth, err := utils.ConvertSmallestUnitToFloatToken(transferredAmount, tokenDecimals)
 	if err != nil {
 		return false, fmt.Errorf("updatePaymentOrderStatus error: %v", err)
 	}

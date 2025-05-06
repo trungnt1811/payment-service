@@ -1,4 +1,4 @@
-package interfaces
+package types
 
 import (
 	"context"
@@ -15,10 +15,18 @@ type PaymentStatisticsRepository interface {
 		amount, transferred *string,
 		symbol, vendorID string,
 	) error
+	RevertAndIncrementStatistics(
+		ctx context.Context,
+		granularity string,
+		periodStart time.Time,
+		amount *string,
+		oldSymbol, newSymbol, vendorID string,
+	) error
 	GetStatisticsByTimeRangeAndGranularity(
 		ctx context.Context,
 		granularity string,
 		startTime, endTime time.Time,
 		vendorID string,
+		symbols []string,
 	) ([]entities.PaymentStatistics, error)
 }

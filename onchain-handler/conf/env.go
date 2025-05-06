@@ -14,12 +14,14 @@ type RedisConfiguration struct {
 }
 
 type DatabaseConfiguration struct {
-	DBUser     string `mapstructure:"DB_USER"`
-	DBPassword string `mapstructure:"DB_PASSWORD"`
-	DBHost     string `mapstructure:"DB_HOST"`
-	DBPort     string `mapstructure:"DB_PORT"`
-	DBName     string `mapstructure:"DB_NAME"`
-	SSLMode    bool   `mapstructure:"DB_SSL_MODE"`
+	DBUser       string `mapstructure:"DB_USER"`
+	DBPassword   string `mapstructure:"DB_PASSWORD"`
+	DBHost       string `mapstructure:"DB_HOST"`
+	DBPort       string `mapstructure:"DB_PORT"`
+	DBName       string `mapstructure:"DB_NAME"`
+	MaxIdleConns int    `mapstructure:"MAX_IDLE_CONNS"`
+	MaxOpenConns int    `mapstructure:"MAX_OPEN_CONNS"`
+	SSLMode      bool   `mapstructure:"DB_SSL_MODE"`
 }
 
 type PaymentGatewayConfiguration struct {
@@ -42,6 +44,7 @@ type AvaxNetworkConfiguration struct {
 	AvaxChainID             uint32 `mapstructure:"AVAX_CHAIN_ID"`
 	AvaxStartBlockListener  uint64 `mapstructure:"AVAX_START_BLOCK_LISTENER"`
 	AvaxUSDTContractAddress string `mapstructure:"AVAX_USDT_CONTRACT_ADDRESS"`
+	AvaxUSDCContractAddress string `mapstructure:"AVAX_USDC_CONTRACT_ADDRESS"`
 }
 
 type BscNetworkConfiguration struct {
@@ -49,6 +52,7 @@ type BscNetworkConfiguration struct {
 	BscChainID             uint32 `mapstructure:"BSC_CHAIN_ID"`
 	BscStartBlockListener  uint64 `mapstructure:"BSC_START_BLOCK_LISTENER"`
 	BscUSDTContractAddress string `mapstructure:"BSC_USDT_CONTRACT_ADDRESS"`
+	BscUSDCContractAddress string `mapstructure:"BSC_USDC_CONTRACT_ADDRESS"`
 }
 
 type WalletConfiguration struct {
@@ -88,6 +92,8 @@ var defaultConfigurations = map[string]any{
 	"DB_HOST":                    "",
 	"DB_PORT":                    "",
 	"DB_NAME":                    "",
+	"MAX_IDLE_CONNS":             5,
+	"MAX_OPEN_CONNS":             15,
 	"DB_SSL_MODE":                false,
 	"INIT_WALLET_COUNT":          10,
 	"ORDER_CUTOFF_TIME":          1440,
@@ -100,10 +106,12 @@ var defaultConfigurations = map[string]any{
 	"AVAX_CHAIN_ID":              0,
 	"AVAX_START_BLOCK_LISTENER":  0,
 	"AVAX_USDT_CONTRACT_ADDRESS": "",
+	"AVAX_USDC_CONTRACT_ADDRESS": "",
 	"BSC_RPC_URLS":               "",
 	"BSC_CHAIN_ID":               0,
 	"BSC_START_BLOCK_LISTENER":   0,
 	"BSC_USDT_CONTRACT_ADDRESS":  "",
+	"BSC_USDC_CONTRACT_ADDRESS":  "",
 	"MNEMONIC":                   "",
 	"PASSPHRASE":                 "",
 	"SALT":                       "",

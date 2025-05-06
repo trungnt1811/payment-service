@@ -6,6 +6,7 @@ import (
 
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
+	"github.com/genefriendway/onchain-handler/internal/domain/entities"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 )
 
@@ -39,20 +40,16 @@ func (u *paymentStatisticsUCase) GetStatisticsByTimeRangeAndGranularity(
 	granularity string,
 	startTime, endTime time.Time,
 	vendorID string,
-) ([]dto.PaymentStatistics, error) {
+	symbols []string,
+) ([]dto.PeriodStatistics, error) {
 	// Retrieve payment statistics from the repository
 	paymentStatistics, err := u.paymentStatisticsRepository.GetStatisticsByTimeRangeAndGranularity(
-		ctx, granularity, startTime, endTime, vendorID,
+		ctx, granularity, startTime, endTime, vendorID, symbols,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert domain models to DTOs
-	var dtos []dto.PaymentStatistics
-	for _, stat := range paymentStatistics {
-		dtos = append(dtos, stat.ToDto())
-	}
-
-	return dtos, nil
+	// Convert the payment statistics to DTO format
+	return entities.ToPeriodStatisticsDTO(paymentStatistics), nil
 }

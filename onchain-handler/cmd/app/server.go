@@ -27,7 +27,7 @@ func RunServer(
 	paymentWalletUCase ucasetypes.PaymentWalletUCase,
 	paymentOrderUCase ucasetypes.PaymentOrderUCase,
 	tokenTransferUCase ucasetypes.TokenTransferUCase,
-	networkMetadataUCase ucasetypes.NetworkMetadataUCase,
+	metadataUCase ucasetypes.MetadataUCase,
 	paymentStatisticsUCase ucasetypes.PaymentStatisticsUCase,
 ) {
 	// Initialize Gin router with middleware
@@ -45,7 +45,7 @@ func RunServer(
 		tokenTransferUCase,
 		paymentOrderUCase,
 		paymentWalletUCase,
-		networkMetadataUCase,
+		metadataUCase,
 		paymentStatisticsUCase,
 	)
 

@@ -27,13 +27,18 @@ type PaymentWalletUCase interface {
 	) error
 	GetPaymentWallets(ctx context.Context) ([]dto.PaymentWalletDTO, error)
 	GetPaymentWalletsWithBalances(
-		ctx context.Context, network *constants.NetworkType,
+		ctx context.Context, network *constants.NetworkType, symbols []string,
 	) ([]dto.PaymentWalletBalanceDTO, error)
 	GetPaymentWalletsWithBalancesPagination(
-		ctx context.Context, page, size int, network *constants.NetworkType,
+		ctx context.Context, page, size int, network *constants.NetworkType, tokenSymbols []string,
 	) (dto.PaginationDTOResponse, error)
 	GetReceivingWalletAddressWithBalances(
 		ctx context.Context, mnemonic, passphrase, salt string,
 	) (string, map[constants.NetworkType]string, error)
-	SyncWalletBalance(ctx context.Context, walletAddress string, network constants.NetworkType) (string, error)
+	SyncWalletBalances(
+		ctx context.Context,
+		walletAddress string,
+		network constants.NetworkType,
+		tokenSymbols []string,
+	) (map[string]string, error)
 }

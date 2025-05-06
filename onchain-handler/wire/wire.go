@@ -21,6 +21,7 @@ type repos struct {
 	TokenTransferRepo        repotypes.TokenTransferRepository
 	PaymentEventHistoryRepo  repotypes.PaymentEventHistoryRepository
 	NetworkMetadataRepo      repotypes.NetworkMetadataRepository
+	TokenMetadataRepo        repotypes.TokenMetadataRepository
 	PaymentStatisticsRepo    repotypes.PaymentStatisticsRepository
 }
 
@@ -36,6 +37,7 @@ func initializeRepos(db *gorm.DB, cacheRepo cachetypes.CacheRepository) *repos {
 		PaymentEventHistoryRepo:  repositories.NewPaymentEventHistoryCacheRepository(repositories.NewPaymentEventHistoryRepository(db), cacheRepo),
 		NetworkMetadataRepo:      repositories.NewNetworkMetadataCacheRepository(repositories.NewNetworkMetadataRepository(db), cacheRepo),
 		PaymentStatisticsRepo:    repositories.NewPaymentStatisticsRepository(db),
+		TokenMetadataRepo:        repositories.NewTokenMetadataCacheRepository(repositories.NewTokenMetadataRepository(db), cacheRepo),
 	}
 }
 
@@ -46,7 +48,7 @@ type UseCases struct {
 	TokenTransferUCase       ucasetypes.TokenTransferUCase
 	PaymentEventHistoryUCase ucasetypes.PaymentEventHistoryUCase
 	PaymentWalletUCase       ucasetypes.PaymentWalletUCase
-	NetworkMetadataUCase     ucasetypes.NetworkMetadataUCase
+	MetadataUCase            ucasetypes.MetadataUCase
 	PaymentStatisticsUCase   ucasetypes.PaymentStatisticsUCase
 }
 
@@ -70,7 +72,7 @@ func InitializeUseCases(
 		TokenTransferUCase:       ucases.NewTokenTransferUCase(repos.TokenTransferRepo),
 		PaymentEventHistoryUCase: ucases.NewPaymentEventHistoryUCase(repos.PaymentEventHistoryRepo),
 		PaymentWalletUCase:       ucases.NewPaymentWalletUCase(db, repos.PaymentWalletRepo, repos.PaymentWalletBalanceRepo),
-		NetworkMetadataUCase:     ucases.NewNetworkMetadataUCase(repos.NetworkMetadataRepo),
+		MetadataUCase:            ucases.NewMetadataUCase(repos.NetworkMetadataRepo, repos.TokenMetadataRepo),
 		PaymentStatisticsUCase:   ucases.NewPaymentStatisticsCase(repos.PaymentStatisticsRepo),
 	}
 }

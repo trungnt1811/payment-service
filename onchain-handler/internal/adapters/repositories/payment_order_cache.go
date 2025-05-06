@@ -175,6 +175,7 @@ func mergePaymentOrderFields(dst, src *entities.PaymentOrder) {
 	}
 }
 
+// UpdateOrderNetwork updates the network and block height of a payment order
 func (c *paymentOrderCache) UpdateOrderNetwork(
 	ctx context.Context, requestID, network string, blockHeight uint64,
 ) error {
@@ -600,4 +601,60 @@ func (c *paymentOrderCache) GetProcessingOrdersExpired(ctx context.Context, netw
 	}
 
 	return orders, nil
+}
+
+func (c *paymentOrderCache) UpdateOrderFieldsByRequestIDAndStatus(
+	ctx context.Context,
+	requestID string,
+	status string,
+	updates map[string]any,
+) error {
+	// Step 1: Update DB
+	if err := c.paymentOrderRepository.UpdateOrderFieldsByRequestIDAndStatus(ctx, requestID, status, updates); err != nil {
+		return fmt.Errorf("failed to update payment order in repository: %w", err)
+	}
+
+	// Step 2: Get order ID for cache key
+	orderID, err := c.paymentOrderRepository.GetPaymentOrderIDByRequestID(ctx, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to get payment order ID for cache update: %w", err)
+	}
+	cacheKey := &cachetypes.Keyer{Raw: keyPrefixPaymentOrder + strconv.FormatUint(orderID, 10)}
+
+	// Step 3: Try to retrieve from cache
+	var cachedOrder entities.PaymentOrder
+	cacheErr := c.cache.RetrieveItem(cacheKey, &cachedOrder)
+	if cacheErr != nil {
+		// Step 4: Cache miss
+		logger.GetLogger().Warnf("Cache miss for payment order ID %d: %v", orderID, cacheErr)
+
+		updatedOrder, dbErr := c.paymentOrderRepository.GetPaymentOrderByID(ctx, orderID)
+		if dbErr != nil {
+			logger.GetLogger().Warnf("Failed to retrieve updated order ID %d after cache miss: %v", orderID, dbErr)
+			return nil // DB update already succeeded; don't block on cache
+		}
+
+		if saveErr := c.cache.SaveItem(cacheKey, *updatedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
+			logger.GetLogger().Warnf("Failed to cache payment order ID %d after cache miss: %v", orderID, saveErr)
+		}
+
+		return nil
+	}
+
+	// Step 5: Update fields in cache
+	if v, ok := updates["network"]; ok {
+		cachedOrder.Network = v.(string)
+	}
+	if v, ok := updates["block_height"]; ok {
+		cachedOrder.BlockHeight = v.(uint64)
+	}
+	if v, ok := updates["symbol"]; ok {
+		cachedOrder.Symbol = v.(string)
+	}
+
+	if saveErr := c.cache.SaveItem(cacheKey, cachedOrder, conf.GetExpiredOrderTime()); saveErr != nil {
+		logger.GetLogger().Warnf("Failed to update cache for payment order ID %d: %v", orderID, saveErr)
+	}
+
+	return nil
 }
