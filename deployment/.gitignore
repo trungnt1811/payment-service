@@ -1,4 +1,0 @@
-.env
-.env.*
-!.env.template
-scripts/cli
