@@ -1,4 +1,4 @@
-package providers
+package instances
 
 import (
 	"sync"
@@ -15,8 +15,8 @@ var (
 	dbInstance *gorm.DB
 )
 
-// ProvideDatabase provides a singleton instance of the PostgreSQL database connection.
-func ProvideDBConnection() *gorm.DB {
+// DBInstance provides a singleton instance of the PostgreSQL database connection.
+func DBInstance() *gorm.DB {
 	dbOnce.Do(func() {
 		logger.GetLogger().Info("Initializing PostgreSQL database connection...")
 

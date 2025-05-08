@@ -14,10 +14,10 @@ import (
 	"github.com/genefriendway/onchain-handler/conf"
 	_ "github.com/genefriendway/onchain-handler/docs"
 	"github.com/genefriendway/onchain-handler/internal/adapters/database/postgres"
+	"github.com/genefriendway/onchain-handler/internal/wire"
+	"github.com/genefriendway/onchain-handler/internal/wire/instances"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
 	loggertypes "github.com/genefriendway/onchain-handler/pkg/logger/types"
-	"github.com/genefriendway/onchain-handler/wire"
-	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 func main() {
@@ -29,7 +29,7 @@ func main() {
 	config := conf.GetConfiguration()
 
 	// Initialize database connection
-	db := providers.ProvideDBConnection()
+	db := instances.DBInstance()
 
 	// TODO: remove this migate function later
 	basePath := "internal/adapters/database/postgres/scripts"
@@ -43,10 +43,10 @@ func main() {
 	initializeLoggerAndMode(config)
 
 	// Initialize the cache repository
-	cacheRepository := providers.ProvideCacheRepository(ctx)
+	cacheRepository := instances.CacheRepositoryInstance(ctx)
 
 	// Initialize payment order set
-	paymentOrderSet := providers.ProvidePaymentOrderSet(ctx)
+	paymentOrderSet := instances.PaymentOrderSetInstance(ctx)
 
 	// Initialize use cases
 	ucases := wire.InitializeUseCases(db, cacheRepository, paymentOrderSet)

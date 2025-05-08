@@ -11,11 +11,11 @@ import (
 	repotypes "github.com/genefriendway/onchain-handler/internal/adapters/repositories/types"
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
+	"github.com/genefriendway/onchain-handler/internal/wire/instances"
 	"github.com/genefriendway/onchain-handler/pkg/blockchain"
 	"github.com/genefriendway/onchain-handler/pkg/logger"
 	"github.com/genefriendway/onchain-handler/pkg/payment"
 	"github.com/genefriendway/onchain-handler/pkg/utils"
-	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 type paymentWalletUCase struct {
@@ -335,7 +335,7 @@ func (u *paymentWalletUCase) getTokenBalanceOnchain(
 		return "", fmt.Errorf("failed to get RPC URLs: %w", err)
 	}
 
-	ethClient, err := providers.ProvideEthClient(network, rpcUrls)
+	ethClient, err := instances.ETHClientInstance(network, rpcUrls)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize Ethereum client: %w", err)
 	}
@@ -347,7 +347,7 @@ func (u *paymentWalletUCase) getTokenBalanceOnchain(
 	}
 
 	// Get token decimals from cache
-	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, network.String(), providers.ProvideCacheRepository(ctx))
+	decimals, err := blockchain.GetTokenDecimalsFromCache(tokenContractAddress, network.String(), instances.CacheRepositoryInstance(ctx))
 	if err != nil {
 		return "", fmt.Errorf("failed to get %s decimals: %w", symbol, err)
 	}
@@ -369,7 +369,7 @@ func (u *paymentWalletUCase) getNativeBalanceOnchain(ctx context.Context, wallet
 		return "", fmt.Errorf("failed to get RPC URLs: %w", err)
 	}
 
-	ethClient, err := providers.ProvideEthClient(network, rpcUrls)
+	ethClient, err := instances.ETHClientInstance(network, rpcUrls)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize Ethereum client: %w", err)
 	}

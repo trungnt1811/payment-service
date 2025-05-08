@@ -12,11 +12,11 @@ import (
 	"github.com/genefriendway/onchain-handler/internal/delivery/dto"
 	ucasetypes "github.com/genefriendway/onchain-handler/internal/domain/ucases/types"
 	"github.com/genefriendway/onchain-handler/internal/listeners"
+	"github.com/genefriendway/onchain-handler/internal/wire/instances"
 	"github.com/genefriendway/onchain-handler/internal/workers"
 	pkgblockchain "github.com/genefriendway/onchain-handler/pkg/blockchain"
 	clienttypes "github.com/genefriendway/onchain-handler/pkg/blockchain/client/types"
 	pkglogger "github.com/genefriendway/onchain-handler/pkg/logger"
-	"github.com/genefriendway/onchain-handler/wire/providers"
 )
 
 func RunWorkers(
@@ -37,7 +37,7 @@ func RunWorkers(
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to get AVAX C-Chain RPC URLs: %v", err)
 	}
-	ethClientAvax, err := providers.ProvideEthClient(constants.AvaxCChain, avaxRPCUrls)
+	ethClientAvax, err := instances.ETHClientInstance(constants.AvaxCChain, avaxRPCUrls)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize AVAX C-Chain client: %v", err)
 	}
@@ -48,7 +48,7 @@ func RunWorkers(
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to get BSC RPC URLs: %v", err)
 	}
-	ethClientBsc, err := providers.ProvideEthClient(constants.Bsc, bscRPCUrls)
+	ethClientBsc, err := instances.ETHClientInstance(constants.Bsc, bscRPCUrls)
 	if err != nil {
 		pkglogger.GetLogger().Fatalf("Failed to initialize BSC client: %v", err)
 	}

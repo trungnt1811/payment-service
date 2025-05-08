@@ -1,4 +1,4 @@
-package providers
+package instances
 
 import (
 	"context"
@@ -15,8 +15,8 @@ var (
 	paymentOrderSet     settypes.Set[dto.PaymentOrderDTO]
 )
 
-// ProvidePaymentOrderSet initializes and provides a singleton instance of PaymentOrderSet.
-func ProvidePaymentOrderSet(ctx context.Context) settypes.Set[dto.PaymentOrderDTO] {
+// PaymentOrderSetInstance initializes and provides a singleton instance of PaymentOrderSet.
+func PaymentOrderSetInstance(ctx context.Context) settypes.Set[dto.PaymentOrderDTO] {
 	paymentOrderSetOnce.Do(func() {
 		keyFunc := func(order dto.PaymentOrderDTO) string {
 			return order.PaymentAddress + "_" + order.Symbol
@@ -24,7 +24,7 @@ func ProvidePaymentOrderSet(ctx context.Context) settypes.Set[dto.PaymentOrderDT
 
 		// Initialize the order set
 		var err error
-		paymentOrderSet, err = orderset.NewSet(ctx, keyFunc, ProvideCacheRepository(ctx))
+		paymentOrderSet, err = orderset.NewSet(ctx, keyFunc, CacheRepositoryInstance(ctx))
 		if err != nil {
 			logger.GetLogger().Fatalf("Create payment order set error: %v", err)
 		}

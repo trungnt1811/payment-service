@@ -1,4 +1,4 @@
-package providers
+package instances
 
 import (
 	"context"
@@ -15,8 +15,8 @@ var (
 	cacheRepo cachetypes.CacheRepository
 )
 
-// ProvideCacheRepository provides a singleton instance of CacheRepository.
-func ProvideCacheRepository(ctx context.Context) cachetypes.CacheRepository {
+// CacheRepositoryInstance provides a singleton instance of CacheRepository.
+func CacheRepositoryInstance(ctx context.Context) cachetypes.CacheRepository {
 	cacheOnce.Do(func() {
 		cacheType := conf.GetCacheType()
 		switch cacheType {

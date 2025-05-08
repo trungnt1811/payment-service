@@ -5,12 +5,12 @@ import (
 	"os"
 
 	"github.com/genefriendway/onchain-handler/internal/adapters/database/postgres"
-	"github.com/genefriendway/onchain-handler/wire/providers"
+	"github.com/genefriendway/onchain-handler/internal/wire/instances"
 )
 
 func main() {
 	// Initialize database connection
-	db := providers.ProvideDBConnection()
+	db := instances.DBInstance()
 
 	// Get migration scripts path (default or CLI argument)
 	basePath := "internal/adapters/database/postgres/scripts"

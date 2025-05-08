@@ -1,4 +1,4 @@
-package providers
+package instances
 
 import (
 	"fmt"
@@ -15,9 +15,9 @@ var (
 	clientMux sync.Mutex
 )
 
-// ProvideEthClient provides a singleton instance of an Ethereum client for a specific network.
+// ETHClientInstance provides a singleton instance of an Ethereum client for a specific network.
 // It takes the network name and RPC URLs as arguments.
-func ProvideEthClient(network constants.NetworkType, rpcUrls []string) (clienttypes.Client, error) {
+func ETHClientInstance(network constants.NetworkType, rpcUrls []string) (clienttypes.Client, error) {
 	clientMux.Lock()
 	defer clientMux.Unlock()
 
